@@ -1,0 +1,9 @@
+# Mark C++ source as the primary project language
+src/** linguist-detectable=true
+src/** linguist-language=C++
+
+# Treat godot-cpp submodule as vendored code
+godot-cpp/** linguist-vendored
+
+# Treat the demo project as vendored/documentation, not main code
+demo/** linguist-vendored

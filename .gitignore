@@ -1,0 +1,29 @@
+# Godot 4+ specific ignores
+.godot/
+*.translation
+
+# SCons
+.sconsign.dblite
+
+# Compiled binaries and libraries
+bin/
+demo/bin/
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.exe
+*.o
+*.obj
+
+# Python
+__pycache__/
+*.py[cod]
+
+# VS Code
+.vscode/
+
+# OS specific
+.DS_Store
+Thumbs.db
