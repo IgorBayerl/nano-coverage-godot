@@ -6,7 +6,11 @@
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
+#include <godot_cpp/classes/engine_debugger.hpp>
+
 using namespace godot;
+
+static Ref<CoverageCollector> coverage_collector;
 
 void initialize_nano_coverage_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
@@ -14,12 +18,20 @@ void initialize_nano_coverage_module(ModuleInitializationLevel p_level) {
 	}
 
 	ClassDB::register_class<CoverageCollector>();
+
+	coverage_collector.instantiate();
+	EngineDebugger::get_singleton()->register_profiler("coverage", coverage_collector);
 }
 
 void uninitialize_nano_coverage_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
+
+	if (EngineDebugger::get_singleton()) {
+		EngineDebugger::get_singleton()->unregister_profiler("coverage");
+	}
+	coverage_collector.unref();
 }
 
 extern "C" {
