@@ -1,37 +1,34 @@
 #include "register_types.h"
 
-#include "coverage_collector.h"
+#include "nano_coverage.h"
+#include "instrumentor.h"
 
 #include <gdextension_interface.h>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
-#include <godot_cpp/classes/engine_debugger.hpp>
-
 using namespace godot;
 
-static Ref<CoverageCollector> coverage_collector;
+static NanoCoverageRuntime *nano_coverage_singleton = nullptr;
 
 void initialize_nano_coverage_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
 
-	ClassDB::register_class<CoverageCollector>();
+	UtilityFunctions::print("NanoCoverage: Initializing module...");
+	ClassDB::register_class<NanoCoverageRuntime>();
+	ClassDB::register_class<Instrumentor>();
 
-	coverage_collector.instantiate();
-	EngineDebugger::get_singleton()->register_profiler("coverage", coverage_collector);
+	// We don't instantiate NanoCoverage here because it will be instantiated 
+	// by the Autoload system (via the dummy script that extends it).
 }
 
 void uninitialize_nano_coverage_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
-
-	if (EngineDebugger::get_singleton()) {
-		EngineDebugger::get_singleton()->unregister_profiler("coverage");
-	}
-	coverage_collector.unref();
+	// No need to delete if it's managed by the SceneTree (Autoload)
 }
 
 extern "C" {

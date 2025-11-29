@@ -5,13 +5,13 @@ func _ready():
 	await get_tree().create_timer(1.0).timeout
 	
 	# Enable coverage collection
-	EngineDebugger.profiler_enable("coverage", true)
+	# EngineDebugger.profiler_enable("coverage", true)
 	
 	# Run some code to be covered
 	_test_function()
 	
 	# Disable coverage collection (triggers save)
-	EngineDebugger.profiler_enable("coverage", false)
+	# EngineDebugger.profiler_enable("coverage", false)
 	
 	print("Coverage test complete")
 	get_tree().quit()
