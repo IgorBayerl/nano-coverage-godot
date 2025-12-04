@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+import os
+import sys
+
+env = SConscript("godot-cpp/SConstruct")
+
+# Add include paths
+env.Append(CPPPATH=["include", "godot-cpp/include", "godot-cpp/gen/include"])
+
+# Sources
+sources = []
+sources.extend(Glob("src/core/*.cpp"))
+sources.extend(Glob("src/editor/*.cpp"))
+sources.extend(Glob("src/instrumentation/*.cpp"))
+sources.extend(Glob("src/runtime/*.cpp"))
+
+# Output path
+# We want to output to ../godot_project/bin/
+# But SCons usually prefers building in the source tree or variant dir.
+# We can set the target path.
+
+target_path = "../godot_project/bin/nano_coverage_godot"
+
+library = env.SharedLibrary(
+    target=target_path,
+    source=sources,
+)
+
+Default(library)

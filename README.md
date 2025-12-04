@@ -1,81 +1,69 @@
 # Nano Coverage Godot
 
-A GDExtension for Godot 4.3 that collects code coverage for GDScript at runtime.
+**Nano Coverage Godot** is a high-performance, GDExtension-based code coverage tool designed specifically for Godot 4. It provides accurate line coverage for GDScript by instrumenting code at the AST level using [tree-sitter](https://tree-sitter.github.io/tree-sitter/), ensuring robust and reliable reporting without modifying your original project files.
 
-## Description
+## 🚀 Features
 
-This tool allows you to measure which parts of your GDScript code are executed during tests or gameplay. It uses the Godot Engine's profiling API to intercept script execution and generates a standard LCOV report (`lcov.info`) that can be used with various coverage visualization tools.
+*   **GDScript Line Coverage**: Accurate tracking of executed lines in your GDScript files.
+*   **Non-Invasive**: Instruments a temporary copy of your project, keeping your source code untouched.
+*   **LCOV Output**: Generates standard `lcov.info` files compatible with most coverage visualization tools (e.g., Coveralls, Codecov, VS Code extensions).
+*   **Editor Integration**: Adds a simple "Run Instrumented" button directly to the Godot editor toolbar.
+*   **High Performance**: Implemented as a C++ GDExtension for minimal runtime overhead.
+*   **Tree-sitter Powered**: Uses robust parsing for accurate instrumentation, avoiding fragile regex-based approaches.
 
-## How it Works
+## 🛠️ Prerequisites
 
-The extension registers a custom `EngineProfiler` named "coverage". When enabled, this profiler receives callbacks from the Godot engine for every executed script frame. It tracks the visited scripts and lines, and when finished, it serializes this data into the LCOV format.
+To build and use Nano Coverage Godot, you need:
 
-## Setup Instructions
+*   **Godot 4.1+**
+*   **Python 3.x** (for build scripts)
+*   **C++ Compiler**:
+    *   **Windows**: Visual Studio (MSVC) or MinGW-w64.
+    *   **Linux**: GCC or Clang (`build-essential`).
+    *   **macOS**: Xcode Command Line Tools.
 
-### Prerequisites
-1. **Python**: Install Python 3.x.
-2. **SCons**: Install via pip: `pip install scons`.
-3. **C++ Compiler**:
-   - Windows: Visual Studio Build Tools (MSVC) or MinGW (g++).
-   - Linux/Mac: GCC or Clang.
-4. **Godot 4.3**: Download the standard version.
+## 📦 Setup & Build
 
-### Installation
-1. Clone the repository:
-   ```bash
-   git clone <repo_url>
-   cd nano-coverage-godot
-   ```
+We provide automated scripts to set up your environment and build the extension.
 
-2. Run the setup script:
-   ```bash
-   python setup.py
-   ```
-   This will initialize submodules, install SCons, and build the extension.
+1.  **Clone the repository**:
+    ```bash
+    git clone --recursive https://github.com/IgorBayerl/nano-coverage-godot.git
+    cd nano-coverage-godot
+    ```
 
-### Manual Installation (Alternative)
-1. Initialize submodules:
-   ```bash
-   git submodule update --init --recursive
-   ```
+2.  **Run the setup script**:
+    This will initialize submodules, check for dependencies (installing SCons if needed), and verify your compiler.
+    ```bash
+    python setup.py
+    ```
 
-2. Build the extension:
-   ```bash
-   scons platform=windows target=template_debug
-   ```
-   (Replace `windows` with `linux` or `macos` as needed).
+3.  **Build the extension**:
+    This compiles the C++ GDExtension and places the binaries in the Godot project folder.
+    ```bash
+    python build.py
+    ```
+    *   *Optional arguments*: `--platform [windows|linux|macos]`, `--target [template_debug|template_release]`, `--clean`.
 
-## Usage
+## 🎮 Usage
 
-1. **Open your project**: Open the `demo` project or your own project where the extension is installed.
+1.  Open the `godot_project` folder in the Godot Editor.
+2.  Go to **Project > Project Settings > Plugins**.
+3.  Enable **NanoCoverageGodot**.
+4.  A new button **"Run Instrumented"** will appear in the main toolbar (usually near the Play buttons).
+5.  Click **"Run Instrumented"** to start your game with coverage tracking enabled.
+6.  Interact with your game/run tests.
+7.  Exit the game.
+8.  An `lcov.info` file will be generated in the project root (or specified output directory).
 
-2. **Enable Coverage**:
-   In your test runner or game script, enable the coverage profiler using `EngineDebugger`:
+## 🏗️ Architecture
 
-   ```gdscript
-   # Start collecting coverage
-   EngineDebugger.profiler_enable("coverage", true)
-   ```
+The system consists of three main components:
 
-3. **Run your tests**: Execute the code you want to measure.
+1.  **Editor Plugin (C++)**: Adds the UI integration and manages the temporary project build process.
+2.  **Instrumentation Layer**: Uses `tree-sitter` to parse GDScript files and inject `NanoCoverage.hit()` calls at executable lines.
+3.  **Runtime Collector**: A high-performance singleton that records hits in memory and flushes them to an LCOV file upon application exit.
 
-4. **Disable and Save**:
-   Disable the profiler to stop collection and trigger the report generation:
+## 📄 License
 
-   ```gdscript
-   # Stop collecting and save report
-   EngineDebugger.profiler_enable("coverage", false)
-   ```
-
-5. **View Report**:
-   The LCOV report will be saved to `res://coverage/lcov.info`.
-
-## Limitations
-
-> [!WARNING]
-> **Debugger Requirement**: The coverage collector relies on the `EngineProfiler` API, which in Godot 4.3 requires an active `ScriptDebugger`.
-
-- **Editor Mode**: Works out of the box when running from the Godot Editor (F5), as the editor attaches a debugger.
-- **Headless Mode**: Does **NOT** work in pure headless mode (`--headless`) unless a remote debugger is connected. To run in CI, you must either:
-    - Run with a dummy debugger server and connect using `--remote-debug`.
-    - Run using the editor binary (requires display server).
+MIT License
