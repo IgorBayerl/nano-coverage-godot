@@ -15,15 +15,62 @@ sources.extend(Glob("src/instrumentation/*.cpp"))
 sources.extend(Glob("src/runtime/*.cpp"))
 
 # Output path
-# We want to output to ../godot_project/bin/
-# But SCons usually prefers building in the source tree or variant dir.
-# We can set the target path.
+# We want to output to ../godot_project/addons/nano_coverage_godot/bin/
+output_dir = "../godot_project/addons/nano_coverage_godot/bin/"
+env.Execute(Mkdir(output_dir))
 
-target_path = "../godot_project/bin/nano_coverage_godot"
+# Construct the target name with suffixes
+# e.g., nano_coverage_godot.windows.template_debug.x86_64
+base_name = "nano_coverage_godot"
+try:
+    print(f"Platform: {env['platform']}")
+    print(f"Target: {env['target']}")
+    # godot-cpp might use 'arch' or 'bits' depending on version/platform
+    if 'arch' in env:
+        arch = env['arch']
+    else:
+        # Fallback if arch is missing (e.g. older godot-cpp or specific platforms)
+        arch = "x86_64" # Assumption for now
+        print("Warning: 'arch' not found in env, defaulting to x86_64")
+    
+    suffix = f".{env['platform']}.{env['target']}.{arch}"
+    target_name = base_name + suffix
+except KeyError as e:
+    print(f"KeyError: {e}")
+    # Fallback for debugging
+    target_name = "nano_coverage_godot.dll"
+
+# Check suffix
+shlib_suffix = env.subst('$SHLIBSUFFIX')
+print(f"SHLIBSUFFIX: {shlib_suffix}")
+
+# Ensure target has suffix if SCons expects it but isn't adding it?
+# Or maybe SCons expects us to NOT have it, but complains because it thinks we should?
+# The error "Target(s) are: ...x86_64" (no dll) suggests SCons thinks the target is the one without dll.
+# If I add the suffix manually, maybe it will match.
+if not target_name.endswith(shlib_suffix):
+    target_name += shlib_suffix
+
+print(f"Target Name (with suffix): {target_name}")
+print(f"Sources: {[str(s) for s in sources]}")
+
+if not sources:
+    print("Error: No source files found!")
+    sys.exit(1)
+
+# Convert sources to strings to be safe
+source_files = [str(s) for s in sources]
+
+# Build in local bin/ directory first
+local_bin = "bin/"
+env.Execute(Mkdir(local_bin))
 
 library = env.SharedLibrary(
-    target=target_path,
-    source=sources,
+    local_bin + target_name,
+    source_files,
 )
+
+# Install to the addon directory
+env.Install(output_dir, library)
 
 Default(library)

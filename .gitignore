@@ -1,0 +1,45 @@
+# Godot 4+ specific ignores
+.godot/
+*.translation
+*.import
+
+# Godot-CPP specific ignores
+native/godot-cpp/gen/
+native/godot-cpp/bin/
+native/godot-cpp/src/gen/
+
+# SCons
+.sconsign.dblite
+
+# Compiled Object files
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exp
+*.pdb
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# VS Code
+.vscode/
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Binaries
+godot_project/addons/nano_coverage_godot/bin/
+bin/
+native/bin/
+
+# Godot Executable
+Godot_*.exe
+Godot_*.zip
