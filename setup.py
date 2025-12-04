@@ -3,6 +3,12 @@ import subprocess
 import sys
 import shutil
 import platform
+import urllib.request
+import zipfile
+
+GODOT_VERSION = "4.5-stable"
+GODOT_URL = f"https://github.com/godotengine/godot/releases/download/{GODOT_VERSION}/Godot_v{GODOT_VERSION}_win64.exe.zip"
+GODOT_EXE_NAME = f"Godot_v{GODOT_VERSION}_win64.exe"
 
 def run_command(command, cwd=None, check=True):
     print(f"Running: {' '.join(command)}")
@@ -56,6 +62,35 @@ def init_submodules():
     run_command(["git", "submodule", "sync"])
     run_command(["git", "submodule", "update", "--init", "--recursive"])
 
+def setup_godot():
+    print("Checking Godot Engine...")
+    if os.path.exists(GODOT_EXE_NAME):
+        print(f"  Found {GODOT_EXE_NAME}")
+        return
+
+    print(f"  Godot executable not found. Downloading Godot {GODOT_VERSION}...")
+    zip_path = "godot.zip"
+    
+    def show_progress(block_num, block_size, total_size):
+        downloaded = block_num * block_size
+        if total_size > 0:
+            percent = downloaded * 100 / total_size
+            sys.stdout.write(f"\r  Downloading: {percent:.1f}% ({downloaded / (1024*1024):.1f} MB / {total_size / (1024*1024):.1f} MB)")
+            sys.stdout.flush()
+            
+    try:
+        urllib.request.urlretrieve(GODOT_URL, zip_path, show_progress)
+        print("\n  Download complete. Extracting...")
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(".")
+        print("  Extraction complete.")
+    except Exception as e:
+        print(f"\n  Failed to download or extract Godot: {e}")
+        sys.exit(1)
+    finally:
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
+
 def main():
     print(f"=== Nano Coverage Godot Setup ({platform.system()}) ===")
     
@@ -67,6 +102,9 @@ def main():
 
     # 3. Check Compiler
     check_compiler()
+
+    # 4. Setup Godot Engine
+    setup_godot()
 
     print("\n=== Setup Complete ===")
     print("You can now run 'python build.py' to build the project.")

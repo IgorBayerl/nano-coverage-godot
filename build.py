@@ -29,8 +29,7 @@ def run_scons(args):
         print("Cleaning build...")
         clean_cmd = cmd + ["-c"]
         subprocess.run(clean_cmd, cwd=NATIVE_DIR, shell=(os.name == 'nt'))
-        # Also clean godot-cpp if requested? usually scons -c cleans what it built.
-        # If we want to clean godot-cpp specifically, we might need more, but let's stick to standard scons clean.
+        return # Stop here if cleaning
         
     # Parallel build
     import multiprocessing

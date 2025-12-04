@@ -14,7 +14,7 @@ def find_godot_executable():
     
     if not exes:
         print("Error: Could not find Godot executable in the root directory.")
-        print("Please ensure Godot_*.exe is present.")
+        print("Please ensure Godot_*.exe is present or run 'python setup.py'.")
         sys.exit(1)
     
     return os.path.abspath(exes[0])
@@ -38,10 +38,6 @@ def run_godot(args):
     print("--------------------------------------------------")
     
     try:
-        # On Windows, using subprocess.call or run with shell=False keeps it attached to current console
-        # if the exe is a console app. Standard Godot exe might detach if it's a GUI app, 
-        # but usually prints to stdout if run from console.
-        # To ensure we see output, we can try to capture or just let it inherit handles.
         subprocess.run(cmd, check=True)
     except KeyboardInterrupt:
         print("\nGodot process interrupted.")

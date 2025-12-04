@@ -71,6 +71,6 @@ library = env.SharedLibrary(
 )
 
 # Install to the addon directory
-env.Install(output_dir, library)
+installed_lib = env.Install(output_dir, library)
 
-Default(library)
+Default(installed_lib)

@@ -1,10 +1,15 @@
 @tool
 extends EditorPlugin
 
+var plugin_instance
+
 func _enter_tree():
-	# Initialization of the plugin goes here.
-	pass
+	# Instantiate the C++ class
+	plugin_instance = NanoCoverageEditorPlugin.new()
+	add_child(plugin_instance)
 
 func _exit_tree():
-	# Clean-up of the plugin goes here.
-	pass
+	if plugin_instance:
+		remove_child(plugin_instance)
+		plugin_instance.queue_free()
+		plugin_instance = null
