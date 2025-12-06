@@ -1,0 +1,5 @@
+native/thirdparty/tree-sitter
+native/thirdparty/tree-sitter-gdscript
+native/godot-cpp
+
+*.os

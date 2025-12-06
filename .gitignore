@@ -44,3 +44,30 @@ native/bin/
 Godot_*.exe
 Godot_*.zip
 godot.zip
+
+
+# SCons / Godot-CPP build artifacts
+*.os
+*.o
+*.obj
+*.a
+*.lib
+
+# Shared Libraries (The final binaries)
+# (Optional: Keep this commented if you WANT to commit the compiled extension)
+# *.dll
+# *.so
+# *.dylib
+# *.gdextension
+
+# Godot 4 Temporary folder
+.godot/
+.scons_env.json
+.sconsign.dblite
+
+# IDEs
+.vscode/
+.idea/
+*.sln
+*.vcxproj
+*.vcxproj.user
