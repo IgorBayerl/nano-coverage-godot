@@ -71,3 +71,4 @@ godot.zip
 *.sln
 *.vcxproj
 *.vcxproj.user
+output_report.txt
