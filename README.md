@@ -1,69 +1,87 @@
 # Nano Coverage Godot
 
-**Nano Coverage Godot** is a high-performance, GDExtension-based code coverage tool designed specifically for Godot 4. It provides accurate line coverage for GDScript by instrumenting code at the AST level using [tree-sitter](https://tree-sitter.github.io/tree-sitter/), ensuring robust and reliable reporting without modifying your original project files.
+A GDExtension-based code coverage tool for Godot 4. It instruments GDScript at the AST level using [tree-sitter](https://tree-sitter.github.io/tree-sitter/) to generate `lcov.info` reports.
 
-## 🚀 Features
+## Compatibility Strategy
 
-*   **GDScript Line Coverage**: Accurate tracking of executed lines in your GDScript files.
-*   **Non-Invasive**: Instruments a temporary copy of your project, keeping your source code untouched.
-*   **LCOV Output**: Generates standard `lcov.info` files compatible with most coverage visualization tools (e.g., Coveralls, Codecov, VS Code extensions).
-*   **Editor Integration**: Adds a simple "Run Instrumented" button directly to the Godot editor toolbar.
-*   **High Performance**: Implemented as a C++ GDExtension for minimal runtime overhead.
-*   **Tree-sitter Powered**: Uses robust parsing for accurate instrumentation, avoiding fragile regex-based approaches.
+This project enforces a **"Build Old, Run New"** workflow to maintain ABI compatibility across Godot 4.x versions.
 
-## 🛠️ Prerequisites
+  * **Build:** Links against **Godot 4.3** bindings. This ensures the binary works on 4.3, 4.4, 4.5, and future 4.x releases without recompilation.
+  * **Test:** The setup script automatically downloads the latest stable Godot version (currently 4.5) for the editor environment.
 
-To build and use Nano Coverage Godot, you need:
+## Prerequisites
 
-*   **Godot 4.1+**
-*   **Python 3.x** (for build scripts)
-*   **C++ Compiler**:
-    *   **Windows**: Visual Studio (MSVC) or MinGW-w64.
-    *   **Linux**: GCC or Clang (`build-essential`).
-    *   **macOS**: Xcode Command Line Tools.
+You only need **Python**, **Git**, and a **C++ Compiler** installed manually. The setup script handles the rest (SCons, Godot Editor, and dependencies).
 
-## 📦 Setup & Build
+  * **Python 3.10+**
+  * **Git**
+  * **C++ Compiler:**
+      * **Windows:** MinGW-w64 (recommended) or MSVC.
+      * **Linux:** GCC or Clang.
+      * **macOS:** Xcode Command Line Tools.
 
-We provide automated scripts to set up your environment and build the extension.
+## Quick Start
 
-1.  **Clone the repository**:
-    ```bash
-    git clone --recursive https://github.com/IgorBayerl/nano-coverage-godot.git
-    cd nano-coverage-godot
-    ```
+```bash
+# 1. Clone
+git clone https://github.com/IgorBayerl/nano-coverage-godot.git
+cd nano-coverage-godot
 
-2.  **Run the setup script**:
-    This will initialize submodules, check for dependencies (installing SCons if needed), and verify your compiler.
-    ```bash
-    python setup.py
-    ```
+# 2. Setup (Downloads Godot 4.5, installs SCons, pins dependencies)
+python setup.py
 
-3.  **Build the extension**:
-    This compiles the C++ GDExtension and places the binaries in the Godot project folder.
-    ```bash
-    python build.py
-    ```
-    *   *Optional arguments*: `--platform [windows|linux|macos]`, `--target [template_debug|template_release]`, `--clean`.
+# 3. Build (Compiles the GDExtension)
+python build.py
 
-## 🎮 Usage
+# 4. Run Editor (Opens the included project)
+python dev.py
+```
 
-1.  Open the `godot_project` folder in the Godot Editor.
-2.  Go to **Project > Project Settings > Plugins**.
-3.  Enable **NanoCoverageGodot**.
-4.  A new button **"Run Instrumented"** will appear in the main toolbar (usually near the Play buttons).
-5.  Click **"Run Instrumented"** to start your game with coverage tracking enabled.
-6.  Interact with your game/run tests.
-7.  Exit the game.
-8.  An `lcov.info` file will be generated in the project root (or specified output directory).
+## Developer Scripts
 
-## 🏗️ Architecture
+### `setup.py`
 
-The system consists of three main components:
+Initializes the environment.
 
-1.  **Editor Plugin (C++)**: Adds the UI integration and manages the temporary project build process.
-2.  **Instrumentation Layer**: Uses `tree-sitter` to parse GDScript files and inject `NanoCoverage.hit()` calls at executable lines.
-3.  **Runtime Collector**: A high-performance singleton that records hits in memory and flushes them to an LCOV file upon application exit.
+  * Updates and pins git submodules (forces `godot-cpp` to `4.3-stable`).
+  * Installs `scons` via pip if missing.
+  * Downloads the Godot Editor binary for local testing.
 
-## 📄 License
+### `build.py`
 
-MIT License
+Wrapper around SCons.
+
+  * **Windows:** Auto-detects MinGW if MSVC is missing.
+  * **Arguments:**
+      * `--target`: `template_debug` (default) or `template_release`.
+      * `--clean`: Cleans build artifacts.
+      * `--platform`: Forces specific platform (usually auto-detected).
+
+### `dev.py`
+
+Launcher for the test project.
+
+  * **Default:** Opens the project in the Editor.
+  * `--game`: Runs the project directly (no editor).
+  * `--verbose`: Enables stdout logging.
+  * `--top`: Keeps the window always on top.
+
+## Usage
+
+1.  Enable **NanoCoverageGodot** in **Project \> Project Settings \> Plugins**.
+2.  Click **"Run Instrumented"** in the main toolbar.
+3.  Run your tests or gameplay loop.
+4.  Exit the application.
+5.  Coverage data is written to `coverage.lcov` in the project root.
+
+## Architecture
+
+1.  **AST Instrumentation:**
+      * Uses `tree-sitter-gdscript` to parse source code.
+      * Identifies executable statements (skips comments, whitespace, class decls).
+      * Injects `NanoCoverage.hit(file_hash, line)` calls into a temporary script copy.
+2.  **GDExtension Backend:**
+      * **Collector:** A C++ singleton that aggregates hit counts in memory for minimal overhead.
+      * **EditorPlugin:** Manages the UI and the temporary instrumented run configuration.
+3.  **Output:**
+      * Standard LCOV format for integration with Coveralls, Codecov, or local viewers.
