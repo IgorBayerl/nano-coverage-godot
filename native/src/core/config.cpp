@@ -4,19 +4,29 @@
 #include <godot_cpp/variant/utility_functions.hpp>
 
 #include "nano_coverage/editor_plugin.hpp"
+#include "nano_coverage/test_runner.hpp"
 
 using namespace godot;
 
 void initialize_nano_coverage_godot_module(ModuleInitializationLevel p_level) {
+    // 1. SCENE LEVEL: Register Runtime classes (TestRunner, Singletons, etc.)
+    // These are available in both the Editor and the running Game.
+    if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
+        ClassDB::register_class<NanoCoverageTestRunner>();
+        // Future: ClassDB::register_class<NanoCoverageRuntime>();
+    }
+
+    // 2. EDITOR LEVEL: Register Editor-only classes (Plugins, UI, etc.)
+    // These are only available when the Editor is open.
     if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
         ClassDB::register_class<NanoCoverageEditorPlugin>();
-        UtilityFunctions::print("NanoCoverageGodot: Registered NanoCoverageEditorPlugin class.");
+        UtilityFunctions::print("NanoCoverageGodot: Editor classes registered.");
     }
 }
 
 void uninitialize_nano_coverage_godot_module(ModuleInitializationLevel p_level) {
-    if (p_level != MODULE_INITIALIZATION_LEVEL_EDITOR) {
-        return;
+    if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
+        // Cleanup runtime singletons here if needed
     }
 }
 
@@ -31,7 +41,8 @@ GDExtensionBool GDE_EXPORT nano_coverage_godot_library_init(GDExtensionInterface
 
     init_obj.register_initializer(initialize_nano_coverage_godot_module);
     init_obj.register_terminator(uninitialize_nano_coverage_godot_module);
-    init_obj.set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_EDITOR);
+    
+    init_obj.set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_SCENE);
 
     return init_obj.init();
 }

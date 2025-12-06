@@ -75,3 +75,4 @@ output_report.txt
 
 
 instrumented
+native/thirdparty/googletest

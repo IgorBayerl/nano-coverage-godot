@@ -9,6 +9,8 @@ import zipfile
 # --- CONFIGURATION ---
 TESTING_GODOT_VERSION = "4.5-stable" 
 TARGET_GODOT_CPP_TAG = "godot-4.3-stable" 
+# Official Google Test Release
+GTEST_URL = "https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip"
 
 # --- COLORS ---
 os.system('') 
@@ -54,38 +56,24 @@ def run_silent(command, cwd=None):
 
 def check_tools():
     print_step("Checking Development Tools...")
-
-    # 1. Check SCons (Always via Python Module)
-    # We don't check PATH. We check if python can import it.
     try:
         import SCons
         print_substep("SCons library found", CHECK)
     except ImportError:
         print_substep("SCons library missing, installing via pip...", ARROW)
         ok, err = run_silent([sys.executable, "-m", "pip", "install", "scons"])
-        if ok:
-            print_substep("SCons installed successfully", CHECK)
-        else:
-            print_substep(f"Failed to install SCons: {err}", CROSS)
-            sys.exit(1)
+        if ok: print_substep("SCons installed successfully", CHECK)
+        else: print_substep(f"Failed to install SCons: {err}", CROSS); sys.exit(1)
 
-    # 2. Check Compiler
     compiler_found = False
     if os.name == 'nt':
-        if shutil.which("g++"):
-            print_substep("MinGW (g++) compiler found", CHECK)
-            compiler_found = True
-        elif shutil.which("cl"):
-            print_substep("MSVC (cl.exe) compiler found", CHECK)
-            compiler_found = True
+        if shutil.which("g++"): print_substep("MinGW (g++) compiler found", CHECK); compiler_found = True
+        elif shutil.which("cl"): print_substep("MSVC (cl.exe) compiler found", CHECK); compiler_found = True
     else:
-        if shutil.which("g++") or shutil.which("clang++"):
-            print_substep("Unix C++ compiler found", CHECK)
-            compiler_found = True
+        if shutil.which("g++") or shutil.which("clang++"): print_substep("Unix C++ compiler found", CHECK); compiler_found = True
 
     if not compiler_found:
         print(f"\n{RED}!! CRITICAL: No C++ compiler found !!{RESET}")
-        print("    If you want a lightweight setup, install MinGW.")
         sys.exit(1)
 
 def init_submodules():
@@ -102,6 +90,43 @@ def enforce_godot_cpp_version():
     ok, err = run_silent(["git", "checkout", TARGET_GODOT_CPP_TAG], cwd=cpp_path)
     if ok: print_substep(f"Locked godot-cpp to {TARGET_GODOT_CPP_TAG}", CHECK)
     else: print_substep(f"Failed to checkout tag: {err}", CROSS); sys.exit(1)
+
+def setup_gtest():
+    print_step("Setting up Google Test...")
+    
+    # Path: native/thirdparty/googletest
+    thirdparty_dir = os.path.join("native", "thirdparty")
+    gtest_root = os.path.join(thirdparty_dir, "googletest")
+    
+    # Check for the key source file to ensure it installed correctly
+    if os.path.exists(os.path.join(gtest_root, "googletest", "src", "gtest-all.cc")):
+        print_substep("Google Test found", CHECK)
+        return
+
+    # Clean old if partial
+    if os.path.exists(gtest_root): shutil.rmtree(gtest_root)
+    os.makedirs(thirdparty_dir, exist_ok=True)
+
+    print_substep("Downloading Google Test v1.14.0...", ARROW)
+    zip_path = "gtest.zip"
+    try:
+        urllib.request.urlretrieve(GTEST_URL, zip_path)
+        
+        print_substep("Extracting...", ARROW)
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(thirdparty_dir)
+            
+        # Rename the extracted folder "googletest-1.14.0" to "googletest"
+        extracted_name = os.path.join(thirdparty_dir, "googletest-1.14.0")
+        if os.path.exists(extracted_name):
+            os.rename(extracted_name, gtest_root)
+            
+        print_substep("Google Test installed", CHECK)
+    except Exception as e:
+        print_substep(f"Installation failed: {e}", CROSS)
+        sys.exit(1)
+    finally:
+        if os.path.exists(zip_path): os.remove(zip_path)
 
 def setup_godot_editor():
     print_step("Checking Godot Editor...")
@@ -121,9 +146,7 @@ def setup_godot_editor():
     try:
         urllib.request.urlretrieve(GODOT_URL, zip_path, show_progress)
         print("") 
-        print_substep("Extracting...", ARROW)
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(".")
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref: zip_ref.extractall(".")
         print_substep("Extraction complete", CHECK)
     except Exception as e:
         print_substep(f"Download failed: {e}", CROSS); sys.exit(1)
@@ -135,26 +158,22 @@ def main():
     init_submodules()
     enforce_godot_cpp_version()
     check_tools()
+    setup_gtest()
     setup_godot_editor()
     
     print(f"\n{GREEN}=== Setup Complete ==={RESET}")
-    print(f" {CHECK} Lib Target:   Godot 4.3 (Compatible 4.3 - 4.6+)")
+    print(f" {CHECK} Lib Target:   Godot 4.3")
+    print(f" {CHECK} Test Suite:   Google Test v1.14.0")
     print(f" {CHECK} Test Editor:  Godot {TESTING_GODOT_VERSION}")
+    
+    # Construct command help
+    base_cmd = "python -m SCons"
+    flags = " platform=windows" if os.name == 'nt' else ""
+    if os.name == 'nt' and shutil.which("g++") and not shutil.which("cl"): flags += " use_mingw=yes"
     
     print("\n---------------------------------------------------------")
     print(f"{YELLOW}HOW TO BUILD:{RESET}")
-    print("Run the following command to build your extension:")
-    
-    # Construct the strictly robust command
-    base_cmd = "python -m SCons"
-    flags = ""
-    
-    if os.name == 'nt' and shutil.which("g++") and not shutil.which("cl"):
-        flags = " platform=windows use_mingw=yes"
-    elif os.name == 'nt':
-         flags = " platform=windows"
-
-    print(f"\n    {CYAN}{base_cmd}{flags}{RESET}")
+    print(f"    {CYAN}{base_cmd}{flags}{RESET}")
     print("---------------------------------------------------------")
 
 if __name__ == "__main__":
