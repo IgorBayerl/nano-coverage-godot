@@ -13,8 +13,12 @@ config_version=5
 config/name="Nano Coverage Godot"
 run/main_scene="uid://c61swf34e68ur"
 config/features=PackedStringArray("4.5", "Forward Plus")
-config/icon="res://icon.svg"
+config/icon="res://logo.svg"
 
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/nano_coverage_godot/plugin.cfg")
+
+[nano_coverage]
+
+general/temp_directory="C:/www/nano-coverage-godot/instrumented"
