@@ -1,5 +1,4 @@
-#ifndef NANO_COVERAGE_EDITOR_PLUGIN_HPP
-#define NANO_COVERAGE_EDITOR_PLUGIN_HPP
+#pragma once
 
 #include <godot_cpp/classes/editor_plugin.hpp>
 #include <godot_cpp/classes/button.hpp>
@@ -27,4 +26,3 @@ public:
 
 } // namespace godot
 
-#endif // NANO_COVERAGE_EDITOR_PLUGIN_HPP

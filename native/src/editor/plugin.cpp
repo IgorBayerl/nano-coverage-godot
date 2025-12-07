@@ -1,5 +1,5 @@
-#include "nano_coverage/editor_plugin.hpp"
-#include "nano_coverage/temp_project_builder.hpp"
+#include "plugin.h"
+#include "temp_builder.h"
 
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/classes/editor_interface.hpp>

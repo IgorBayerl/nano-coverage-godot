@@ -48,7 +48,14 @@ def run_scons(args):
     
     cmd.append(f"target={args.target}")
 
-    # 5. Smart MinGW Detection (Windows Only)
+    # 5. Test Configuration
+    # The SConstruct defaults to 'yes' for template_debug, and 'no' for template_release.
+    # We only need to intervene if the user explicitly wants NO tests.
+    if args.no_tests:
+        print_substep(f"{YELLOW}Forcing tests DISABLED{RESET}")
+        cmd.append("build_tests=no")
+
+    # 6. Smart MinGW Detection (Windows Only)
     # If we are on Windows, have G++, but NO MSVC (cl.exe), force MinGW.
     if os.name == 'nt':
         has_gpp = shutil.which("g++") is not None
@@ -58,11 +65,11 @@ def run_scons(args):
             print_substep(f"{YELLOW}Auto-detected MinGW (no MSVC found). Adding use_mingw=yes{RESET}")
             cmd.append("use_mingw=yes")
 
-    # 6. Debug Symbols
+    # 7. Debug Symbols
     if args.target == "template_debug":
         cmd.append("debug_symbols=yes")
 
-    # 7. Execute
+    # 8. Execute
     print_step(f"Compiling in {os.path.basename(NATIVE_DIR)}...")
     # Print the clean command for the user to see
     display_cmd = " ".join(cmd)
@@ -82,6 +89,7 @@ def main():
     parser.add_argument("--target", choices=["template_debug", "template_release"], default="template_debug", help="Build target")
     parser.add_argument("--clean", action="store_true", help="Clean before building")
     parser.add_argument("--only-clean", action="store_true", help="Clean and exit")
+    parser.add_argument("--no-tests", action="store_true", help="Force disable unit tests (even in debug)")
     
     args = parser.parse_args()
     

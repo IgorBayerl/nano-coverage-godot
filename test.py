@@ -2,6 +2,8 @@ import os
 import subprocess
 import sys
 import glob
+import argparse
+import build # Import our local build script
 
 # --- CONFIGURATION ---
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -46,6 +48,29 @@ def find_godot_executable():
 def main():
     print(f"\n{GREEN}=== Running Nano Coverage Unit Tests ==={RESET}")
     
+    # 0. Ensure Debug Build (with Tests) Exists
+    print(f"{GREEN}[+] Verifying Build...{RESET}")
+    
+    # Create a dummy arguments object to pass to build.run_scons
+    class BuildArgs:
+        platform = "auto"
+        target = "template_debug" # Tests are auto-enabled in debug
+        clean = False
+        only_clean = False
+        no_tests = False 
+    
+    try:
+        # This reuses the logic in build.py. 
+        # Because we updated SConstruct to use env.Clone(), 
+        # this will be very fast if no files changed.
+        build.run_scons(BuildArgs())
+    except SystemExit:
+        print(f"{RED}[!] Build Failed. Aborting tests.{RESET}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"{RED}[!] Build Exception: {e}{RESET}")
+        sys.exit(1)
+    
     godot_exe = find_godot_executable()
     runner_script_path = os.path.join(GODOT_PROJECT_DIR, "addons", "run_cpp_tests.gd")
     
@@ -55,6 +80,7 @@ def main():
 extends SceneTree
 
 func _init():
+    # NanoCoverageTestRunner is registered in register_types.cpp when TESTS_ENABLED is defined
     var runner = NanoCoverageTestRunner.new()
     var result = runner.run_all_tests()
     

@@ -1,5 +1,4 @@
-#ifndef NANO_COVERAGE_TEST_RUNNER_HPP
-#define NANO_COVERAGE_TEST_RUNNER_HPP
+#pragma once
 
 #include <godot_cpp/classes/node.hpp>
 
@@ -18,4 +17,3 @@ public:
 
 } // namespace godot
 
-#endif // NANO_COVERAGE_TEST_RUNNER_HPP

@@ -76,3 +76,11 @@ output_report.txt
 
 instrumented
 native/thirdparty/googletest
+
+
+# Ignore the test-specific binary in the bin folder
+godot_project/addons/nano_coverage_godot/bin/nano_coverage_tests*
+
+# Ignore object files in the src directory (since we compile in-place effectively)
+native/src/**/*.o
+native/src/**/*.os

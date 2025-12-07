@@ -1,5 +1,4 @@
-#ifndef NANO_COVERAGE_TEMP_PROJECT_BUILDER_HPP
-#define NANO_COVERAGE_TEMP_PROJECT_BUILDER_HPP
+#pragma once
 
 #include <godot_cpp/classes/ref.hpp>
 #include <godot_cpp/variant/string.hpp>
@@ -15,4 +14,3 @@ public:
 
 } // namespace godot
 
-#endif // NANO_COVERAGE_TEMP_PROJECT_BUILDER_HPP

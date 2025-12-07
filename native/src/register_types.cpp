@@ -3,8 +3,10 @@
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
-#include "nano_coverage/editor_plugin.hpp"
-#include "nano_coverage/test_runner.hpp"
+#include "editor/plugin.h"
+#ifdef TESTS_ENABLED
+#include "tests/test_main.h"
+#endif
 
 using namespace godot;
 
@@ -12,7 +14,9 @@ void initialize_nano_coverage_godot_module(ModuleInitializationLevel p_level) {
     // 1. SCENE LEVEL: Register Runtime classes (TestRunner, Singletons, etc.)
     // These are available in both the Editor and the running Game.
     if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
+        #ifdef TESTS_ENABLED
         ClassDB::register_class<NanoCoverageTestRunner>();
+#endif
         // Future: ClassDB::register_class<NanoCoverageRuntime>();
     }
 

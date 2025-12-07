@@ -1,4 +1,4 @@
-#include "nano_coverage/test_runner.hpp"
+#include "test_main.h"
 
 // Include Google Test
 #include <gtest/gtest.h>

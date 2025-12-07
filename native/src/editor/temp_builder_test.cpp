@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "nano_coverage/temp_project_builder.hpp"
+#include "temp_builder.h"
 #include <godot_cpp/classes/project_settings.hpp>
 #include <filesystem>
 #include <string>
