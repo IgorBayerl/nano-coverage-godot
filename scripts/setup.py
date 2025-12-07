@@ -12,6 +12,8 @@ TARGET_GODOT_CPP_TAG = "godot-4.3-stable"
 # Official Google Test Release
 GTEST_URL = "https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip"
 
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # --- COLORS ---
 os.system('') 
 GREEN = '\033[92m'
@@ -78,14 +80,14 @@ def check_tools():
 
 def init_submodules():
     print_step("Initializing git submodules...")
-    ok, _ = run_silent(["git", "submodule", "sync"])
+    ok, _ = run_silent(["git", "submodule", "sync"], cwd=PROJECT_ROOT)
     if not ok: sys.exit(1)
-    ok, _ = run_silent(["git", "submodule", "update", "--init", "--recursive"])
+    ok, _ = run_silent(["git", "submodule", "update", "--init", "--recursive"], cwd=PROJECT_ROOT)
     if ok: print_substep("Submodules updated", CHECK)
 
 def enforce_godot_cpp_version():
     print_step(f"Configuring Compatibility ({TARGET_GODOT_CPP_TAG})...")
-    cpp_path = os.path.join("native", "godot-cpp")
+    cpp_path = os.path.join(PROJECT_ROOT, "native", "godot-cpp")
     run_silent(["git", "fetch", "--tags"], cwd=cpp_path)
     ok, err = run_silent(["git", "checkout", TARGET_GODOT_CPP_TAG], cwd=cpp_path)
     if ok: print_substep(f"Locked godot-cpp to {TARGET_GODOT_CPP_TAG}", CHECK)
@@ -95,7 +97,7 @@ def setup_gtest():
     print_step("Setting up Google Test...")
     
     # Path: native/thirdparty/googletest
-    thirdparty_dir = os.path.join("native", "thirdparty")
+    thirdparty_dir = os.path.join(PROJECT_ROOT, "native", "thirdparty")
     gtest_root = os.path.join(thirdparty_dir, "googletest")
     
     # Check for the key source file to ensure it installed correctly
@@ -108,7 +110,7 @@ def setup_gtest():
     os.makedirs(thirdparty_dir, exist_ok=True)
 
     print_substep("Downloading Google Test v1.14.0...", ARROW)
-    zip_path = "gtest.zip"
+    zip_path = os.path.join(PROJECT_ROOT, "gtest.zip")
     try:
         urllib.request.urlretrieve(GTEST_URL, zip_path)
         
@@ -130,12 +132,15 @@ def setup_gtest():
 
 def setup_godot_editor():
     print_step("Checking Godot Editor...")
-    if os.path.exists(GODOT_EXE_NAME) or (sys.platform == 'darwin' and os.path.exists("Godot.app")):
+    godot_exe_path = os.path.join(PROJECT_ROOT, GODOT_EXE_NAME)
+    
+    # Check for Godot in PROJECT_ROOT
+    if os.path.exists(godot_exe_path) or (sys.platform == 'darwin' and os.path.exists(os.path.join(PROJECT_ROOT, "Godot.app"))):
         print_substep(f"Found existing {GODOT_EXE_NAME}", CHECK)
         return
 
     print_substep(f"Downloading Godot {TESTING_GODOT_VERSION}...", ARROW)
-    zip_path = "godot.zip"
+    zip_path = os.path.join(PROJECT_ROOT, "godot.zip")
     def show_progress(block_num, block_size, total_size):
         downloaded = block_num * block_size
         if total_size > 0:
@@ -146,7 +151,7 @@ def setup_godot_editor():
     try:
         urllib.request.urlretrieve(GODOT_URL, zip_path, show_progress)
         print("") 
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref: zip_ref.extractall(".")
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref: zip_ref.extractall(PROJECT_ROOT)
         print_substep("Extraction complete", CHECK)
     except Exception as e:
         print_substep(f"Download failed: {e}", CROSS); sys.exit(1)

@@ -5,7 +5,7 @@ import glob
 import argparse
 
 # --- CONFIGURATION ---
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GODOT_PROJECT_DIR = os.path.join(PROJECT_ROOT, "godot_project") 
 
 # --- COLORS ---

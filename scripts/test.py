@@ -6,7 +6,7 @@ import argparse
 import build # Import our local build script
 
 # --- CONFIGURATION ---
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GODOT_PROJECT_DIR = os.path.join(PROJECT_ROOT, "godot_project")
 
 # --- COLORS ---
