@@ -30,6 +30,7 @@ __pycache__/
 
 # VS Code
 .vscode/
+!.vscode/c_cpp_properties.json
 
 # OS generated
 .DS_Store
@@ -66,7 +67,7 @@ godot.zip
 .sconsign.dblite
 
 # IDEs
-.vscode/
+
 .idea/
 *.sln
 *.vcxproj
@@ -76,6 +77,8 @@ output_report.txt
 
 instrumented
 native/thirdparty/googletest
+compile_commands.json
+native/compile_commands.json
 
 
 # Ignore the test-specific binary in the bin folder

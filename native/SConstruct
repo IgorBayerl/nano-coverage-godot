@@ -73,4 +73,8 @@ library = project_env.SharedLibrary(
     [str(s) for s in sources],
 )
 
-Default(library)
+# 4. Generate Compilation Database for VS Code / Clangd
+# This creates 'compile_commands.json' in the current directory (native/)
+comp_db = project_env.CompilationDatabase(target="compile_commands.json", source=sources)
+
+Default(library, comp_db)
