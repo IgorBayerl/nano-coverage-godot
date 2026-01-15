@@ -8,7 +8,6 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	# This function runs every frame
-	
 	# 1. Handle Movement
 	var input := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 	
@@ -22,7 +21,6 @@ func _process(delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
 	# This runs on any input event (mouse, keyboard, etc)
-	
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		# Check if the click is inside the sprite's local rect
 		if get_rect().has_point(to_local(event.position)):

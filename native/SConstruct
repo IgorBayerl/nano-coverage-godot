@@ -15,7 +15,16 @@ project_env = env.Clone()
 project_env.Append(CPPPATH=[
     "src", 
     "godot-cpp/include", 
-    "godot-cpp/gen/include"
+    "godot-cpp/gen/include",
+
+    # Tree-sitter
+    "thirdparty/tree-sitter/lib/include",
+    "thirdparty/tree-sitter/lib/src",
+
+    # Many grammars include "tree_sitter/parser.h" via their own src/tree_sitter/
+    # so include the grammar src folder too.
+    "thirdparty/tree-sitter-gdscript/src",
+
 ])
 
 # --- SOURCE GATHERING ---
@@ -30,6 +39,18 @@ for root, dirs, files in os.walk("src"):
                 test_sources.append(path)
             else:
                 sources.append(path)
+
+# --- TREE-SITTER SOURCES ---
+TS_LIB_C = "thirdparty/tree-sitter/lib/src/lib.c"
+GDSCRIPT_PARSER_C = "thirdparty/tree-sitter-gdscript/src/parser.c"
+GDSCRIPT_SCANNER_C = "thirdparty/tree-sitter-gdscript/src/scanner.c"
+
+sources.append(TS_LIB_C)
+sources.append(GDSCRIPT_PARSER_C)
+
+if os.path.exists(GDSCRIPT_SCANNER_C):
+    sources.append(GDSCRIPT_SCANNER_C)
+
 
 # --- AUTOMATIC TEST CONFIGURATION ---
 # Logic: If we are building for Debug, include tests. If Release, exclude them.
