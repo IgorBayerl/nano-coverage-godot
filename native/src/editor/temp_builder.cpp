@@ -1,84 +1,161 @@
 #include "temp_builder.h"
 
 #include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <filesystem>
 #include <godot_cpp/classes/config_file.hpp>
-#include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/classes/resource_uid.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "../instrumentation/instrumenter.h"
 
-namespace fs = std::filesystem;
-
 namespace godot {
 
-// Helper to decide if we MUST copy the file
-static bool is_copy_mandatory(const fs::path& p) {
-    std::string filename = p.filename().string();
+namespace {
 
-    // 1. Ignore Hot-Reload Artifacts (Windows)
-    if (!filename.empty() && filename[0] == '~')
-        return false;
+namespace fs = std::filesystem;
 
-    std::string ext = p.extension().string();
+// Files with these extensions must be physically copied to the temp directory.
+// Symlinking them can cause file locking (DLLs), permission errors (.cfg),
+// or prevents us from modifying them in-place (.gd).
+const std::array<std::string_view, 8> kMandatoryCopyExtensions = {".gd", ".gdextension", ".cfg", ".dll",
+                                                                  ".so", ".dylib",       ".a",   ".lib"};
 
-    // 2. Scripts and Project settings
-    if (ext == ".gd")
-        return true;
-    if (filename == "project.godot")
-        return true;
+// Cache files required for the project to run correctly without the Editor.
+const std::array<std::string_view, 2> kCriticalCacheFiles = {
+    "uid_cache.bin",      // Resolves uid:// paths
+    "extension_list.cfg"  // Tells the runtime to load our GDExtension
+};
 
-    // 3. GDExtension artifacts and Configs
-    if (ext == ".gdextension")
-        return true;
-    if (ext == ".cfg")
-        return true;
+// Constants for configuration injection
+const char* kAutoloadName = "NanoCoverage";
+const char* kAutoloadPath = "*res://addons/nano_coverage_godot/runtime.gd";
+const char* kAddonPrefix = "addons/nano_coverage_godot/";
 
-    // 4. Binaries
-    if (ext == ".dll" || ext == ".so" || ext == ".dylib" || ext == ".a" || ext == ".lib")
-        return true;
+// --- Helper Functions ---
 
-    return false;
-}
-
-static bool env_truthy(const char* name) {
+bool IsEnvTruthy(const char* name) {
     const char* v = std::getenv(name);
-    if (!v || !*v)
-        return false;
-    return std::string_view(v) != "0";
+    return v && *v && std::string_view(v) != "0";
 }
 
-static bool should_instrument_rel_path(const fs::path& relative_path) {
-    if (env_truthy("NANO_COVERAGE_INSTRUMENT_ADDONS"))
-        return true;
+bool IsHotReloadArtifact(const std::string& filename) {
+    // Windows creates temp files like "~filename.dll" during hot-reload.
+    return !filename.empty() && filename[0] == '~';
+}
 
-    // Don't instrument our own addon
-    const std::string rel = relative_path.generic_string();
-    if (rel.rfind("addons/nano_coverage_godot/", 0) == 0)
+bool ShouldInstrumentFile(const fs::path& relative_path) {
+    // Allow overriding via env var for debugging the plugin itself
+    if (IsEnvTruthy("NANO_COVERAGE_INSTRUMENT_ADDONS")) {
+        return true;
+    }
+
+    // Do not instrument the coverage tool's own code
+    std::string rel_str = relative_path.generic_string();
+    if (rel_str.find(kAddonPrefix) == 0) {
         return false;
+    }
 
     return true;
 }
 
-static void sanitize_project_config(const fs::path& dest_root) {
-    String project_file_str = String((dest_root / "project.godot").string().c_str());
+bool IsCopyMandatory(const fs::path& path) {
+    std::string filename = path.filename().string();
+
+    // Always ignore hot-reload trash
+    if (IsHotReloadArtifact(filename))
+        return false;
+
+    // Project file must be copied to be mutable
+    if (filename == "project.godot")
+        return true;
+
+    std::string ext = path.extension().string();
+    for (const auto& mandatory_ext : kMandatoryCopyExtensions) {
+        if (ext == mandatory_ext)
+            return true;
+    }
+
+    return false;
+}
+
+// Tries to create a symlink; falls back to a physical copy on failure.
+void CreateSymlinkOrCopy(const fs::path& src, const fs::path& dst) {
+    std::error_code ec;
+    fs::create_symlink(src, dst, ec);
+
+    if (ec) {
+        // Fallback: Copy
+        ec.clear();
+        fs::copy_file(src, dst, fs::copy_options::overwrite_existing, ec);
+        if (ec) {
+            UtilityFunctions::printerr("NanoCoverage: Failed to link/copy ", String(src.string().c_str()), " -> ",
+                                       String(ec.message().c_str()));
+        }
+    }
+}
+
+// Copies essential data from .godot/ to ensure assets and extensions load.
+void SyncGodotCache(const fs::path& src_root, const fs::path& dst_root) {
+    fs::path src_godot = src_root / ".godot";
+    fs::path dst_godot = dst_root / ".godot";
+
+    if (!fs::exists(src_godot))
+        return;
+
+    std::error_code ec;
+    fs::create_directories(dst_godot, ec);
+
+    // 1. Copy Critical Cache Files (uid resolution, extension loading)
+    for (const auto& filename : kCriticalCacheFiles) {
+        fs::path src_file = src_godot / filename;
+        fs::path dst_file = dst_godot / filename;
+
+        if (fs::exists(src_file)) {
+            fs::copy_file(src_file, dst_file, fs::copy_options::overwrite_existing, ec);
+        }
+    }
+
+    // 2. Sync Imported Artifacts (Textures, Sounds, etc.)
+    // We iterate recursively and use the Symlink/Copy helper.
+    fs::path src_imported = src_godot / "imported";
+    if (fs::exists(src_imported)) {
+        fs::create_directories(dst_godot / "imported", ec);
+
+        for (const auto& entry : fs::recursive_directory_iterator(src_imported)) {
+            const auto& path = entry.path();
+            auto relative = fs::relative(path, src_godot);
+            fs::path target = dst_godot / relative;
+
+            if (fs::is_directory(path)) {
+                fs::create_directories(target, ec);
+            } else {
+                CreateSymlinkOrCopy(path, target);
+            }
+        }
+    }
+}
+
+// Modifies project.godot to ensure it runs in the isolated environment.
+void SanitizeProjectConfig(const fs::path& project_root) {
+    String project_file_str = String((project_root / "project.godot").string().c_str());
 
     Ref<ConfigFile> cfg;
     cfg.instantiate();
 
-    Error err = cfg->load(project_file_str);
-    if (err != OK) {
-        UtilityFunctions::printerr("NanoCoverage: Failed to load temp project.godot for editing.");
+    if (cfg->load(project_file_str) != OK) {
+        UtilityFunctions::printerr("NanoCoverage: Failed to load temp project.godot");
         return;
     }
 
-    // 1. Fix Main Scene (Replace UID with absolute res:// path)
-    // This allows the temp project to run without a full resource scan/cache.
+    // 1. Fix Main Scene (UID -> Absolute Path)
+    // Even though we copy uid_cache.bin, resolving this explicitly makes startup more robust
+    // if the cache is slightly out of date.
     String main_scene = ProjectSettings::get_singleton()->get_setting("application/run/main_scene");
 
     if (main_scene.begins_with("uid://")) {
@@ -92,19 +169,20 @@ static void sanitize_project_config(const fs::path& dest_root) {
     }
     cfg->set_value("application", "run/main_scene", main_scene);
 
-    // 2. Configure Autoload
-    // Key "NanoCoverage" matches the injected "NanoCoverage.hit()" calls.
-    cfg->set_value("autoload", "NanoCoverage", "*res://addons/nano_coverage_godot/runtime.gd");
+    // 2. Inject Autoload
+    // This allows the instrumented code (NanoCoverage.hit) to find the runtime singleton.
+    cfg->set_value("autoload", kAutoloadName, kAutoloadPath);
 
     cfg->save(project_file_str);
-    UtilityFunctions::print("NanoCoverage: Sanitized project.godot (Main Scene: ", main_scene, ")");
 }
 
-String TempProjectBuilder::create_temp_project() {
-    String res_path = ProjectSettings::get_singleton()->globalize_path("res://");
-    fs::path source_path(res_path.utf8().get_data());
+}  // namespace
 
-    // Determine Destination
+String TempProjectBuilder::create_temp_project() {
+    // 1. Resolve Paths
+    String res_path_gd = ProjectSettings::get_singleton()->globalize_path("res://");
+    fs::path source_root(res_path_gd.utf8().get_data());
+
     fs::path temp_root;
     String custom_path_setting = ProjectSettings::get_singleton()->get_setting("nano_coverage/general/temp_directory");
 
@@ -115,111 +193,74 @@ String TempProjectBuilder::create_temp_project() {
         temp_root = fs::temp_directory_path() / "nano_coverage_godot_runs";
     }
 
-    std::string project_hash = std::to_string(std::hash<std::string>{}(source_path.string()));
-    fs::path dest_path = temp_root / project_hash;
+    // Generate hash based on source path to separate different projects
+    std::string project_hash = std::to_string(std::hash<std::string>{}(source_root.string()));
+    fs::path dest_root = temp_root / project_hash;
 
+    // 2. Clean Destination
     std::error_code ec;
-
-    // Clean Previous Run
-    if (fs::exists(dest_path)) {
-        fs::remove_all(dest_path, ec);
+    if (fs::exists(dest_root)) {
+        fs::remove_all(dest_root, ec);
     }
-    fs::create_directories(dest_path, ec);
+    fs::create_directories(dest_root, ec);
 
-    // Main Copy Loop
-    for (const auto& entry : fs::recursive_directory_iterator(source_path)) {
+    UtilityFunctions::print("NanoCoverage: Building temp project at ", String(dest_root.string().c_str()));
+
+    // 3. Recursive Copy / Instrument
+    for (const auto& entry : fs::recursive_directory_iterator(source_root)) {
         const auto& path = entry.path();
-        auto relative_path = fs::relative(path, source_path);
+        auto relative_path = fs::relative(path, source_root);
         std::string path_str = relative_path.generic_string();
 
-        if (path_str.rfind(".godot", 0) == 0 || path_str.rfind(".git", 0) == 0)
-            continue;
-        if (!path.filename().string().empty() && path.filename().string()[0] == '~')
+        // Skip internal .godot (handled separately) and .git
+        if (path_str.find(".godot") == 0 || path_str.find(".git") == 0)
             continue;
 
-        fs::path target = dest_path / relative_path;
+        // Skip hot-reload artifacts
+        if (IsHotReloadArtifact(path.filename().string()))
+            continue;
+
+        fs::path target = dest_root / relative_path;
 
         if (fs::is_directory(path)) {
             fs::create_directories(target, ec);
             continue;
         }
 
-        if (is_copy_mandatory(path)) {
+        if (IsCopyMandatory(path)) {
+            // Physical Copy
             fs::copy_file(path, target, fs::copy_options::overwrite_existing, ec);
 
-            // Instrument .gd
-            if (path.extension() == ".gd" && should_instrument_rel_path(relative_path)) {
-                const std::string rel = relative_path.generic_string();
-                const std::string res_gd = "res://" + rel;
+            // Instrumentation Logic
+            if (path.extension() == ".gd" && ShouldInstrumentFile(relative_path)) {
+                std::string res_gd = "res://" + relative_path.generic_string();
+                std::replace(res_gd.begin(), res_gd.end(), '\\', '/');  // Normalize slashes for Godot
+
                 int insertions = 0;
                 Instrumenter::instrument_file_in_place(target, res_gd, &insertions);
             }
         } else {
-            // Symlink with fallback
-            fs::create_symlink(path, target, ec);
-            if (ec) {
-                ec.clear();
-                fs::copy_file(path, target, fs::copy_options::overwrite_existing, ec);
-            }
+            // Symlink (Fast)
+            CreateSymlinkOrCopy(path, target);
         }
     }
 
-    // Handle .godot folder
-    fs::path src_godot_dir = source_path / ".godot";
-    fs::path dest_godot_dir = dest_path / ".godot";
+    // 4. Sync Cache & Imports (Crucial step for runtime execution)
+    SyncGodotCache(source_root, dest_root);
 
-    if (fs::exists(src_godot_dir)) {
-        fs::create_directories(dest_godot_dir, ec);
-
-        // 1. Copy Critical Cache/Config Files
-        // - uid_cache.bin: Needed for UIDs (though we sanitize main_scene, other resources might need it)
-        // - extension_list.cfg: TELLS THE ENGINE TO LOAD THE GDEXTENSIONS!
-        std::vector<std::string> critical_files = {"uid_cache.bin", "extension_list.cfg"};
-
-        for (const auto& filename : critical_files) {
-            fs::path src_file = src_godot_dir / filename;
-            fs::path dest_file = dest_godot_dir / filename;
-
-            if (fs::exists(src_file)) {
-                fs::copy_file(src_file, dest_file, fs::copy_options::overwrite_existing, ec);
-            }
-        }
-
-        // 2. Sync Imported Artifacts
-        fs::path src_imported = src_godot_dir / "imported";
-        if (fs::exists(src_imported)) {
-            fs::create_directories(dest_godot_dir / "imported", ec);
-            for (const auto& entry : fs::recursive_directory_iterator(src_imported)) {
-                const auto& path = entry.path();
-                auto relative = fs::relative(path, src_godot_dir);
-                fs::path target = dest_godot_dir / relative;
-
-                if (fs::is_directory(path)) {
-                    fs::create_directories(target, ec);
-                } else {
-                    fs::create_symlink(path, target, ec);
-                    if (ec) {
-                        ec.clear();
-                        fs::copy_file(path, target, fs::copy_options::overwrite_existing, ec);
-                    }
-                }
-            }
-        }
-    }
-
-    // Verify Project Exists
-    if (!fs::exists(dest_path / "project.godot")) {
+    // 5. Finalize Configuration
+    if (fs::exists(dest_root / "project.godot")) {
+        SanitizeProjectConfig(dest_root);
+    } else {
         UtilityFunctions::printerr("NanoCoverage: CRITICAL - project.godot not found in temp directory!");
         return "";
     }
 
-    // Sanitize Project Config (Fix UIDs, Add Autoload)
-    sanitize_project_config(dest_path);
+    // Return normalized string path
+    std::string final_path = dest_root.string();
+    std::replace(final_path.begin(), final_path.end(), '\\', '/');
 
-    std::string final_path_str = dest_path.string();
-    std::replace(final_path_str.begin(), final_path_str.end(), '\\', '/');
-
-    return String(final_path_str.c_str());
+    return String(final_path.c_str());
 }
 
 }  // namespace godot
