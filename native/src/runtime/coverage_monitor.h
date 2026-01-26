@@ -1,43 +1,35 @@
 #pragma once
-
-#include <cstdint>
-
 #include <godot_cpp/classes/object.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
+#include <godot_cpp/variant/string.hpp>
 
-namespace godot
-{
+namespace godot {
 
-    /// GDScript-facing singleton:
-    ///   NanoCoverage.hit(file_hash, line)
-    ///   NanoCoverage.get_line_hits(file_hash)
-    ///   NanoCoverage.get_snapshot()
-    ///   NanoCoverage.reset()
-    class NanoCoverage : public Object
-    {
-        GDCLASS(NanoCoverage, Object)
+class NanoCoverage : public Object {
+    GDCLASS(NanoCoverage, Object)
 
-    protected:
-        static void _bind_methods();
+   protected:
+    static void _bind_methods();
 
-    public:
-        NanoCoverage() = default;
-        ~NanoCoverage() override = default;
+   public:
+    NanoCoverage() = default;
+    ~NanoCoverage() override = default;
 
-        /// Record one hit for (file_hash, line).
-        void hit(int64_t file_hash, int32_t line);
+    // CHANGED: Accepts String path (matches Instrumenter output)
+    void hit(String file_path, int32_t line);
 
-        /// Clears all collected data.
-        void reset();
+    void reset();
 
-        /// Returns { line:int -> hits:int } for a single file hash.
-        Dictionary get_line_hits(int64_t file_hash) const;
+    // Trigger to write data to disk
+    void save_report(String path);
 
-        /// Returns { file_hash:int -> { line:int -> hits:int } }
-        Dictionary get_snapshot() const;
+    // Returns { "res://file.gd" -> { line: hits } }
+    Dictionary get_snapshot() const;
 
-        /// Total number of hit() calls recorded across all files/lines.
-        int64_t get_total_hit_count() const;
-    };
+    // Helper mostly for debug
+    Dictionary get_line_hits(String file_path) const;
 
-} // namespace godot
+    int64_t get_total_hit_count() const;
+};
+
+}  // namespace godot
