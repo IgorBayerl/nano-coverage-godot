@@ -12,4 +12,6 @@ func hit(file: String, line: int) -> void:
 func _notification(what: int) -> void:
 	# Handle application exit to flush data to disk
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_EXIT_TREE:
-		_agent.save_report("res://coverage.lcov")
+		if _agent:
+			var path = ProjectSettings.get_setting("nano_coverage/output_path", "res://coverage.lcov")
+			_agent.save_report(path)

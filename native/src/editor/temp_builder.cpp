@@ -142,8 +142,8 @@ void SyncGodotCache(const fs::path& src_root, const fs::path& dst_root) {
 }
 
 // Modifies project.godot to ensure it runs in the isolated environment.
-void SanitizeProjectConfig(const fs::path& project_root) {
-    String project_file_str = String((project_root / "project.godot").string().c_str());
+void SanitizeProjectConfig(const fs::path& temp_project_root, const fs::path& original_project_root) {
+    String project_file_str = String((temp_project_root / "project.godot").string().c_str());
 
     Ref<ConfigFile> cfg;
     cfg.instantiate();
@@ -172,6 +172,13 @@ void SanitizeProjectConfig(const fs::path& project_root) {
     // 2. Inject Autoload
     // This allows the instrumented code (NanoCoverage.hit) to find the runtime singleton.
     cfg->set_value("autoload", kAutoloadName, kAutoloadPath);
+
+    // 3. Inject Output Path (Absolute path to original project root)
+    fs::path report_fs_path = original_project_root / "coverage.lcov";
+    std::string report_str = report_fs_path.string();
+    std::replace(report_str.begin(), report_str.end(), '\\', '/');  // Normalize for Godot
+
+    cfg->set_value("nano_coverage", "output_path", String(report_str.c_str()));
 
     cfg->save(project_file_str);
 }
@@ -250,7 +257,7 @@ String TempProjectBuilder::create_temp_project() {
 
     // 5. Finalize Configuration
     if (fs::exists(dest_root / "project.godot")) {
-        SanitizeProjectConfig(dest_root);
+        SanitizeProjectConfig(dest_root, source_root);
     } else {
         UtilityFunctions::printerr("NanoCoverage: CRITICAL - project.godot not found in temp directory!");
         return "";
