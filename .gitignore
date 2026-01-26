@@ -87,3 +87,7 @@ godot_project/addons/nano_coverage_godot/bin/nano_coverage_tests*
 # Ignore object files in the src directory (since we compile in-place effectively)
 native/src/**/*.o
 native/src/**/*.os
+
+godot_project/coverage-report/*
+godot_project/nanovision.exe
+godot_project/coverage.lcov
