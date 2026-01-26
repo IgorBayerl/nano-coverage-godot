@@ -1,20 +1,20 @@
 #pragma once
 
-#include <godot_cpp/classes/editor_plugin.hpp>
 #include <godot_cpp/classes/button.hpp>
+#include <godot_cpp/classes/editor_plugin.hpp>
 
 namespace godot {
 
 class NanoCoverageEditorPlugin : public EditorPlugin {
     GDCLASS(NanoCoverageEditorPlugin, EditorPlugin)
 
-private:
-    Button *run_instrumented_button = nullptr;
+   private:
+    Button* run_instrumented_button = nullptr;
 
-protected:
+   protected:
     static void _bind_methods();
 
-public:
+   public:
     NanoCoverageEditorPlugin();
     ~NanoCoverageEditorPlugin();
 
@@ -24,5 +24,4 @@ public:
     void _on_run_instrumented_pressed();
 };
 
-} // namespace godot
-
+}  // namespace godot
