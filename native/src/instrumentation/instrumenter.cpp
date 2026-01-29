@@ -6,7 +6,6 @@
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 #include <vector>
 
 #include "rewriter.h"
@@ -18,47 +17,41 @@ const TSLanguage* tree_sitter_gdscript(void);
 
 namespace godot {
 
-/// Optional diagnostics to understand parser/grammar differences in dev setups.
+// ... [Existing helper functions: is_debug_enabled, read_all_bytes, write_all_bytes, find_line_start, etc.] ...
+// ... [Retain all helpers from previous version up to escape_gd_string] ...
+
 static bool is_debug_enabled() {
     const char* v = std::getenv("NANO_COVERAGE_DEBUG");
     return v && *v && std::string_view(v) != "0";
 }
 
-/// File I/O is kept centralized so the AST/injection logic stays easy to follow.
 static bool read_all_bytes(const std::filesystem::path& p, std::string& out) {
     std::ifstream f(p, std::ios::binary);
-    if (!f.is_open()) {
+    if (!f.is_open())
         return false;
-    }
-
     f.seekg(0, std::ios::end);
     const size_t sz = (size_t)f.tellg();
     f.seekg(0, std::ios::beg);
-
     out.resize(sz);
-    if (sz > 0) {
+    if (sz > 0)
         f.read(out.data(), (std::streamsize)sz);
-    }
     return true;
 }
 
 static bool write_all_bytes(const std::filesystem::path& p, const std::string& data) {
     std::ofstream f(p, std::ios::binary | std::ios::trunc);
-    if (!f.is_open()) {
+    if (!f.is_open())
         return false;
-    }
     f.write(data.data(), (std::streamsize)data.size());
     return true;
 }
 
 static size_t find_line_start(const std::string& src, size_t byte_pos) {
-    if (byte_pos > src.size()) {
+    if (byte_pos > src.size())
         byte_pos = src.size();
-    }
     while (byte_pos > 0) {
-        if (src[byte_pos - 1] == '\n') {
+        if (src[byte_pos - 1] == '\n')
             break;
-        }
         byte_pos--;
     }
     return byte_pos;
@@ -66,9 +59,8 @@ static size_t find_line_start(const std::string& src, size_t byte_pos) {
 
 static size_t find_line_end(const std::string& src, size_t line_start) {
     size_t i = line_start;
-    while (i < src.size() && src[i] != '\n') {
+    while (i < src.size() && src[i] != '\n')
         i++;
-    }
     return i;
 }
 
@@ -85,7 +77,6 @@ static std::string get_line_indent(const std::string& src, size_t line_start) {
     return src.substr(line_start, i - line_start);
 }
 
-/// Avoid duplicate insertions if the instrumenter runs multiple times on the same file.
 static bool is_line_already_instrumented(const std::string& src, size_t line_start) {
     const size_t line_end = find_line_end(src, line_start);
     const std::string_view line(src.data() + line_start, line_end - line_start);
@@ -94,13 +85,9 @@ static bool is_line_already_instrumented(const std::string& src, size_t line_sta
 
 static bool is_comment_node(TSNode n) {
     const char* t = ts_node_type(n);
-    if (!t) {
-        return false;
-    }
-    return std::string_view(t).find("comment") != std::string_view::npos;
+    return t && std::string_view(t).find("comment") != std::string_view::npos;
 }
 
-/// Matching is permissive to tolerate minor tree-sitter-gdscript grammar changes.
 static bool is_function_def_node_type(std::string_view t) {
     return t.find("function") != std::string_view::npos || t.find("method") != std::string_view::npos ||
            t.find("func") != std::string_view::npos;
@@ -113,108 +100,63 @@ static bool is_block_like_node_type(std::string_view t) {
 
 static bool has_function_ancestor(TSNode n) {
     for (TSNode cur = ts_node_parent(n); !ts_node_is_null(cur); cur = ts_node_parent(cur)) {
-        if (is_function_def_node_type(ts_node_type(cur))) {
+        if (is_function_def_node_type(ts_node_type(cur)))
             return true;
-        }
     }
     return false;
-}
-
-static void dump_node_types(TSNode root, const std::string& res_path) {
-    std::unordered_set<std::string> types;
-    std::vector<TSNode> stack;
-    stack.push_back(root);
-
-    while (!stack.empty()) {
-        const TSNode n = stack.back();
-        stack.pop_back();
-
-        if (const char* t = ts_node_type(n)) {
-            types.insert(std::string(t));
-        }
-
-        const uint32_t c = ts_node_child_count(n);
-        for (uint32_t i = 0; i < c; i++) {
-            const TSNode ch = ts_node_child(n, i);
-            if (!ts_node_is_null(ch)) {
-                stack.push_back(ch);
-            }
-        }
-    }
-
-    UtilityFunctions::print("NanoCoverage: AST node types for ", String(res_path.c_str()), " (", (int)types.size(),
-                            " types; first ~60 shown)");
-
-    int shown = 0;
-    for (const auto& s : types) {
-        UtilityFunctions::print("  - ", String(s.c_str()));
-        if (++shown >= 60) {
-            UtilityFunctions::print("  ... (truncated)");
-            break;
-        }
-    }
 }
 
 static std::string escape_gd_string(std::string_view s) {
     std::string out;
     out.reserve(s.size() + 8);
-
     for (char c : s) {
-        switch (c) {
-            case '\\':
-                out += "\\\\";
-                break;
-            case '"':
-                out += "\\\"";
-                break;
-            case '\n':
-                out += "\\n";
-                break;
-            case '\r':
-                out += "\\r";
-                break;
-            case '\t':
-                out += "\\t";
-                break;
-            default:
-                out.push_back(c);
-                break;
-        }
+        if (c == '\\')
+            out += "\\\\";
+        else if (c == '"')
+            out += "\\\"";
+        else if (c == '\n')
+            out += "\\n";
+        else if (c == '\r')
+            out += "\\r";
+        else if (c == '\t')
+            out += "\\t";
+        else
+            out.push_back(c);
     }
     return out;
 }
 
-/// Builds the injected line.
-/// Assumes the project guarantees the global `NanoCoverage` is available (autoload).
-/// If memory becomes a concern in very large projects, consider compacting file identifiers at runtime.
 static std::string make_injected_line(const std::string& indent, const std::string& file_lit, uint32_t line_1_based) {
     return indent + "NanoCoverage.hit(\"" + file_lit + "\", " + std::to_string(line_1_based) + ")\n";
 }
 
+// Updated to fill 'lines_found'
 static void collect_insertions(TSNode node, const std::string& src, const std::string& file_lit,
-                               std::vector<TextInsertion>& out) {
+                               std::vector<TextInsertion>& out_insertions, std::vector<uint32_t>& out_lines) {
     const std::string_view type = ts_node_type(node);
-
     if (is_block_like_node_type(type) && has_function_ancestor(node)) {
         const uint32_t n = ts_node_named_child_count(node);
         for (uint32_t i = 0; i < n; i++) {
             const TSNode child = ts_node_named_child(node, i);
-            if (ts_node_is_null(child) || is_comment_node(child)) {
+            if (ts_node_is_null(child) || is_comment_node(child))
                 continue;
-            }
 
             const size_t stmt_start = (size_t)ts_node_start_byte(child);
             const size_t line_start = find_line_start(src, stmt_start);
 
-            if (is_line_already_instrumented(src, line_start)) {
+            if (is_line_already_instrumented(src, line_start))
                 continue;
-            }
 
             const TSPoint pt = ts_node_start_point(child);
             const uint32_t line_1_based = pt.row + 1;
 
             const std::string indent = get_line_indent(src, line_start);
-            out.push_back(TextInsertion{line_start, make_injected_line(indent, file_lit, line_1_based)});
+
+            // Record the coverable line
+            out_lines.push_back(line_1_based);
+
+            // Record the injection
+            out_insertions.push_back(TextInsertion{line_start, make_injected_line(indent, file_lit, line_1_based)});
         }
     }
 
@@ -222,16 +164,16 @@ static void collect_insertions(TSNode node, const std::string& src, const std::s
     for (uint32_t i = 0; i < child_count; i++) {
         const TSNode c = ts_node_child(node, i);
         if (!ts_node_is_null(c)) {
-            collect_insertions(c, src, file_lit, out);
+            collect_insertions(c, src, file_lit, out_insertions, out_lines);
         }
     }
 }
 
 bool Instrumenter::instrument_file_in_place(const std::filesystem::path& abs_path, const std::string& res_path,
-                                            int* out_insertions) {
-    if (out_insertions) {
+                                            std::vector<uint32_t>& out_lines, int* out_insertions) {
+    if (out_insertions)
         *out_insertions = 0;
-    }
+    out_lines.clear();
 
     std::string src;
     if (!read_all_bytes(abs_path, src)) {
@@ -240,9 +182,8 @@ bool Instrumenter::instrument_file_in_place(const std::filesystem::path& abs_pat
     }
 
     TSParser* parser = ts_parser_new();
-    if (!parser) {
+    if (!parser)
         return false;
-    }
 
     if (!ts_parser_set_language(parser, tree_sitter_gdscript())) {
         UtilityFunctions::printerr("NanoCoverage: tree-sitter-gdscript language init failed");
@@ -262,18 +203,14 @@ bool Instrumenter::instrument_file_in_place(const std::filesystem::path& abs_pat
     insertions.reserve(64);
 
     const std::string file_lit = escape_gd_string(res_path);
-    collect_insertions(root, src, file_lit, insertions);
 
-    if (out_insertions) {
+    // Pass the vector to collect lines
+    collect_insertions(root, src, file_lit, insertions, out_lines);
+
+    if (out_insertions)
         *out_insertions = (int)insertions.size();
-    }
 
     if (insertions.empty()) {
-        if (is_debug_enabled()) {
-            UtilityFunctions::print("NanoCoverage: No insertions for ", String(res_path.c_str()),
-                                    " (likely node-type mismatch; dumping node types)");
-            dump_node_types(root, res_path);
-        }
         ts_tree_delete(tree);
         ts_parser_delete(parser);
         return true;
