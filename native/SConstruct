@@ -2,13 +2,13 @@
 import os
 import sys
 
+# Pylance Fix: Import SCons globals explicity for Intellisense (SCons injects them at runtime anyway)
+from SCons.Script import * # type: ignore
+
 # 1. Load Godot-CPP configuration
-# This sets up the base 'env' for compiling the bindings.
 env = SConscript("godot-cpp/SConstruct")
 
 # 2. Clone the environment
-# CRITICAL: We clone 'env' so that any flags we add (like TESTS_ENABLED) 
-# only affect OUR code, not the godot-cpp library. This prevents massive rebuilds.
 project_env = env.Clone()
 
 # --- INCLUDE PATHS ---
@@ -16,15 +16,9 @@ project_env.Append(CPPPATH=[
     "src", 
     "godot-cpp/include", 
     "godot-cpp/gen/include",
-
-    # Tree-sitter
     "thirdparty/tree-sitter/lib/include",
     "thirdparty/tree-sitter/lib/src",
-
-    # Many grammars include "tree_sitter/parser.h" via their own src/tree_sitter/
-    # so include the grammar src folder too.
     "thirdparty/tree-sitter-gdscript/src",
-
 ])
 
 # --- SOURCE GATHERING ---
@@ -53,10 +47,7 @@ if os.path.exists(GDSCRIPT_SCANNER_C):
 
 
 # --- AUTOMATIC TEST CONFIGURATION ---
-# Logic: If we are building for Debug, include tests. If Release, exclude them.
-target_mode = project_env["target"] # 'template_debug' or 'template_release'
-
-# You can still override this manually with scons build_tests=no if you really want
+target_mode = project_env["target"]
 arg_build_tests = ARGUMENTS.get('build_tests', 'auto')
 
 if arg_build_tests == "yes" or (arg_build_tests == "auto" and target_mode == "template_debug"):
@@ -88,14 +79,12 @@ shlib_suffix = project_env.subst('$SHLIBSUFFIX')
 if not target_name.endswith(shlib_suffix):
     target_name += shlib_suffix
 
-# 3. Build Shared Library using the CLONED environment
+# 3. Build Shared Library
 library = project_env.SharedLibrary(
     output_dir + target_name,
     [str(s) for s in sources],
 )
 
-# 4. Generate Compilation Database for VS Code / Clangd
-# This creates 'compile_commands.json' in the current directory (native/)
 comp_db = project_env.CompilationDatabase(target="compile_commands.json", source=sources)
 
 Default(library, comp_db)

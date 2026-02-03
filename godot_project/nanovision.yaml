@@ -1,0 +1,20 @@
+# nanovision.yaml Configuration
+reports:
+  - "coverage.lcov"
+
+source_dirs:
+  - "."
+
+output_dir: "coverage-report"
+
+report_types:
+  - "Html"
+  - "TextSummary"
+  - "Lcov"
+
+verbosity: "Info"
+log_format: "text"
+
+ignore_files:
+  - "-vendor/**"
+  - "-**/*_test.go"

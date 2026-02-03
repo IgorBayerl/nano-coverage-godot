@@ -91,3 +91,6 @@ native/src/**/*.os
 godot_project/coverage-report/*
 godot_project/nanovision.exe
 godot_project/coverage.lcov
+
+godot_project/coverage.data
+godot_project/coverage.meta

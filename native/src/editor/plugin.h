@@ -10,6 +10,7 @@ class NanoCoverageEditorPlugin : public EditorPlugin {
 
    private:
     Button* run_instrumented_button = nullptr;
+    Button* generate_report_button = nullptr;
 
    protected:
     static void _bind_methods();
@@ -22,6 +23,7 @@ class NanoCoverageEditorPlugin : public EditorPlugin {
     void _exit_tree() override;
 
     void _on_run_instrumented_pressed();
+    void _on_generate_report_pressed();
 };
 
 }  // namespace godot

@@ -15,21 +15,19 @@ class NanoCoverage : public Object {
     NanoCoverage() = default;
     ~NanoCoverage() override = default;
 
-    // CHANGED: Accepts String path (matches Instrumenter output)
+    // Called by injected code: NanoCoverage.hit("res://foo.gd", 10)
     void hit(String file_path, int32_t line);
 
     void reset();
 
-    // Trigger to write data to disk
-    void save_report(String path);
+    // Dumps current memory execution data to "coverage.data" (appends).
+    void save_session();
 
-    // Returns { "res://file.gd" -> { line: hits } }
-    Dictionary get_snapshot() const;
+    // Reads "coverage.meta" and "coverage.data", merges them, and outputs "lcov.info".
+    void generate_report();
 
-    // Helper mostly for debug
-    Dictionary get_line_hits(String file_path) const;
-
+    // Debugging helpers
     int64_t get_total_hit_count() const;
+    Dictionary get_snapshot() const;  // Returns raw internal state
 };
-
 }  // namespace godot
