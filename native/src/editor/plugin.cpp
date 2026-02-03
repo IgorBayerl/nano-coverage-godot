@@ -12,6 +12,7 @@
 
 #include "../runtime/coverage_monitor.h"  // Needed to cast singleton
 #include "temp_builder.h"
+#include "../config/settings_keys.h"
 
 namespace godot {
 
@@ -30,7 +31,7 @@ NanoCoverageEditorPlugin::~NanoCoverageEditorPlugin() {
 void NanoCoverageEditorPlugin::_enter_tree() {
     // --- 1. Register Project Setting ---
     ProjectSettings* ps = ProjectSettings::get_singleton();
-    String setting_path = "nano_coverage/general/temp_directory";
+    String setting_path = SettingsKeys::TEMP_DIRECTORY;
 
     if (!ps->has_setting(setting_path)) {
         ps->set_setting(setting_path, "");
