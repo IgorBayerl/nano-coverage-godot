@@ -3,6 +3,8 @@
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/string.hpp>
 
+#include "coverage_collector.h"
+
 namespace godot {
 
 class NanoCoverage : public Object {
@@ -29,5 +31,8 @@ class NanoCoverage : public Object {
     // Debugging helpers
     int64_t get_total_hit_count() const;
     Dictionary get_snapshot() const;  // Returns raw internal state
+
+   private:
+    CoverageCollector collector;
 };
 }  // namespace godot

@@ -13,23 +13,6 @@ namespace godot {
 namespace fs = std::filesystem;
 
 namespace {
-struct Collector {
-    mutable std::mutex mtx;
-    // Map: FilePath -> (Line -> Hits)
-    CoverageData data;
-    uint64_t total_hits = 0;
-
-    void clear_locked() {
-        data.clear();
-        total_hits = 0;
-    }
-};
-
-Collector& collector() {
-    static Collector c;
-    return c;
-}
-
 String get_output_dir() {
     if (ProjectSettings::get_singleton()->has_setting("nano_coverage/output_dir")) {
         return ProjectSettings::get_singleton()->get_setting("nano_coverage/output_dir");
@@ -48,22 +31,11 @@ void NanoCoverage::_bind_methods() {
 }
 
 void NanoCoverage::hit(String file_path, int32_t line) {
-    if (file_path.is_empty() || line <= 0)
-        return;
-
-    std::string path_std = file_path.utf8().get_data();
-
-    Collector& c = collector();
-    std::lock_guard<std::mutex> lock(c.mtx);
-
-    c.data[path_std][line]++;
-    c.total_hits++;
+    collector.record_hit(file_path, line);
 }
 
 void NanoCoverage::reset() {
-    Collector& c = collector();
-    std::lock_guard<std::mutex> lock(c.mtx);
-    c.clear_locked();
+    collector.clear();
 }
 
 void NanoCoverage::save_session() {
@@ -71,11 +43,10 @@ void NanoCoverage::save_session() {
     String global_out_dir = ProjectSettings::get_singleton()->globalize_path(out_dir_godot);
     fs::path data_path = fs::path(global_out_dir.utf8().get_data()) / "coverage.data";
 
-    Collector& c = collector();
-    std::lock_guard<std::mutex> lock(c.mtx);
+    CoverageData snapshot = collector.snapshot();
 
     UtilityFunctions::print("NanoCoverage: Appending execution data to ", String(data_path.string().c_str()));
-    if (!Persistence::append_execution_data(data_path.string(), c.data)) {
+    if (!Persistence::append_execution_data(data_path.string(), snapshot)) {
         UtilityFunctions::printerr("NanoCoverage: Failed to save session data.");
     }
 }
@@ -140,16 +111,14 @@ void NanoCoverage::generate_report() {
 }
 
 int64_t NanoCoverage::get_total_hit_count() const {
-    Collector& c = collector();
-    std::lock_guard<std::mutex> lock(c.mtx);
-    return (int64_t)c.total_hits;
+    return (int64_t)collector.get_total_hits();
 }
 
 Dictionary NanoCoverage::get_snapshot() const {
     Dictionary out;
-    Collector& c = collector();
-    std::lock_guard<std::mutex> lock(c.mtx);
-    for (const auto& f : c.data) {
+    CoverageData snapshot = collector.snapshot();
+
+    for (const auto& f : snapshot) {
         Dictionary lines;
         for (const auto& l : f.second)
             lines[l.first] = (int64_t)l.second;
