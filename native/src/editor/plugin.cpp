@@ -13,6 +13,7 @@
 #include "../runtime/coverage_monitor.h"  // Needed to cast singleton
 #include "temp_builder.h"
 #include "../config/settings_keys.h"
+#include "../config/settings_gateway.h"
 
 namespace godot {
 
@@ -29,31 +30,17 @@ NanoCoverageEditorPlugin::~NanoCoverageEditorPlugin() {
 }
 
 void NanoCoverageEditorPlugin::_enter_tree() {
-    // --- 1. Register Project Setting ---
-    ProjectSettings* ps = ProjectSettings::get_singleton();
-    String setting_path = SettingsKeys::TEMP_DIRECTORY;
+    // Register Project Setting
+    SettingsGateway::register_settings();
 
-    if (!ps->has_setting(setting_path)) {
-        ps->set_setting(setting_path, "");
-    }
-    ps->set_initial_value(setting_path, "");
-
-    Dictionary property_info;
-    property_info["name"] = setting_path;
-    property_info["type"] = Variant::STRING;
-    property_info["hint"] = PROPERTY_HINT_GLOBAL_DIR;
-    property_info["hint_string"] = "Folder to store the instrumented project. Leave empty to use system temp.";
-    ps->add_property_info(property_info);
-    ps->set_as_basic(setting_path, true);
-
-    // --- 2. Create "Run Instrumented" Button ---
+    // Create "Run Instrumented" Button
     run_instrumented_button = memnew(Button);
     run_instrumented_button->set_text("Run Instrumented");
     run_instrumented_button->set_tooltip_text("Run the project in a temporary environment with coverage enabled");
     run_instrumented_button->connect("pressed", Callable(this, "_on_run_instrumented_pressed"));
     add_control_to_container(CONTAINER_TOOLBAR, run_instrumented_button);
 
-    // --- 3. Create "Generate Report" Button ---
+    // Create "Generate Report" Button
     generate_report_button = memnew(Button);
     generate_report_button->set_text("Generate Report");
     generate_report_button->set_tooltip_text("Merge coverage data and generate lcov report");
