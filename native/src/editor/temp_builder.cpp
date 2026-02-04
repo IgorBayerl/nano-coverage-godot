@@ -122,7 +122,7 @@ void InstrumentFileIfNeeded(const fs::path& target_file, const fs::path& relativ
     int insertions = 0;
     std::vector<uint32_t> lines;
 
-    Instrumenter::instrument_file_in_place(target_file, res_gd, lines, &insertions);
+    Instrumenter::instrument_file(String(target_file.string().c_str()), String(res_gd.c_str()), &lines, &insertions);
 
     if (!lines.empty()) {
         metadata[res_gd] = std::move(lines);

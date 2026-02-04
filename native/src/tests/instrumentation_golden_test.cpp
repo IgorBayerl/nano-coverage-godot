@@ -54,52 +54,27 @@ func _ready():
 # A comment
 )";
 
-    // 3. Create Temp File
-    fs::path temp_file = fs::temp_directory_path() / "golden_test_input.gd";
-    {
-        std::ofstream out(temp_file, std::ios::binary);
-        out << gd_source;
-    }
 
     // 4. Run Instrumenter
-    std::vector<uint32_t> covered_lines;
-    int insertions = 0;
     // We pass a dummy "res://" path to ensure deterministic output in the hit() call
-    bool success = Instrumenter::instrument_file_in_place(
-        temp_file, 
-        "res://test_golden.gd", 
-        covered_lines, 
-        &insertions
-    );
+    InstrumentResult result = Instrumenter::instrument_text(gd_source, "res://test_golden.gd");
 
-    ASSERT_TRUE(success) << "Instrumentation failed";
+    ASSERT_TRUE(result.ok) << "Instrumentation failed: " << result.error_message;
 
-    // 5. Read Result
-    std::string actual_output;
-    {
-        std::ifstream in(temp_file, std::ios::binary);
-        ASSERT_TRUE(in.is_open());
-        // Read file into string
-        in.seekg(0, std::ios::end);
-        actual_output.resize(in.tellg());
-        in.seekg(0, std::ios::beg);
-        in.read(&actual_output[0], actual_output.size());
-    }
+    // 5. Cleanup
+    // (No file I/O to cleanup)
 
-    // 6. Cleanup
-    fs::remove(temp_file);
-
-    // 7. Verify
+    // 6. Verify
     // Normalize both to ensure test passes on Windows/Linux regardless of checkout settings
     std::string norm_expected = normalize_newlines(expected_output);
-    std::string norm_actual = normalize_newlines(actual_output);
+    std::string norm_actual = normalize_newlines(result.instrumented_code);
 
     EXPECT_EQ(norm_actual, norm_expected);
     
     // Also verify strict line reporting
     // Lines 4, 5, 6 should be in covered_lines
-    ASSERT_EQ(covered_lines.size(), 3);
-    EXPECT_EQ(covered_lines[0], 4);
-    EXPECT_EQ(covered_lines[1], 5);
-    EXPECT_EQ(covered_lines[2], 6);
+    ASSERT_EQ(result.covered_lines.size(), 3);
+    EXPECT_EQ(result.covered_lines[0], 4);
+    EXPECT_EQ(result.covered_lines[1], 5);
+    EXPECT_EQ(result.covered_lines[2], 6);
 }
