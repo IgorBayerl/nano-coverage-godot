@@ -8,6 +8,7 @@
 
 #include "../data/persistence.h"
 #include "lcov_writer.h"
+#include "../config/settings_gateway.h"
 
 namespace godot {
 namespace fs = std::filesystem;
@@ -60,7 +61,7 @@ void NanoCoverage::generate_report() {
     fs::path data_path = root / "coverage.data";
     fs::path lcov_path = root / "coverage.lcov";
 
-    // 1. Load Metadata (Coverable lines)
+    // Load Metadata (Coverable lines)
     CoverageMetadata meta;
     if (!Persistence::load_metadata(meta_path.string(), meta)) {
         UtilityFunctions::printerr("NanoCoverage: Report generation failed. Could not load ",
@@ -68,46 +69,41 @@ void NanoCoverage::generate_report() {
         return;
     }
 
-    // 2. Load Execution Data (Hits)
+    // Load Execution Data (Hits)
     CoverageData hits;
     // It's okay if this fails or is empty (0 coverage), but we try to load it.
     if (fs::exists(data_path)) {
         Persistence::load_and_merge_execution_data(data_path.string(), hits);
     }
 
-    // 3. Merge: Create the dictionary structure expected by LCOVWriter
-    // Structure: { "res://file.gd": { line_int: hits_int } }
-    Dictionary final_snap;
+    // Reconstruct full coverage data including 0s
+    CoverageData final_data;
 
     for (const auto& meta_kv : meta) {
         const std::string& file_path = meta_kv.first;
         const std::vector<uint32_t>& coverable_lines = meta_kv.second;
 
-        Dictionary file_lines;
+        std::unordered_map<uint32_t, uint64_t>& file_lines = final_data[file_path];
 
         // Check if we have hits for this file
         auto hit_file_it = hits.find(file_path);
-
+        
         for (uint32_t line : coverable_lines) {
             uint64_t count = 0;
-
-            // If we have hits for this file, look up the line
             if (hit_file_it != hits.end()) {
                 auto hit_line_it = hit_file_it->second.find(line);
                 if (hit_line_it != hit_file_it->second.end()) {
                     count = hit_line_it->second;
                 }
             }
-            file_lines[line] = static_cast<int64_t>(count);
+            file_lines[line] = count;
         }
-
-        final_snap[String(file_path.c_str())] = file_lines;
     }
 
-    // 4. Write LCOV
-    String final_lcov_str = String(lcov_path.string().c_str());
-    LCOVWriter::write_lcov_report(final_lcov_str, final_snap);
-    UtilityFunctions::print("NanoCoverage: Report generated at ", final_lcov_str);
+    // Load Settings & Write LCOV
+    CoverageSettings settings = SettingsGateway::load();
+    
+    LCOVWriter::write_lcov_report(final_data, settings);
 }
 
 int64_t NanoCoverage::get_total_hit_count() const {

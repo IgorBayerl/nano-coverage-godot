@@ -6,12 +6,20 @@
 
 namespace godot {
 
-// CONFIGURATION: Hardcoded toggle
-// true  = "C:/Projects/MyGame/script.gd"
-// false = "res://script.gd"
-const bool kUseAbsolutePath = true;
 
-void LCOVWriter::write_lcov_report(const String& output_path, const Dictionary& snapshot) {
+
+void LCOVWriter::write_lcov_report(const CoverageData& data, const CoverageSettings& settings) {
+    // Construct output path
+    String output_dir = settings.paths_report_dir;
+    String filename = settings.report_lcov_filename;
+    String output_path;
+
+    if (output_dir.ends_with("/")) {
+        output_path = output_dir + filename;
+    } else {
+        output_path = output_dir + "/" + filename;
+    }
+
     Ref<FileAccess> file = FileAccess::open(output_path, FileAccess::WRITE);
     if (file.is_null()) {
         UtilityFunctions::printerr("NanoCoverage: Could not open report file for writing: ", output_path);
@@ -22,46 +30,48 @@ void LCOVWriter::write_lcov_report(const String& output_path, const Dictionary& 
 
     // Fetch the original project root if available (injected by TempBuilder)
     String source_root = "";
-    if (kUseAbsolutePath) {
+    if (settings.report_use_absolute_source_paths) {
         if (ProjectSettings::get_singleton()->has_setting("nano_coverage/source_root")) {
             source_root = ProjectSettings::get_singleton()->get_setting("nano_coverage/source_root");
         }
     }
 
-    Array file_paths = snapshot.keys();
-
-    for (int i = 0; i < file_paths.size(); i++) {
-        String file_path = file_paths[i];
-        Dictionary lines = snapshot[file_path];
+    for (const auto& file_entry : data) {
+        String file_path = String(file_entry.first.c_str());
+        const auto& lines = file_entry.second;
 
         // --- Path Resolution Logic ---
         String display_path = file_path;
 
-        if (kUseAbsolutePath && !source_root.is_empty() && file_path.begins_with("res://")) {
-            // Strip "res://" (6 chars) and join with source root
-            String rel_path = file_path.substr(6);
+        if (settings.report_use_absolute_source_paths) {
+            if (!source_root.is_empty() && file_path.begins_with("res://")) {
+                // Strip "res://" (6 chars) and join with source root
+                String rel_path = file_path.substr(6);
 
-            // Handle slash consistency
-            if (source_root.ends_with("/")) {
-                display_path = source_root + rel_path;
-            } else {
-                display_path = source_root + "/" + rel_path;
+                // Handle slash consistency
+                if (source_root.ends_with("/")) {
+                    display_path = source_root + rel_path;
+                } else {
+                    display_path = source_root + "/" + rel_path;
+                }
+            } else if (file_path.begins_with("res://")) {
+                // Fallback: globalize path if source_root is not set but we want absolute paths
+                display_path = ProjectSettings::get_singleton()->globalize_path(file_path);
             }
         }
         // -----------------------------
 
-        // 1. Write Source File (SF)
+        // Write Source File (SF)
         file->store_line("SF:" + display_path);
 
-        // 2. Write Data Lines (DA)
-        Array line_nums = lines.keys();
-        for (int j = 0; j < line_nums.size(); j++) {
-            int line = line_nums[j];
-            int64_t hits = lines[line];
+        // Write Data Lines (DA)
+        for (const auto& line_entry : lines) {
+            uint32_t line = line_entry.first;
+            uint64_t hits = line_entry.second;
             file->store_line("DA:" + String::num_int64(line) + "," + String::num_int64(hits));
         }
 
-        // 3. Close Record
+        // Close Record
         file->store_line("end_of_record");
     }
 
