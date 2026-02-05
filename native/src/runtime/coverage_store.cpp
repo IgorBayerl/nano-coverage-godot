@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <stdexcept>
 
 namespace godot {
 
@@ -37,6 +38,25 @@ CoverageData CoverageStore::load_and_merge() {
         }
     }
     return merged_data;
+}
+
+void CoverageStore::clear() {
+    if (!fs::exists(runs_path)) {
+        return;
+    }
+
+    // We only remove .covdata files to be safe
+    // We only remove .covdata files to be safe
+    for (const auto& entry : fs::directory_iterator(runs_path)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".covdata") {
+            std::error_code ec;
+            fs::remove(entry.path(), ec);
+            if (ec) {
+                // Best effort
+                std::cerr << "CoverageStore: Failed to delete " << entry.path().string() << ": " << ec.message() << std::endl;
+            }
+        }
+    }
 }
 
 } // namespace godot

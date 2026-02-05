@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>  // <--- FIX: Required for UtilityFunctions::print
 #include <mutex>
@@ -14,7 +15,20 @@ namespace godot {
 namespace fs = std::filesystem;
 
 namespace {
+String get_override_from_args(const String& key_prefix) {
+    PackedStringArray user_args = OS::get_singleton()->get_cmdline_user_args();
+    for (const String& arg : user_args) {
+        if (arg.begins_with(key_prefix)) {
+            return arg.substr(key_prefix.length());
+        }
+    }
+    return "";
+}
+
 String get_output_dir() {
+    String override = get_override_from_args("nano_coverage/output_dir=");
+    if (!override.is_empty()) return override;
+
     if (ProjectSettings::get_singleton()->has_setting("nano_coverage/output_dir")) {
         return ProjectSettings::get_singleton()->get_setting("nano_coverage/output_dir");
     }
@@ -42,7 +56,15 @@ void NanoCoverage::reset() {
 void NanoCoverage::save_session() {
     String out_dir_godot = get_output_dir();
     String global_out_dir = ProjectSettings::get_singleton()->globalize_path(out_dir_godot);
-    fs::path data_path = fs::path(global_out_dir.utf8().get_data()) / "coverage.data";
+    String out_filename = "coverage.data";
+    
+    String name_override = get_override_from_args("nano_coverage/output_name=");
+    if (!name_override.is_empty()) {
+        out_filename = name_override;
+    } else if (ProjectSettings::get_singleton()->has_setting("nano_coverage/output_name")) {
+        out_filename = ProjectSettings::get_singleton()->get_setting("nano_coverage/output_name");
+    }
+    fs::path data_path = fs::path(global_out_dir.utf8().get_data()) / out_filename.utf8().get_data();
 
     CoverageData snapshot = collector.snapshot();
 

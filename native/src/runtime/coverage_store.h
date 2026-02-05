@@ -18,6 +18,9 @@ public:
     // Iterates all .covdata files in the store directory and merges them into a single CoverageData map.
     CoverageData load_and_merge();
 
+    // Deletes all .covdata files in the runs directory.
+    void clear();
+
 private:
     std::string root_path;
     std::string runs_path;

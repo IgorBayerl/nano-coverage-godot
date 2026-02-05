@@ -3,8 +3,10 @@
 #include <godot_cpp/godot.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
+
 #include "editor/plugin.h"
 #include "runtime/coverage_monitor.h"
+#include "api/coverage_api.h"
 #ifdef TESTS_ENABLED
 #include "tests/test_main.h"
 #endif
@@ -22,6 +24,7 @@ void initialize_nano_coverage_godot_module(ModuleInitializationLevel p_level) {
 #endif
 
         ClassDB::register_class<NanoCoverage>();
+        ClassDB::register_class<CoverageApi>();
 
         if (g_nano_coverage_singleton == nullptr) {
             g_nano_coverage_singleton = memnew(NanoCoverage);
