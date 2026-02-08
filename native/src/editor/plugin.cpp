@@ -3,6 +3,8 @@
 #include <godot_cpp/classes/control.hpp>
 #include <godot_cpp/classes/editor_interface.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/classes/os.hpp>
+#include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/callable.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -20,6 +22,8 @@ void NanoCoverageEditorPlugin::_bind_methods() {
                          &NanoCoverageEditorPlugin::_on_clear_data_pressed);
     ClassDB::bind_method(D_METHOD("_on_settings_changed"),
                          &NanoCoverageEditorPlugin::_on_settings_changed);
+    ClassDB::bind_method(D_METHOD("_on_log_poll_timeout"),
+                         &NanoCoverageEditorPlugin::_on_log_poll_timeout);
 }
 
 NanoCoverageEditorPlugin::NanoCoverageEditorPlugin() {
@@ -57,6 +61,13 @@ void NanoCoverageEditorPlugin::_enter_tree() {
     // Connect to settings changed
     ProjectSettings::get_singleton()->connect("settings_changed", Callable(this, "_on_settings_changed"));
     
+    // Log Timer
+    log_poll_timer = memnew(Timer);
+    log_poll_timer->set_wait_time(0.5); // Check every 500ms
+    log_poll_timer->set_one_shot(false);
+    log_poll_timer->connect("timeout", Callable(this, "_on_log_poll_timeout"));
+    add_child(log_poll_timer); // Add to tree so it processes
+
     // Initial visibility update
     _update_visibility();
 }
@@ -80,6 +91,12 @@ void NanoCoverageEditorPlugin::_exit_tree() {
     
     if (ProjectSettings::get_singleton()->is_connected("settings_changed", Callable(this, "_on_settings_changed"))) {
         ProjectSettings::get_singleton()->disconnect("settings_changed", Callable(this, "_on_settings_changed"));
+    }
+
+    if (log_poll_timer) {
+        log_poll_timer->stop();
+        log_poll_timer->queue_free();
+        log_poll_timer = nullptr;
     }
 }
 
@@ -111,9 +128,14 @@ void NanoCoverageEditorPlugin::_on_run_instrumented_pressed() {
         return;
     }
 
+    // Stop previous logging if active
+    if (log_poll_timer->is_stopped() == false) {
+        log_poll_timer->stop();
+    }
+
     Dictionary instr_opts;
     Dictionary instr_result = coverage_api->instrument_project(instr_opts);
-
+    
     if (instr_result.has("error")) {
         UtilityFunctions::printerr("NanoCoverage: Instrumentation failed: ", instr_result["error"]);
         return;
@@ -123,15 +145,55 @@ void NanoCoverageEditorPlugin::_on_run_instrumented_pressed() {
     
     Dictionary run_opts;
     run_opts["output_path"] = output_path;
-    run_opts["workspace_id"] = "default"; // Could be configurable
+    run_opts["workspace_id"] = "default";
+    run_opts["blocking"] = false; // Non-blocking so we can tail logs
 
     UtilityFunctions::print("NanoCoverage: Launching instrumented project...");
     Dictionary run_result = coverage_api->run_instrumented_project(run_opts);
     
     if (run_result.has("error")) {
          UtilityFunctions::printerr("NanoCoverage: Run failed: ", run_result["error"]);
-    } else {
-         UtilityFunctions::print("NanoCoverage: Project running. Run ID: ", run_result["run_id"]);
+         return;
+    }
+    
+    UtilityFunctions::print("NanoCoverage: Project running. Run ID: ", run_result["run_id"]);
+         
+    // Setup Log Tailing
+    if (run_result.has("log_file") && run_result.has("pid")) {
+        current_log_path = run_result["log_file"];
+        current_pid = run_result["pid"];
+        log_read_pos = 0;
+        
+        UtilityFunctions::print("NanoCoverage: Tailing log file: ", current_log_path);
+        log_poll_timer->start();
+    }
+}
+
+void NanoCoverageEditorPlugin::_on_log_poll_timeout() {
+    if (current_log_path.is_empty()) return;
+
+    Ref<FileAccess> f = FileAccess::open(current_log_path, FileAccess::READ);
+    if (f.is_valid()) {
+        // Seek to where we last left off
+        f->seek(log_read_pos);
+        
+        while (f->get_position() < f->get_length()) {
+            String line = f->get_line();
+            // Prefix to distinguish game logs from editor logs
+            UtilityFunctions::print("[Game] ", line);
+        }
+        
+        log_read_pos = f->get_position();
+        f->close();
+    }
+
+    // Check if process is still alive
+    if (current_pid != -1) {
+        if (!OS::get_singleton()->is_process_running(current_pid)) {
+            UtilityFunctions::print("NanoCoverage: Game process finished.");
+            log_poll_timer->stop();
+            current_pid = -1;
+        }
     }
 }
 
