@@ -1,6 +1,6 @@
 # nanovision.yaml Configuration
 reports:
-  - "coverage.lcov"
+  - "coverage_report/lcov.info"
 
 source_dirs:
   - "."
