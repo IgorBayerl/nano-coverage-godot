@@ -1,7 +1,8 @@
 #pragma once
+#include <godot_cpp/variant/string.hpp>
+
 #include "../config/settings_gateway.h"
 #include "../data/persistence.h"
-#include <godot_cpp/variant/string.hpp>
 
 namespace godot {
 

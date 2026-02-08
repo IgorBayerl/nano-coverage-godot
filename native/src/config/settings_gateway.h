@@ -24,11 +24,11 @@ struct CoverageSettings {
 };
 
 class SettingsGateway {
-public:
+   public:
     static void register_settings();
     static CoverageSettings load();
 };
 
-} // namespace godot
+}  // namespace godot
 
-#endif // SETTINGS_GATEWAY_H
+#endif  // SETTINGS_GATEWAY_H

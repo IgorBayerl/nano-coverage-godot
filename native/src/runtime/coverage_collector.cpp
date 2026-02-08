@@ -30,4 +30,4 @@ uint64_t CoverageCollector::get_total_hits() const {
     return total_hits;
 }
 
-} // namespace godot
+}  // namespace godot

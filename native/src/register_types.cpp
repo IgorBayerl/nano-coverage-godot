@@ -3,10 +3,9 @@
 #include <godot_cpp/godot.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
-
+#include "api/coverage_api.h"
 #include "editor/plugin.h"
 #include "runtime/coverage_monitor.h"
-#include "api/coverage_api.h"
 #ifdef TESTS_ENABLED
 #include "tests/test_main.h"
 #endif

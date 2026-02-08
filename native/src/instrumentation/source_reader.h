@@ -12,10 +12,10 @@ struct ReadTextResult {
 };
 
 class SourceReader {
-public:
+   public:
     static ReadTextResult read_text_file(const std::string& path);
 };
 
-} // namespace NanoCoverage
+}  // namespace NanoCoverage
 
-#endif // NANO_COVERAGE_SOURCE_READER_H
+#endif  // NANO_COVERAGE_SOURCE_READER_H

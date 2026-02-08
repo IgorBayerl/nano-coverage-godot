@@ -23,7 +23,7 @@ TEST(NanoCoverageTest, GeneratesReportAndCreatesDirectories) {
     TestUtils::clean_dir(data_dir);
     DirAccess::make_dir_recursive_absolute(data_dir);
     
-    // 1. Create Dummy Metadata
+    // Create Dummy Metadata
     String test_file = "res://test_report.gd";
     CoverageMetadata meta;
     meta[test_file.utf8().get_data()] = {5};
@@ -31,20 +31,20 @@ TEST(NanoCoverageTest, GeneratesReportAndCreatesDirectories) {
     String meta_path_abs = ProjectSettings::get_singleton()->globalize_path(data_dir + "/coverage.meta");
     Persistence::save_metadata(meta_path_abs.utf8().get_data(), meta);
 
-    // 2. Setup Settings Overrides
+    // Setup Settings Overrides
     SettingsOverride s1(SettingsKeys::PATHS_REPORT_DIR, output_dir);
     SettingsOverride s2(SettingsKeys::PATHS_DATA_STORE_DIR, data_dir);
     SettingsOverride s3("nano_coverage/output_dir", data_dir);
 
-    // 3. Record Hits & Save
+    // Record Hits & Save
     cov->reset();
     cov->hit(test_file, 5);
     cov->save_session();
 
-    // 4. Generate
+    // Generate
     cov->generate_report();
 
-    // 5. Verify
+    // Verify
     EXPECT_TRUE(DirAccess::dir_exists_absolute(output_dir)) << "Report directory was not created.";
     String output_file = output_dir + "/lcov.info";
     EXPECT_TRUE(FileAccess::file_exists(output_file)) << "Report file was not created.";

@@ -1,87 +1,128 @@
 # Nano Coverage Godot
 
-A GDExtension-based code coverage tool for Godot 4. It instruments GDScript at the AST level using [tree-sitter](https://tree-sitter.github.io/tree-sitter/) to generate `lcov.info` reports.
+**Nano Coverage** is a simple, powerful code coverage tool for Godot 4.
 
-## Compatibility Strategy
+It helps you see exactly which parts of your GDScript code are executed when you run your game or your unit tests. This is essential for ensuring your tests actually test your code, helping you find bugs before they happen.
 
-This project enforces a **"Build Old, Run New"** workflow to maintain ABI compatibility across Godot 4.x versions.
+---
 
-  * **Build:** Links against **Godot 4.3** bindings. This ensures the binary works on 4.3, 4.4, 4.5, and future 4.x releases without recompilation.
-  * **Test:** The setup script automatically downloads the latest stable Godot version (currently 4.5) for the editor environment.
+## 🚧 Status & Roadmap
 
-## Prerequisites
+**Current State:** Alpha / Developer Preview.  
+**Note:** We currently do not have automated builds (CI/CD). You must build the plugin from source using the instructions below.
 
-You only need **Python**, **Git**, and a **C++ Compiler** installed manually. The setup script handles the rest (SCons, Godot Editor, and dependencies).
+### ✅ Current Features
+* **Accurate Coverage:** Uses advanced parsing (Tree-sitter) to ignore comments and empty lines, counting only real code.
+* **Simple UI:** Adds "Run Instrumented" and "Generate Report" buttons directly to the Godot Editor toolbar.
+* **LCOV Support:** Generates standard `lcov.info` files compatible with popular tools like Coveralls, Codecov, or IDE extensions.
+* **Session Merging:** Run your game multiple times; the tool accumulates coverage data across all sessions.
+* **Headless Support:** Works from the command line for automated testing environments.
 
-  * **Python 3.10+**
-  * **Git**
-  * **C++ Compiler:**
-      * **Windows:** MinGW-w64 (recommended) or MSVC.
-      * **Linux:** GCC or Clang.
-      * **macOS:** Xcode Command Line Tools.
+### 🚀 Planned Features
+* **In editor Reports:** Visualization of covered and uncovered lines inside of code editor.
+* **Godot Asset Library:** We plan to publish this to the Asset Library for one-click installation.
+* **Automated Builds:** Pre-compiled binaries for Windows, Linux, and macOS.
 
-## Quick Start
+---
 
-```bash
-# 1. Clone
-git clone https://github.com/IgorBayerl/nano-coverage-godot.git
-cd nano-coverage-godot
+## ⚙️ How It Works
 
-# 2. Setup (Downloads Godot 4.5, installs SCons, pins dependencies)
-python setup.py
+1.  **Instrumentation:** When you click "Run Instrumented", Nano Coverage creates a temporary copy of your project. It injects invisible trackers into your GDScript code.
+2.  **Execution:** Your game runs normally. As you play or run tests, the trackers record which lines are hit.
+3.  **Reporting:** When you finish, you click "Generate Report" to combine the data into a LCOV file.
 
-# 3. Build (Compiles the GDExtension)
-python build.py
+---
 
-# 4. Run Editor (Opens the included project)
-python dev.py
-```
+## 🛠️ Building from Source
 
-## Developer Scripts
+Since pre-compiled binaries aren't available yet, you need to build the plugin yourself. We have automated this process with Python scripts.
 
-### `setup.py`
+### Prerequisites
+* **Python 3.10+**
+* **Git**
+* **C++ Compiler:**
+    * *Windows:* MinGW (recommended) or MSVC.
+    * *Linux:* GCC or Clang.
+    * *macOS:* Xcode Command Line Tools.
 
-Initializes the environment.
+### Build Steps
 
-  * Updates and pins git submodules (forces `godot-cpp` to `4.3-stable`).
-  * Installs `scons` via pip if missing.
-  * Downloads the Godot Editor binary for local testing.
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/IgorBayerl/nano-coverage-godot.git
+    cd nano-coverage-godot
+    ```
 
-### `build.py`
+2.  **Setup Environment:**
+    Downloads the Godot engine (for testing), Google Test, and installs SCons.
+    ```bash
+    python scripts/setup.py
+    ```
 
-Wrapper around SCons.
+3.  **Compile:**
+    Compiles the C++ code into a Godot GDExtension.
+    ```bash
+    python scripts/build.py
+    ```
 
-  * **Windows:** Auto-detects MinGW if MSVC is missing.
-  * **Arguments:**
-      * `--target`: `template_debug` (default) or `template_release`.
-      * `--clean`: Cleans build artifacts.
-      * `--platform`: Forces specific platform (usually auto-detected).
+4.  *(Optional)* **Test the Build:**
+    Runs the included Unit Tests to ensure everything is working.
+    ```bash
+    python scripts/test.py
+    ```
 
-### `dev.py`
+---
 
-Launcher for the test project.
+## 📥 Installing in Your Project
 
-  * **Default:** Opens the project in the Editor.
-  * `--game`: Runs the project directly (no editor).
-  * `--verbose`: Enables stdout logging.
-  * `--top`: Keeps the window always on top.
+Once you have built the project, you can install it into your own Godot game.
 
-## Usage
+1.  Locate the **`addons`** folder inside `godot_project/` (generated after the build).
+2.  Copy the `addons/nano_coverage_godot` folder into your own project's root directory.
+    * *Your project structure should look like:* `res://addons/nano_coverage_godot/`
+3.  Open your project in Godot.
+4.  Go to **Project > Project Settings > Plugins**.
+5.  Find **NanoCoverage** and check the **Enable** box.
 
-1.  Enable **NanoCoverageGodot** in **Project \> Project Settings \> Plugins**.
-2.  Click **"Run Instrumented"** in the main toolbar.
-3.  Run your tests or gameplay loop.
-4.  Exit the application.
-5.  Coverage data is written to `coverage.lcov` in the project root.
+---
 
-## Architecture
+## 🎮 Usage
 
-1.  **AST Instrumentation:**
-      * Uses `tree-sitter-gdscript` to parse source code.
-      * Identifies executable statements (skips comments, whitespace, class decls).
-      * Injects `NanoCoverage.hit(file_hash, line)` calls into a temporary script copy.
-2.  **GDExtension Backend:**
-      * **Collector:** A C++ singleton that aggregates hit counts in memory for minimal overhead.
-      * **EditorPlugin:** Manages the UI and the temporary instrumented run configuration.
-3.  **Output:**
-      * Standard LCOV format for integration with Coveralls, Codecov, or local viewers.
+1.  **Run Instrumented:**
+    Click the **"Run Instrumented"** button in the main editor toolbar. This launches your game with coverage tracking enabled.
+2.  **Play/Test:**
+    Play your game or run your unit test suite.
+3.  **Exit:**
+    Close the game window.
+4.  **Generate Report:**
+    Click the **"Generate Report"** button in the toolbar.
+5.  **View Results:**
+    A file named `lcov.info` will be created in your project folder (usually under `coverage_report/`). You can view this using any LCOV viewer (like the "Coverage Gutters" extension for VS Code).
+
+---
+
+## 🤖 API & Integrations
+
+Nano Coverage exposes a `CoverageApi` class to GDScript.
+
+If you are building a test runner (like **GdUnit4**) or a CI pipeline, you can use this API to programmatically:
+* Instrument the project.
+* Run the instrumented instance.
+* Generate reports without using the Editor UI.
+
+Refer to `addons/nano_coverage_godot/coverage_api_example.gd` or the C++ source for the exact method signatures.
+
+---
+
+## 🔧 Configuration
+
+You can customize the tool via **Project > Project Settings > Nano Coverage**
+
+| Setting                         | Description                                                 | Default                 |
+|:--------------------------------|:------------------------------------------------------------|:------------------------|
+| **Paths / Report Dir**          | Where the `lcov.info` file is saved.                        | `res://coverage_report` |
+| **Paths / Data Store**          | Where raw coverage data is kept.                            | `res://coverage_data`   |
+| **Report / Use Absolute Paths** | If true, uses full system paths in reports (useful for CI). | `false`                 |
+| **UI / Show All Buttons**       | Hides/Shows the toolbar buttons.                            | `true`                  |
+
+---

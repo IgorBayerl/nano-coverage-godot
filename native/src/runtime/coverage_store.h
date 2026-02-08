@@ -3,12 +3,13 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
 #include "../data/persistence.h"
 
 namespace godot {
 
 class CoverageStore {
-public:
+   public:
     CoverageStore(const std::string& data_store_dir, const std::string& workspace_id);
 
     // Persists the given snapshot to a file named <run_id>.covdata in the store directory.
@@ -21,12 +22,12 @@ public:
     // Deletes all .covdata files in the runs directory.
     void clear();
 
-private:
+   private:
     std::string base_path;
     std::string root_path;
     std::string runs_path;
-    
+
     void ensure_paths();
 };
 
-} // namespace godot
+}  // namespace godot

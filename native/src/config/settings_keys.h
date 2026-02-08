@@ -21,6 +21,6 @@ struct SettingsKeys {
     static constexpr const char* UI_SHOW_CLEAR_DATA_BUTTON = "nano_coverage/ui/show_clear_data_button";
 };
 
-} // namespace godot
+}  // namespace godot
 
-#endif // SETTINGS_KEYS_H
+#endif  // SETTINGS_KEYS_H

@@ -3,12 +3,13 @@
 #include <godot_cpp/variant/string.hpp>
 #include <mutex>
 #include <string>
+
 #include "../data/persistence.h"
 
 namespace godot {
 
 class CoverageCollector {
-public:
+   public:
     // Records a hit for a specific file and line.
     // Thread-safe.
     void record_hit(const String& file, int line);
@@ -25,10 +26,10 @@ public:
     // Thread-safe.
     uint64_t get_total_hits() const;
 
-private:
+   private:
     mutable std::mutex mtx;
     CoverageData data;
     uint64_t total_hits = 0;
 };
 
-} // namespace godot
+}  // namespace godot

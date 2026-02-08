@@ -160,7 +160,7 @@ static void collect_insertions(TSNode node, const std::string& src, const std::s
 InstrumentResult Instrumenter::instrument_text(const std::string& utf8_code, const std::string& res_path) {
     InstrumentResult result;
     result.ok = false;
-    
+
     // Copy input code as it might be unmodified
     result.instrumented_code = utf8_code;
 
@@ -207,25 +207,27 @@ InstrumentResult Instrumenter::instrument_text(const std::string& utf8_code, con
 
     ts_tree_delete(tree);
     ts_parser_delete(parser);
-    
+
     result.ok = true;
     return result;
 }
-
 
 // [I/O Wrapper]
 // Handles the "dirty work" of interacting with the filesystem.
 // * Reads the file using SourceReader (handling BOMs/encoding).
 // * Delegates the logic to instrument_text().
 // * Writes the result back to disk if changes were made.
-bool Instrumenter::instrument_file(const String& path, const String& res_path, std::vector<uint32_t>* out_lines, int* out_insertions) {
-    if (out_lines) out_lines->clear();
-    if (out_insertions) *out_insertions = 0;
+bool Instrumenter::instrument_file(const String& path, const String& res_path, std::vector<uint32_t>* out_lines,
+                                   int* out_insertions) {
+    if (out_lines)
+        out_lines->clear();
+    if (out_insertions)
+        *out_insertions = 0;
 
     // Read
     // We use NanoCoverage::SourceReader which we just imported
     NanoCoverage::ReadTextResult read_res = NanoCoverage::SourceReader::read_text_file(path.utf8().get_data());
-    
+
     if (!read_res.ok) {
         UtilityFunctions::printerr("NanoCoverage: failed to read: ", path);
         // If needed, log read_res.error_message
@@ -237,7 +239,8 @@ bool Instrumenter::instrument_file(const String& path, const String& res_path, s
     InstrumentResult inst_res = instrument_text(read_res.content, res_path_std);
 
     if (!inst_res.ok) {
-        UtilityFunctions::printerr("NanoCoverage: instrumentation failed for: ", path, " error: ", String(inst_res.error_message.c_str()));
+        UtilityFunctions::printerr("NanoCoverage: instrumentation failed for: ", path,
+                                   " error: ", String(inst_res.error_message.c_str()));
         return false;
     }
 
@@ -253,7 +256,7 @@ bool Instrumenter::instrument_file(const String& path, const String& res_path, s
     if (inst_res.insertions == 0 && read_res.content == inst_res.instrumented_code) {
         return true;
     }
-    
+
     // We also typically return true if 0 insertions, same as before, but now we filled the metadata.
     if (inst_res.insertions == 0) {
         return true;

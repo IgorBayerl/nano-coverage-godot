@@ -7,8 +7,6 @@
 
 namespace godot {
 
-
-
 void LCOVWriter::write_lcov_report(const CoverageData& data, const CoverageSettings& settings) {
     // Construct output path
     String output_dir = settings.paths_report_dir;
@@ -21,15 +19,12 @@ void LCOVWriter::write_lcov_report(const CoverageData& data, const CoverageSetti
         output_path = output_dir + "/" + filename;
     }
 
-
-
-
     // Ensure directory exists
     // Check if it exists
     if (!DirAccess::dir_exists_absolute(output_dir)) {
         Error err = DirAccess::make_dir_recursive_absolute(output_dir);
         if (err != OK) {
-             UtilityFunctions::printerr("NanoCoverage: Failed to create report directory: ", output_dir);
+            UtilityFunctions::printerr("NanoCoverage: Failed to create report directory: ", output_dir);
         }
     }
 
@@ -40,7 +35,7 @@ void LCOVWriter::write_lcov_report(const CoverageData& data, const CoverageSetti
     }
 
     UtilityFunctions::print("NanoCoverage: Writing LCOV report to ", output_path);
-    
+
     // Fetch the original project root if available (injected by TempBuilder)
 
     // Fetch the original project root if available (injected by TempBuilder)

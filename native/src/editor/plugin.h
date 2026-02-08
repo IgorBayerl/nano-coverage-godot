@@ -2,7 +2,8 @@
 
 #include <godot_cpp/classes/button.hpp>
 #include <godot_cpp/classes/editor_plugin.hpp>
-#include <godot_cpp/classes/timer.hpp> 
+#include <godot_cpp/classes/timer.hpp>
+
 #include "../api/coverage_api.h"
 
 namespace godot {

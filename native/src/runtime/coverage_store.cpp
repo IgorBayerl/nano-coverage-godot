@@ -42,29 +42,30 @@ CoverageData CoverageStore::load_and_merge() {
 }
 
 void CoverageStore::clear() {
-    // 1. Clear Runs
+    // Clear Runs
     if (fs::exists(runs_path)) {
         for (const auto& entry : fs::directory_iterator(runs_path)) {
             if (entry.is_regular_file() && entry.path().extension() == ".covdata") {
                 std::error_code ec;
                 fs::remove(entry.path(), ec);
                 if (ec) {
-                    std::cerr << "CoverageStore: Failed to delete " << entry.path().string() << ": " << ec.message() << std::endl;
+                    std::cerr << "CoverageStore: Failed to delete " << entry.path().string() << ": " << ec.message()
+                              << std::endl;
                 }
             }
         }
     }
 
-    // 2. Clear Global Metadata (coverage.meta)
+    // Clear Global Metadata (coverage.meta)
     // This is stored at the root of the data store (base_path)
     fs::path meta_path = fs::path(base_path) / "coverage.meta";
     if (fs::exists(meta_path)) {
         std::error_code ec;
         fs::remove(meta_path, ec);
         if (ec) {
-             std::cerr << "CoverageStore: Failed to delete " << meta_path.string() << ": " << ec.message() << std::endl;
+            std::cerr << "CoverageStore: Failed to delete " << meta_path.string() << ": " << ec.message() << std::endl;
         }
     }
 }
 
-} // namespace godot
+}  // namespace godot

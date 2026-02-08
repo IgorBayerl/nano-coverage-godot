@@ -1,7 +1,8 @@
 #include "source_reader.h"
+
+#include <cstdint>
 #include <fstream>
 #include <vector>
-#include <cstdint>
 
 namespace NanoCoverage {
 
@@ -9,9 +10,11 @@ namespace {
 
 // Helper to check if a buffer starts with a sequence
 bool starts_with(const std::vector<uint8_t>& buffer, const std::vector<uint8_t>& prefix) {
-    if (buffer.size() < prefix.size()) return false;
+    if (buffer.size() < prefix.size())
+        return false;
     for (size_t i = 0; i < prefix.size(); ++i) {
-        if (buffer[i] != prefix[i]) return false;
+        if (buffer[i] != prefix[i])
+            return false;
     }
     return true;
 }
@@ -23,16 +26,20 @@ bool is_valid_utf8(const std::string& str) {
     size_t i = 0;
     while (i < len) {
         unsigned char c = bytes[i];
-        if (c < 0x80) { // 0xxxxxxx
+        if (c < 0x80) {  // 0xxxxxxx
             i++;
-        } else if ((c & 0xE0) == 0xC0) { // 110xxxxx 10xxxxxx
-            if (i + 1 >= len || (bytes[i + 1] & 0xC0) != 0x80) return false;
+        } else if ((c & 0xE0) == 0xC0) {  // 110xxxxx 10xxxxxx
+            if (i + 1 >= len || (bytes[i + 1] & 0xC0) != 0x80)
+                return false;
             i += 2;
-        } else if ((c & 0xF0) == 0xE0) { // 1110xxxx 10xxxxxx 10xxxxxx
-            if (i + 2 >= len || (bytes[i + 1] & 0xC0) != 0x80 || (bytes[i + 2] & 0xC0) != 0x80) return false;
+        } else if ((c & 0xF0) == 0xE0) {  // 1110xxxx 10xxxxxx 10xxxxxx
+            if (i + 2 >= len || (bytes[i + 1] & 0xC0) != 0x80 || (bytes[i + 2] & 0xC0) != 0x80)
+                return false;
             i += 3;
-        } else if ((c & 0xF8) == 0xF0) { // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-            if (i + 3 >= len || (bytes[i + 1] & 0xC0) != 0x80 || (bytes[i + 2] & 0xC0) != 0x80 || (bytes[i + 3] & 0xC0) != 0x80) return false;
+        } else if ((c & 0xF8) == 0xF0) {  // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+            if (i + 3 >= len || (bytes[i + 1] & 0xC0) != 0x80 || (bytes[i + 2] & 0xC0) != 0x80 ||
+                (bytes[i + 3] & 0xC0) != 0x80)
+                return false;
             i += 4;
         } else {
             return false;
@@ -43,7 +50,7 @@ bool is_valid_utf8(const std::string& str) {
 
 std::string utf16le_to_utf8(const std::vector<uint8_t>& data, size_t offset) {
     std::string res;
-    res.reserve(data.size()); // Estimate
+    res.reserve(data.size());  // Estimate
     for (size_t i = offset; i + 1 < data.size(); i += 2) {
         uint16_t c = data[i] | (data[i + 1] << 8);
         if (c < 0x80) {
@@ -72,7 +79,7 @@ std::string utf16be_to_utf8(const std::vector<uint8_t>& data, size_t offset) {
             res.push_back((char)(0xC0 | (c >> 6)));
             res.push_back((char)(0x80 | (c & 0x3F)));
         } else {
-             // Basic BMP support
+            // Basic BMP support
             res.push_back((char)(0xE0 | (c >> 12)));
             res.push_back((char)(0x80 | ((c >> 6) & 0x3F)));
             res.push_back((char)(0x80 | (c & 0x3F)));
@@ -81,7 +88,7 @@ std::string utf16be_to_utf8(const std::vector<uint8_t>& data, size_t offset) {
     return res;
 }
 
-} // namespace
+}  // namespace
 
 ReadTextResult SourceReader::read_text_file(const std::string& path) {
     ReadTextResult result;
@@ -106,7 +113,7 @@ ReadTextResult SourceReader::read_text_file(const std::string& path) {
     if (starts_with(buffer, {0xEF, 0xBB, 0xBF})) {
         result.content.assign(reinterpret_cast<const char*>(buffer.data() + 3), buffer.size() - 3);
         result.ok = true;
-    } 
+    }
     // UTF-16 LE: FF FE
     else if (starts_with(buffer, {0xFF, 0xFE})) {
         result.content = utf16le_to_utf8(buffer, 2);
@@ -116,8 +123,7 @@ ReadTextResult SourceReader::read_text_file(const std::string& path) {
     else if (starts_with(buffer, {0xFE, 0xFF})) {
         result.content = utf16be_to_utf8(buffer, 2);
         result.ok = true;
-    }
-    else {
+    } else {
         // No BOM
         std::string raw(reinterpret_cast<const char*>(buffer.data()), buffer.size());
         if (is_valid_utf8(raw)) {
@@ -132,4 +138,4 @@ ReadTextResult SourceReader::read_text_file(const std::string& path) {
     return result;
 }
 
-} // namespace NanoCoverage
+}  // namespace NanoCoverage

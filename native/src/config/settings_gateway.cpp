@@ -1,9 +1,11 @@
 #include "settings_gateway.h"
-#include "settings_keys.h"
-#include <godot_cpp/classes/project_settings.hpp>
+
 #include <godot_cpp/classes/global_constants.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
+
+#include "settings_keys.h"
 
 namespace godot {
 
@@ -11,12 +13,13 @@ void SettingsGateway::register_settings() {
     ProjectSettings* ps = ProjectSettings::get_singleton();
 
     // Helper lambda to register a setting
-    auto register_key = [&](const String& path, const Variant& default_value, Variant::Type type, PropertyHint hint = PROPERTY_HINT_NONE, const String& hint_string = "") {
+    auto register_key = [&](const String& path, const Variant& default_value, Variant::Type type,
+                            PropertyHint hint = PROPERTY_HINT_NONE, const String& hint_string = "") {
         if (!ps->has_setting(path)) {
             ps->set_setting(path, default_value);
         }
         ps->set_initial_value(path, default_value);
-        
+
         Dictionary property_info;
         property_info["name"] = path;
         property_info["type"] = type;
@@ -27,10 +30,12 @@ void SettingsGateway::register_settings() {
     };
 
     // Current keys
-    register_key(SettingsKeys::TEMP_DIRECTORY, "", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR, "Folder to store the instrumented project");
+    register_key(SettingsKeys::TEMP_DIRECTORY, "", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR,
+                 "Folder to store the instrumented project");
 
     // Future keys - Paths
-    register_key(SettingsKeys::PATHS_TEMP_DIR, "", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR, "Same as temp_directory (Transition)");
+    register_key(SettingsKeys::PATHS_TEMP_DIR, "", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR,
+                 "Same as temp_directory (Transition)");
     register_key(SettingsKeys::PATHS_REPORT_DIR, "res://coverage_report", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR);
     register_key(SettingsKeys::PATHS_DATA_STORE_DIR, "res://coverage_data", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR);
 
@@ -63,13 +68,14 @@ CoverageSettings SettingsGateway::load() {
     };
 
     settings.temp_directory = get_safe(SettingsKeys::TEMP_DIRECTORY, "");
-    
-    // For paths, if we get an empty string, we should probably use default if default is non-empty. 
+
+    // For paths, if we get an empty string, we should probably use default if default is non-empty.
     // This protects against "set to empty" pollution or user error.
-    
+
     auto get_path = [&](const String& key, const String& def) -> String {
         String val = get_safe(key, def);
-        if (val.is_empty() && !def.is_empty()) return def;
+        if (val.is_empty() && !def.is_empty())
+            return def;
         return val;
     };
 
@@ -89,4 +95,4 @@ CoverageSettings SettingsGateway::load() {
     return settings;
 }
 
-} // namespace godot
+}  // namespace godot
