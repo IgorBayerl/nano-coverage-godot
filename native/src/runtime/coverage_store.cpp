@@ -9,6 +9,7 @@ namespace godot {
 namespace fs = std::filesystem;
 
 CoverageStore::CoverageStore(const std::string& data_store_dir, const std::string& workspace_id) {
+    base_path = data_store_dir;
     fs::path base = fs::path(data_store_dir) / workspace_id;
     root_path = base.string();
     runs_path = (base / "runs").string();
@@ -41,20 +42,27 @@ CoverageData CoverageStore::load_and_merge() {
 }
 
 void CoverageStore::clear() {
-    if (!fs::exists(runs_path)) {
-        return;
+    // 1. Clear Runs
+    if (fs::exists(runs_path)) {
+        for (const auto& entry : fs::directory_iterator(runs_path)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".covdata") {
+                std::error_code ec;
+                fs::remove(entry.path(), ec);
+                if (ec) {
+                    std::cerr << "CoverageStore: Failed to delete " << entry.path().string() << ": " << ec.message() << std::endl;
+                }
+            }
+        }
     }
 
-    // We only remove .covdata files to be safe
-    // We only remove .covdata files to be safe
-    for (const auto& entry : fs::directory_iterator(runs_path)) {
-        if (entry.is_regular_file() && entry.path().extension() == ".covdata") {
-            std::error_code ec;
-            fs::remove(entry.path(), ec);
-            if (ec) {
-                // Best effort
-                std::cerr << "CoverageStore: Failed to delete " << entry.path().string() << ": " << ec.message() << std::endl;
-            }
+    // 2. Clear Global Metadata (coverage.meta)
+    // This is stored at the root of the data store (base_path)
+    fs::path meta_path = fs::path(base_path) / "coverage.meta";
+    if (fs::exists(meta_path)) {
+        std::error_code ec;
+        fs::remove(meta_path, ec);
+        if (ec) {
+             std::cerr << "CoverageStore: Failed to delete " << meta_path.string() << ": " << ec.message() << std::endl;
         }
     }
 }

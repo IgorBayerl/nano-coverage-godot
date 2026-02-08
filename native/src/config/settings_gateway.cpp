@@ -3,6 +3,7 @@
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/classes/global_constants.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
 
 namespace godot {
 
@@ -53,14 +54,29 @@ CoverageSettings SettingsGateway::load() {
         if (ps->has_setting(path)) {
             return ps->get_setting(path);
         }
+        // Fallback: Try getting it anyway, in case has_setting is false but it exists (e.g. dynamic override)
+        Variant val = ps->get_setting(path);
+        if (val.get_type() != Variant::NIL) {
+            return val;
+        }
         return default_val;
     };
 
     settings.temp_directory = get_safe(SettingsKeys::TEMP_DIRECTORY, "");
     
-    settings.paths_temp_dir = get_safe(SettingsKeys::PATHS_TEMP_DIR, "");
-    settings.paths_report_dir = get_safe(SettingsKeys::PATHS_REPORT_DIR, "res://coverage_report");
-    settings.paths_data_store_dir = get_safe(SettingsKeys::PATHS_DATA_STORE_DIR, "res://coverage_data");
+    // For paths, if we get an empty string, we should probably use default if default is non-empty. 
+    // This protects against "set to empty" pollution or user error.
+    
+    auto get_path = [&](const String& key, const String& def) -> String {
+        String val = get_safe(key, def);
+        if (val.is_empty() && !def.is_empty()) return def;
+        return val;
+    };
+
+    settings.paths_temp_dir = get_path(SettingsKeys::PATHS_TEMP_DIR, "");
+    // Default for report dir is res://coverage_report. If retrieval gives "", use default.
+    settings.paths_report_dir = get_path(SettingsKeys::PATHS_REPORT_DIR, "res://coverage_report");
+    settings.paths_data_store_dir = get_path(SettingsKeys::PATHS_DATA_STORE_DIR, "res://coverage_data");
 
     settings.report_lcov_filename = get_safe(SettingsKeys::REPORT_LCOV_FILENAME, "lcov.info");
     settings.report_use_absolute_source_paths = get_safe(SettingsKeys::REPORT_USE_ABSOLUTE_SOURCE_PATHS, false);

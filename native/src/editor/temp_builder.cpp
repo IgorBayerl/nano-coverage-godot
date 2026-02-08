@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "../config/settings_gateway.h"
 #include "../data/persistence.h"
 #include "../instrumentation/instrumenter.h"
 
@@ -242,11 +243,21 @@ String TempProjectBuilder::create_temp_project() {
     if (fs::exists(dest_root / "project.godot")) {
         PatchProjectSettings(dest_root, source_root);
 
-        // Save Metadata
-        fs::path meta_path = source_root / "coverage.meta";
-        UtilityFunctions::print("NanoCoverage: Saving metadata to ", String(meta_path.string().c_str()));
-        Persistence::save_metadata(meta_path.string(), global_metadata);
+    // Save Metadata to Disk
+    CoverageSettings settings = SettingsGateway::load();
+    String data_store_dir = settings.paths_data_store_dir; 
+    
+    String global_data_dir = ProjectSettings::get_singleton()->globalize_path(data_store_dir);
+    fs::path meta_dir(global_data_dir.utf8().get_data());
+    std::error_code ec_meta;
+    fs::create_directories(meta_dir, ec_meta);
 
+    fs::path meta_path = meta_dir / "coverage.meta";
+    
+    UtilityFunctions::print("NanoCoverage: Saving metadata to ", String(meta_path.string().c_str()));
+    if (!Persistence::save_metadata(meta_path.string(), global_metadata)) {
+         UtilityFunctions::printerr("NanoCoverage: Failed to save coverage.meta!");
+    }
     } else {
         UtilityFunctions::printerr("NanoCoverage: CRITICAL - project.godot not found in temp directory!");
         return "";

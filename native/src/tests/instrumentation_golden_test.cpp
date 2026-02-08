@@ -32,6 +32,8 @@ func _ready():
 	var x = 10
 	if x > 5:
 		print("Hello")
+	else:
+		print("Else")
 
 # A comment
 )";
@@ -50,6 +52,9 @@ func _ready():
 	if x > 5:
 		NanoCoverage.hit("res://test_golden.gd", 6)
 		print("Hello")
+	else:
+		NanoCoverage.hit("res://test_golden.gd", 8)
+		print("Else")
 
 # A comment
 )";
@@ -73,8 +78,10 @@ func _ready():
     
     // Also verify strict line reporting
     // Lines 4, 5, 6 should be in covered_lines
-    ASSERT_EQ(result.covered_lines.size(), 3);
+    // Lines 4, 5, 6, 8 should be in covered_lines
+    ASSERT_EQ(result.covered_lines.size(), 4);
     EXPECT_EQ(result.covered_lines[0], 4);
     EXPECT_EQ(result.covered_lines[1], 5);
     EXPECT_EQ(result.covered_lines[2], 6);
+    EXPECT_EQ(result.covered_lines[3], 8);
 }

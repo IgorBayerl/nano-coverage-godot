@@ -22,6 +22,7 @@ public:
     void clear();
 
 private:
+    std::string base_path;
     std::string root_path;
     std::string runs_path;
     

@@ -1,39 +1,54 @@
 #include "test_main.h"
 
-// Include Google Test
 #include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <gtest/gtest.h>
 #include <sstream>
 
-// Include the class we are testing
 #include "../runtime/coverage_monitor.h"
+#include "test_utils.h" // Include the helper
 
 namespace godot {
 
 // --- Custom Listener to pipe GTest output to Godot ---
 class GodotGTestPrinter : public ::testing::EmptyTestEventListener {
-    // Called when a test assertion fails
-    virtual void OnTestPartResult(const ::testing::TestPartResult& result) {
-        if (result.failed()) {
-            std::stringstream ss;
-            // Format: [FAILED] filename:line summary
-            ss << "\n[FAILED] " << result.file_name() << ":" << result.line_number() << "\n"
-               << "         " << result.summary() << "\n";
-            UtilityFunctions::printerr(ss.str().c_str());
+    void log_to_file(String message) {
+        Ref<FileAccess> f;
+        if (FileAccess::file_exists("res://test_log.txt")) {
+            f = FileAccess::open("res://test_log.txt", FileAccess::READ_WRITE);
+            f->seek_end();
+        } else {
+            f = FileAccess::open("res://test_log.txt", FileAccess::WRITE);
+        }
+        if (f.is_valid()) {
+            f->store_line(message);
         }
     }
 
-    // Called after a test ends
+    virtual void OnTestPartResult(const ::testing::TestPartResult& result) {
+        if (result.failed()) {
+            std::stringstream ss;
+            ss << "\n[FAILED] " << result.file_name() << ":" << result.line_number() << "\n"
+               << "         " << result.summary() << "\n";
+            String msg = String(ss.str().c_str());
+            UtilityFunctions::printerr(msg);
+            log_to_file(msg);
+        }
+    }
+
     virtual void OnTestEnd(const ::testing::TestInfo& test_info) {
         if (test_info.result()->Failed()) {
-            UtilityFunctions::printerr("[TEST FAILED] ", test_info.test_suite_name(), ".", test_info.name());
+            String msg = "[TEST FAILED] " + String(test_info.test_suite_name()) + "." + String(test_info.name());
+            UtilityFunctions::printerr(msg);
+            log_to_file(msg);
         } else {
-            // Uncomment this if you want to see passing tests too
-            UtilityFunctions::print("[TEST PASSED] ", test_info.test_suite_name(), ".", test_info.name());
+            String msg = "[TEST PASSED] " + String(test_info.test_suite_name()) + "." + String(test_info.name());
+            UtilityFunctions::print(msg);
+            log_to_file(msg);
         }
     }
 };
@@ -56,6 +71,14 @@ TEST(NanoCoverageTest, RecordsHitsAndSavesSession) {
     // 1. Setup
     NanoCoverage* cov = memnew(NanoCoverage);
     String test_file = "res://test_unit_gen.gd";
+    
+    // Use a temp folder to avoid polluting project root
+    String temp_dir = "res://temp_session_test";
+    TestUtils::clean_dir(temp_dir); // Ensure clean start
+    DirAccess::make_dir_recursive_absolute(temp_dir);
+
+    // Override "nano_coverage/output_dir" so save_session() writes there
+    SettingsOverride s1("nano_coverage/output_dir", temp_dir);
 
     cov->reset();
     cov->hit(test_file, 10);
@@ -63,11 +86,15 @@ TEST(NanoCoverageTest, RecordsHitsAndSavesSession) {
 
     // 2. Assert Hits in Memory
     EXPECT_EQ(cov->get_total_hit_count(), 2);
-
-    // 3. Test Save (We can't easily assert the file path in unit test without mocking,
-    //    but we ensure the method call is valid and doesn't crash).
+    
+    // 3. Test Save
     cov->save_session();
+    
+    // Verify file exists (optional, but good for sanity)
+    EXPECT_TRUE(FileAccess::file_exists(temp_dir + "/coverage.data"));
 
+    // 4. Cleanup
+    TestUtils::clean_dir(temp_dir);
     memdelete(cov);
 }
 
@@ -78,20 +105,36 @@ void NanoCoverageTestRunner::_bind_methods() {
 }
 
 int NanoCoverageTestRunner::run_all_tests() {
+    {
+        Ref<FileAccess> f = FileAccess::open("res://test_log.txt", FileAccess::WRITE);
+        if (f.is_valid()) f->store_line("--- STARTING TESTS ---");
+    }
+
     UtilityFunctions::print("NanoCoverage: --- STARTING GOOGLE TEST SUITE ---");
+    
+    PackedStringArray user_args = OS::get_singleton()->get_cmdline_user_args();
+    int argc = user_args.size() + 1;
+    std::vector<char*> argv_vec;
+    std::vector<std::string> arg_strings;
 
-    int argc = 1;
-    char* argv[] = {(char*)"nano_coverage_tests", nullptr};
+    arg_strings.push_back("nano_coverage_tests");
+    for (const String& arg : user_args) {
+        arg_strings.push_back(arg.utf8().get_data());
+    }
 
-    // Check if already initialized to avoid duplicate listener issues on repeated runs (if any)
+    for (size_t i = 0; i < arg_strings.size(); ++i) {
+        argv_vec.push_back((char*)arg_strings[i].c_str());
+    }
+    argv_vec.push_back(nullptr);
+    
+    char** argv = argv_vec.data();
+
     if (!::testing::GTEST_FLAG(list_tests)) {
         ::testing::InitGoogleTest(&argc, argv);
-        // Add our custom printer to the listener list
         ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();
         listeners.Append(new GodotGTestPrinter);
     }
 
-    // Run tests
     int res = RUN_ALL_TESTS();
     if (res == 0) {
         UtilityFunctions::print("NanoCoverage: --- ALL TESTS PASSED ---");

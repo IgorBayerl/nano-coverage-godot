@@ -1,5 +1,6 @@
 #include "lcov_writer.h"
 
+#include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -20,6 +21,18 @@ void LCOVWriter::write_lcov_report(const CoverageData& data, const CoverageSetti
         output_path = output_dir + "/" + filename;
     }
 
+
+
+
+    // Ensure directory exists
+    // Check if it exists
+    if (!DirAccess::dir_exists_absolute(output_dir)) {
+        Error err = DirAccess::make_dir_recursive_absolute(output_dir);
+        if (err != OK) {
+             UtilityFunctions::printerr("NanoCoverage: Failed to create report directory: ", output_dir);
+        }
+    }
+
     Ref<FileAccess> file = FileAccess::open(output_path, FileAccess::WRITE);
     if (file.is_null()) {
         UtilityFunctions::printerr("NanoCoverage: Could not open report file for writing: ", output_path);
@@ -27,12 +40,18 @@ void LCOVWriter::write_lcov_report(const CoverageData& data, const CoverageSetti
     }
 
     UtilityFunctions::print("NanoCoverage: Writing LCOV report to ", output_path);
+    
+    // Fetch the original project root if available (injected by TempBuilder)
 
     // Fetch the original project root if available (injected by TempBuilder)
     String source_root = "";
     if (settings.report_use_absolute_source_paths) {
         if (ProjectSettings::get_singleton()->has_setting("nano_coverage/source_root")) {
             source_root = ProjectSettings::get_singleton()->get_setting("nano_coverage/source_root");
+            // Ensure source_root itself is absolute if it's a resource path
+            if (source_root.begins_with("res://") || source_root.begins_with("user://")) {
+                source_root = ProjectSettings::get_singleton()->globalize_path(source_root);
+            }
         }
     }
 
