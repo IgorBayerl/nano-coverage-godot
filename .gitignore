@@ -94,3 +94,6 @@ godot_project/coverage.lcov
 
 godot_project/coverage.data
 godot_project/coverage.meta
+godot_project/test_log.txt
+godot_project/coverage_data/coverage.meta
+godot_project/coverage_data/default/runs/1770584366-41.covdata

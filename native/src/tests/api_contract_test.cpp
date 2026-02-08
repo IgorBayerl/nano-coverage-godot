@@ -19,9 +19,7 @@ TEST(CoverageApiTest, ContractTest) {
     Dictionary instr_result = api->instrument_project(instr_opts);
 
     // Verify success immediately
-    if (instr_result.has("error")) {
-        FAIL() << "Instrumentation failed: " << String(instr_result["error"]).utf8().get_data();
-    }
+    ASSERT_FALSE(instr_result.has("error")) << "Instrumentation failed: " << String(instr_result.get("error", "")).utf8().get_data();
     
     ASSERT_TRUE(instr_result.has("output_path")) << "instrument_project missing output_path";
     String output_path = instr_result["output_path"];
@@ -44,9 +42,7 @@ TEST(CoverageApiTest, ContractTest) {
     report_opts["workspace_id"] = "test_workspace";
     Dictionary report_result = api->generate_coverage_report(report_opts);
     
-    if (report_result.has("error")) {
-         FAIL() << "Report generation failed: " << String(report_result["error"]).utf8().get_data();
-    }
+    ASSERT_FALSE(report_result.has("error")) << "Report generation failed: " << String(report_result.get("error", "")).utf8().get_data();
     
     EXPECT_TRUE(report_result.has("status"));
     EXPECT_EQ(String(report_result["status"]), "ok");
