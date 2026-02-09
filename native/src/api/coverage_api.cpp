@@ -11,7 +11,7 @@
 
 #include "../config/settings_gateway.h"
 #include "../data/persistence.h"
-#include "../editor/temp_builder.h"
+#include "../editor/instrumented_project_builder.h"
 #include "../runtime/coverage_collector.h"
 #include "../runtime/coverage_store.h"
 #include "../runtime/lcov_writer.h"
@@ -26,7 +26,7 @@ void CoverageApi::_bind_methods() {
 }
 
 Dictionary CoverageApi::instrument_project(const Dictionary& options) {
-    String output_path = TempProjectBuilder::create_temp_project();
+    String output_path = InstrumentedProjectBuilder::build_instrumented_project();
     Dictionary result;
     if (output_path.is_empty()) {
         result["error"] = "Failed to create temp project";

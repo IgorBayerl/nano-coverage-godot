@@ -1,4 +1,4 @@
-#include "temp_builder.h"
+#include "instrumented_project_builder.h"
 
 #include <algorithm>
 #include <array>
@@ -194,7 +194,7 @@ void PatchProjectSettings(const fs::path& temp_project_root, const fs::path& ori
 
 }  // namespace
 
-String TempProjectBuilder::create_temp_project() {
+String InstrumentedProjectBuilder::build_instrumented_project() {
     // Resolve Paths
     String res_path_gd = ProjectSettings::get_singleton()->globalize_path("res://");
     fs::path source_root(res_path_gd.utf8().get_data());
