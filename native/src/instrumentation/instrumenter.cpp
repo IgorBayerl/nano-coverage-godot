@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "rewriter.h"
+#include "source_reader.h"
 
 extern "C" {
 #include <tree_sitter/api.h>
@@ -17,25 +18,9 @@ const TSLanguage* tree_sitter_gdscript(void);
 
 namespace godot {
 
-// ... [Existing helper functions: is_debug_enabled, read_all_bytes, write_all_bytes, find_line_start, etc.] ...
-// ... [Retain all helpers from previous version up to escape_gd_string] ...
-
 static bool is_debug_enabled() {
     const char* v = std::getenv("NANO_COVERAGE_DEBUG");
     return v && *v && std::string_view(v) != "0";
-}
-
-static bool read_all_bytes(const std::filesystem::path& p, std::string& out) {
-    std::ifstream f(p, std::ios::binary);
-    if (!f.is_open())
-        return false;
-    f.seekg(0, std::ios::end);
-    const size_t sz = (size_t)f.tellg();
-    f.seekg(0, std::ios::beg);
-    out.resize(sz);
-    if (sz > 0)
-        f.read(out.data(), (std::streamsize)sz);
-    return true;
 }
 
 static bool write_all_bytes(const std::filesystem::path& p, const std::string& data) {
@@ -130,7 +115,6 @@ static std::string make_injected_line(const std::string& indent, const std::stri
     return indent + "NanoCoverage.hit(\"" + file_lit + "\", " + std::to_string(line_1_based) + ")\n";
 }
 
-// Updated to fill 'lines_found'
 static void collect_insertions(TSNode node, const std::string& src, const std::string& file_lit,
                                std::vector<TextInsertion>& out_insertions, std::vector<uint32_t>& out_lines) {
     const std::string_view type = ts_node_type(node);
@@ -169,32 +153,34 @@ static void collect_insertions(TSNode node, const std::string& src, const std::s
     }
 }
 
-bool Instrumenter::instrument_file_in_place(const std::filesystem::path& abs_path, const std::string& res_path,
-                                            std::vector<uint32_t>& out_lines, int* out_insertions) {
-    if (out_insertions)
-        *out_insertions = 0;
-    out_lines.clear();
+// [Pure Pipeline]
+// Takes raw source code (UTF-8), parses it with Tree-sitter, identifies coverable lines,
+// and returns the instrumented code and metadata.
+// This function performs NO file I/O and is side-effect free, making it ideal for unit testing.
+InstrumentResult Instrumenter::instrument_text(const std::string& utf8_code, const std::string& res_path) {
+    InstrumentResult result;
+    result.ok = false;
 
-    std::string src;
-    if (!read_all_bytes(abs_path, src)) {
-        UtilityFunctions::printerr("NanoCoverage: failed to read: ", String(abs_path.string().c_str()));
-        return false;
-    }
+    // Copy input code as it might be unmodified
+    result.instrumented_code = utf8_code;
 
     TSParser* parser = ts_parser_new();
-    if (!parser)
-        return false;
-
-    if (!ts_parser_set_language(parser, tree_sitter_gdscript())) {
-        UtilityFunctions::printerr("NanoCoverage: tree-sitter-gdscript language init failed");
-        ts_parser_delete(parser);
-        return false;
+    if (!parser) {
+        result.error_message = "Failed to create tree-sitter parser";
+        return result;
     }
 
-    TSTree* tree = ts_parser_parse_string(parser, nullptr, src.data(), (uint32_t)src.size());
-    if (!tree) {
+    if (!ts_parser_set_language(parser, tree_sitter_gdscript())) {
+        result.error_message = "tree-sitter-gdscript language init failed";
         ts_parser_delete(parser);
-        return false;
+        return result;
+    }
+
+    TSTree* tree = ts_parser_parse_string(parser, nullptr, utf8_code.data(), (uint32_t)utf8_code.size());
+    if (!tree) {
+        result.error_message = "Failed to parse code";
+        ts_parser_delete(parser);
+        return result;
     }
 
     const TSNode root = ts_tree_root_node(tree);
@@ -205,24 +191,81 @@ bool Instrumenter::instrument_file_in_place(const std::filesystem::path& abs_pat
     const std::string file_lit = escape_gd_string(res_path);
 
     // Pass the vector to collect lines
-    collect_insertions(root, src, file_lit, insertions, out_lines);
+    collect_insertions(root, utf8_code, file_lit, insertions, result.covered_lines);
+    result.insertions = (int)insertions.size();
 
-    if (out_insertions)
-        *out_insertions = (int)insertions.size();
-
+    // If no insertions, we are done
     if (insertions.empty()) {
         ts_tree_delete(tree);
         ts_parser_delete(parser);
-        return true;
+        result.ok = true;
+        return result;
     }
 
-    std::string out_text = Rewriter::apply(src, std::move(insertions));
+    // Rewrite code
+    result.instrumented_code = Rewriter::apply(utf8_code, std::move(insertions));
 
     ts_tree_delete(tree);
     ts_parser_delete(parser);
 
-    if (!write_all_bytes(abs_path, out_text)) {
-        UtilityFunctions::printerr("NanoCoverage: failed to write: ", String(abs_path.string().c_str()));
+    result.ok = true;
+    return result;
+}
+
+// [I/O Wrapper]
+// Handles the "dirty work" of interacting with the filesystem.
+// * Reads the file using SourceReader (handling BOMs/encoding).
+// * Delegates the logic to instrument_text().
+// * Writes the result back to disk if changes were made.
+bool Instrumenter::instrument_file(const String& path, const String& res_path, std::vector<uint32_t>* out_lines,
+                                   int* out_insertions) {
+    if (out_lines)
+        out_lines->clear();
+    if (out_insertions)
+        *out_insertions = 0;
+
+    // Read
+    // We use NanoCoverage::SourceReader which we just imported
+    NanoCoverage::ReadTextResult read_res = NanoCoverage::SourceReader::read_text_file(path.utf8().get_data());
+
+    if (!read_res.ok) {
+        UtilityFunctions::printerr("NanoCoverage: failed to read: ", path);
+        // If needed, log read_res.error_message
+        return false;
+    }
+
+    // Instrument
+    std::string res_path_std = res_path.utf8().get_data();
+    InstrumentResult inst_res = instrument_text(read_res.content, res_path_std);
+
+    if (!inst_res.ok) {
+        UtilityFunctions::printerr("NanoCoverage: instrumentation failed for: ", path,
+                                   " error: ", String(inst_res.error_message.c_str()));
+        return false;
+    }
+
+    // Output metadata
+    if (out_lines) {
+        *out_lines = inst_res.covered_lines;
+    }
+    if (out_insertions) {
+        *out_insertions = inst_res.insertions;
+    }
+
+    // Write
+    if (inst_res.insertions == 0 && read_res.content == inst_res.instrumented_code) {
+        return true;
+    }
+
+    // We also typically return true if 0 insertions, same as before, but now we filled the metadata.
+    if (inst_res.insertions == 0) {
+        return true;
+    }
+
+    // Write back
+    std::filesystem::path fs_path(path.utf8().get_data());
+    if (!write_all_bytes(fs_path, inst_res.instrumented_code)) {
+        UtilityFunctions::printerr("NanoCoverage: failed to write: ", path);
         return false;
     }
 

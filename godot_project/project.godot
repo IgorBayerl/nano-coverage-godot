@@ -18,7 +18,3 @@ config/icon="res://logo.svg"
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/nano_coverage_godot/plugin.cfg")
-
-[nano_coverage]
-
-general/temp_directory="C:/www/nano-coverage-godot/instrumented"

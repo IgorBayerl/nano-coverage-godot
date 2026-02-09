@@ -1,4 +1,4 @@
-#include "../data/persistence.h"
+#include "persistence.h"
 
 #include <filesystem>
 #include <gtest/gtest.h>

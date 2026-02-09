@@ -1,9 +1,10 @@
-#include "temp_builder.h"
+#include "instrumented_project_builder.h"
 
 #include <algorithm>
 #include <array>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <godot_cpp/classes/config_file.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/classes/resource_uid.hpp>
@@ -11,14 +12,17 @@
 #include <string>
 #include <vector>
 
+#include "../config/settings_gateway.h"
 #include "../data/persistence.h"
 #include "../instrumentation/instrumenter.h"
 
 namespace godot {
 
 namespace {
-// ... [Retain existing constants and helpers: fs, kMandatoryCopyExtensions, IsEnvTruthy, etc.] ...
+
 namespace fs = std::filesystem;
+
+// Constants
 const std::array<std::string_view, 8> kMandatoryCopyExtensions = {".gd", ".gdextension", ".cfg", ".dll",
                                                                   ".so", ".dylib",       ".a",   ".lib"};
 const std::array<std::string_view, 2> kCriticalCacheFiles = {"uid_cache.bin", "extension_list.cfg"};
@@ -26,6 +30,7 @@ const char* kAutoloadName = "NanoCoverage";
 const char* kAutoloadPath = "*res://addons/nano_coverage_godot/runtime.gd";
 const char* kAddonPrefix = "addons/nano_coverage_godot/";
 
+// Helper Predicates
 bool IsEnvTruthy(const char* name) {
     const char* v = std::getenv(name);
     return v && *v && std::string_view(v) != "0";
@@ -55,31 +60,118 @@ bool IsCopyMandatory(const fs::path& path) {
     return false;
 }
 
+// File Operations
 void CreateSymlinkOrCopy(const fs::path& src, const fs::path& dst) {
     std::error_code ec;
     fs::create_symlink(src, dst, ec);
     if (ec) {
         ec.clear();
         fs::copy_file(src, dst, fs::copy_options::overwrite_existing, ec);
-        if (ec)
+
+        if (ec) {
             UtilityFunctions::printerr("NanoCoverage: Failed to link/copy ", String(src.string().c_str()));
+            std::ofstream debug_file("debug_log.txt", std::ios::app);
+            debug_file << "NanoCoverage: Failed to link/copy " << src.string() << " to " << dst.string()
+                       << ". Error: " << ec.message() << std::endl;
+        }
+    }
+}
+
+// Pipeline Steps
+
+std::vector<fs::path> CollectSourceFiles(const fs::path& source_root) {
+    std::vector<fs::path> files;
+    if (!fs::exists(source_root))
+        return files;
+
+    {
+        std::ofstream debug_file("debug_log.txt", std::ios::app);
+        debug_file << "NanoCoverage: Collecting files from " << source_root.string() << std::endl;
+        debug_file.close();
+    }
+    UtilityFunctions::print("NanoCoverage: Collecting files from ", String(source_root.string().c_str()));
+    for (const auto& entry : fs::recursive_directory_iterator(source_root)) {
+        const auto& path = entry.path();
+
+        // We handle directory creation based on file paths
+        if (fs::is_directory(path))
+            continue;
+
+        auto relative_path = fs::relative(path, source_root);
+        std::string path_str = relative_path.generic_string();
+
+        // Standard exclusions
+        if (path_str.find(".godot") == 0 || path_str.find(".git") == 0)
+            continue;
+        if (IsHotReloadArtifact(path.filename().string()))
+            continue;
+
+        if (path.filename() == "project.godot") {
+            std::ofstream debug_file("debug_log.txt", std::ios::app);
+            debug_file << "NanoCoverage: Found project.godot at " << path.string() << std::endl;
+        }
+        files.push_back(path);
+    }
+    {
+        std::ofstream debug_file("debug_log.txt", std::ios::app);
+        debug_file << "NanoCoverage: Collected " << files.size() << " files." << std::endl;
+    }
+    return files;
+}
+
+void CopyOrLinkFile(const fs::path& src, const fs::path& dst) {
+    std::error_code ec;
+    // Note: create_directories(parent) is done by caller to avoid repeated checks here
+
+    if (IsCopyMandatory(src)) {
+        fs::copy_file(src, dst, fs::copy_options::overwrite_existing, ec);
+        if (ec) {
+            std::ofstream debug_file("debug_log.txt", std::ios::app);
+            debug_file << "NanoCoverage: Failed to mandatory copy " << src.string() << " to " << dst.string()
+                       << ". Error: " << ec.message() << std::endl;
+        }
+    } else {
+        CreateSymlinkOrCopy(src, dst);
+    }
+}
+
+void InstrumentFileIfNeeded(const fs::path& target_file, const fs::path& relative_path, CoverageMetadata& metadata) {
+    if (target_file.extension() != ".gd")
+        return;
+
+    if (!ShouldInstrumentFile(relative_path))
+        return;
+
+    std::string res_gd = "res://" + relative_path.generic_string();
+    std::replace(res_gd.begin(), res_gd.end(), '\\', '/');
+
+    int insertions = 0;
+    std::vector<uint32_t> lines;
+
+    Instrumenter::instrument_file(String(target_file.string().c_str()), String(res_gd.c_str()), &lines, &insertions);
+
+    if (!lines.empty()) {
+        metadata[res_gd] = std::move(lines);
     }
 }
 
 void SyncGodotCache(const fs::path& src_root, const fs::path& dst_root) {
-    // ... [Same implementation as before] ...
     fs::path src_godot = src_root / ".godot";
     fs::path dst_godot = dst_root / ".godot";
+
     if (!fs::exists(src_godot))
         return;
+
     std::error_code ec;
     fs::create_directories(dst_godot, ec);
+
     for (const auto& filename : kCriticalCacheFiles) {
         fs::path src_file = src_godot / filename;
         fs::path dst_file = dst_godot / filename;
         if (fs::exists(src_file))
             fs::copy_file(src_file, dst_file, fs::copy_options::overwrite_existing, ec);
     }
+
     fs::path src_imported = src_godot / "imported";
     if (fs::exists(src_imported)) {
         fs::create_directories(dst_godot / "imported", ec);
@@ -95,7 +187,7 @@ void SyncGodotCache(const fs::path& src_root, const fs::path& dst_root) {
     }
 }
 
-void SanitizeProjectConfig(const fs::path& temp_project_root, const fs::path& original_project_root) {
+void PatchProjectSettings(const fs::path& temp_project_root, const fs::path& original_project_root) {
     String project_file_str = String((temp_project_root / "project.godot").string().c_str());
     Ref<ConfigFile> cfg;
     cfg.instantiate();
@@ -124,17 +216,28 @@ void SanitizeProjectConfig(const fs::path& temp_project_root, const fs::path& or
 
     cfg->save(project_file_str);
 }
+
 }  // namespace
 
-String TempProjectBuilder::create_temp_project() {
+String InstrumentedProjectBuilder::build_instrumented_project() {
+    // Resolve Paths
     String res_path_gd = ProjectSettings::get_singleton()->globalize_path("res://");
-    fs::path source_root(res_path_gd.utf8().get_data());
+
+    // Explicitly hold CharString to ensure pointer validity for fs::path
+    CharString res_path_utf8 = res_path_gd.utf8();
+    fs::path source_root(res_path_utf8.get_data());
+
     fs::path temp_root;
-    String custom_path_setting = ProjectSettings::get_singleton()->get_setting("nano_coverage/general/temp_directory");
+
+    // Use SettingsGateway for robust fallback and defaults
+    CoverageSettings settings = SettingsGateway::load();
+    String custom_path_setting = settings.temp_directory;
 
     if (!custom_path_setting.is_empty()) {
         String global_custom = ProjectSettings::get_singleton()->globalize_path(custom_path_setting);
-        temp_root = fs::path(global_custom.utf8().get_data());
+        // Explicitly hold CharString
+        CharString custom_utf8 = global_custom.utf8();
+        temp_root = fs::path(custom_utf8.get_data());
     } else {
         temp_root = fs::temp_directory_path() / "nano_coverage_godot_runs";
     }
@@ -143,63 +246,63 @@ String TempProjectBuilder::create_temp_project() {
     fs::path dest_root = temp_root / project_hash;
     std::error_code ec;
 
+    // Prepare Temp Directory
     if (fs::exists(dest_root))
         fs::remove_all(dest_root, ec);
     fs::create_directories(dest_root, ec);
 
+    // Verify creation
+    if (ec) {
+        UtilityFunctions::printerr("NanoCoverage: Failed to create temp dir: ", String(dest_root.string().c_str()));
+        return "";
+    }
+
     UtilityFunctions::print("NanoCoverage: Building temp project at ", String(dest_root.string().c_str()));
 
-    // NEW: Accumulate metadata during the copy/instrument loop
+    // Process Files (Collect, Copy, Instrument)
     CoverageMetadata global_metadata;
+    auto files = CollectSourceFiles(source_root);
 
-    for (const auto& entry : fs::recursive_directory_iterator(source_root)) {
-        const auto& path = entry.path();
-        auto relative_path = fs::relative(path, source_root);
-        std::string path_str = relative_path.generic_string();
+    for (const auto& src_path : files) {
+        auto relative = fs::relative(src_path, source_root);
+        auto target = dest_root / relative;
 
-        if (path_str.find(".godot") == 0 || path_str.find(".git") == 0)
-            continue;
-        if (IsHotReloadArtifact(path.filename().string()))
-            continue;
-
-        fs::path target = dest_root / relative_path;
-        if (fs::is_directory(path)) {
-            fs::create_directories(target, ec);
-            continue;
+        fs::create_directories(target.parent_path(), ec);
+        if (ec) {
+            std::ofstream debug_file("debug_log.txt", std::ios::app);
+            debug_file << "NanoCoverage: Failed to create directory " << target.parent_path().string()
+                       << ". Error: " << ec.message() << std::endl;
         }
 
-        if (IsCopyMandatory(path)) {
-            fs::copy_file(path, target, fs::copy_options::overwrite_existing, ec);
+        CopyOrLinkFile(src_path, target);
 
-            if (path.extension() == ".gd" && ShouldInstrumentFile(relative_path)) {
-                std::string res_gd = "res://" + relative_path.generic_string();
-                std::replace(res_gd.begin(), res_gd.end(), '\\', '/');
-
-                int insertions = 0;
-                std::vector<uint32_t> lines;
-
-                Instrumenter::instrument_file_in_place(target, res_gd, lines, &insertions);
-
-                // Store metadata for this file
-                if (!lines.empty()) {
-                    global_metadata[res_gd] = std::move(lines);
-                }
-            }
-        } else {
-            CreateSymlinkOrCopy(path, target);
+        if (IsCopyMandatory(src_path)) {
+            InstrumentFileIfNeeded(target, relative, global_metadata);
         }
     }
 
+    // Sync Cache
     SyncGodotCache(source_root, dest_root);
 
+    // Finalize Configuration
     if (fs::exists(dest_root / "project.godot")) {
-        SanitizeProjectConfig(dest_root, source_root);
+        PatchProjectSettings(dest_root, source_root);
 
-        // NEW: Save the accumulated metadata to the original source root
-        fs::path meta_path = source_root / "coverage.meta";
+        // Save Metadata to Disk
+        CoverageSettings settings = SettingsGateway::load();
+        String data_store_dir = settings.paths_data_store_dir;
+
+        String global_data_dir = ProjectSettings::get_singleton()->globalize_path(data_store_dir);
+        fs::path meta_dir(global_data_dir.utf8().get_data());
+        std::error_code ec_meta;
+        fs::create_directories(meta_dir, ec_meta);
+
+        fs::path meta_path = meta_dir / "coverage.meta";
+
         UtilityFunctions::print("NanoCoverage: Saving metadata to ", String(meta_path.string().c_str()));
-        Persistence::save_metadata(meta_path.string(), global_metadata);
-
+        if (!Persistence::save_metadata(meta_path.string(), global_metadata)) {
+            UtilityFunctions::printerr("NanoCoverage: Failed to save coverage.meta!");
+        }
     } else {
         UtilityFunctions::printerr("NanoCoverage: CRITICAL - project.godot not found in temp directory!");
         return "";

@@ -1,4 +1,4 @@
-#include "temp_builder.h"
+#include "instrumented_project_builder.h"
 
 #include <filesystem>
 #include <godot_cpp/classes/project_settings.hpp>
@@ -8,9 +8,9 @@
 namespace fs = std::filesystem;
 using namespace godot;
 
-TEST(TempProjectBuilderTest, CreatesValidProjectStructure) {
+TEST(InstrumentedProjectBuilderTest, CreatesValidProjectStructure) {
     // 1. Action
-    String result_path_str = TempProjectBuilder::create_temp_project();
+    String result_path_str = InstrumentedProjectBuilder::build_instrumented_project();
 
     // Convert to standard string/path
     std::string path_std = result_path_str.utf8().get_data();

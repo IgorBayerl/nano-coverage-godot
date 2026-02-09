@@ -88,3 +88,23 @@ library = project_env.SharedLibrary(
 comp_db = project_env.CompilationDatabase(target="compile_commands.json", source=sources)
 
 Default(library, comp_db)
+
+# --- INSTALLATION OF RESOURCES ---
+# Define the source directory for scripts/configs
+addon_res_src = Dir("addon_resources")
+
+# Define the destination directory (Root of the addon)
+# output_dir is ".../bin/", so we go up one level
+addon_root_dir = Dir(output_dir).Dir("..")
+
+# List of files to copy
+# Note: These files must exist in native/addon_resources/
+resource_files = ["plugin.cfg", "plugin.gd", "runtime.gd", "nano_coverage_godot.gdextension"]
+
+for f in resource_files:
+    # We use the Install command which copies files only if they are newer
+    project_env.Install(addon_root_dir, addon_res_src.File(f))
+
+# Ensure these copy actions happen when we build the library
+project_env.Alias("install_resources", addon_root_dir)
+Default("install_resources")
