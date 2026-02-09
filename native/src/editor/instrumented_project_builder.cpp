@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <godot_cpp/classes/config_file.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/classes/resource_uid.hpp>
@@ -66,8 +67,13 @@ void CreateSymlinkOrCopy(const fs::path& src, const fs::path& dst) {
     if (ec) {
         ec.clear();
         fs::copy_file(src, dst, fs::copy_options::overwrite_existing, ec);
-        if (ec)
+
+        if (ec) {
             UtilityFunctions::printerr("NanoCoverage: Failed to link/copy ", String(src.string().c_str()));
+            std::ofstream debug_file("debug_log.txt", std::ios::app);
+            debug_file << "NanoCoverage: Failed to link/copy " << src.string() << " to " << dst.string()
+                       << ". Error: " << ec.message() << std::endl;
+        }
     }
 }
 
@@ -78,6 +84,12 @@ std::vector<fs::path> CollectSourceFiles(const fs::path& source_root) {
     if (!fs::exists(source_root))
         return files;
 
+    {
+        std::ofstream debug_file("debug_log.txt", std::ios::app);
+        debug_file << "NanoCoverage: Collecting files from " << source_root.string() << std::endl;
+        debug_file.close();
+    }
+    UtilityFunctions::print("NanoCoverage: Collecting files from ", String(source_root.string().c_str()));
     for (const auto& entry : fs::recursive_directory_iterator(source_root)) {
         const auto& path = entry.path();
 
@@ -94,7 +106,15 @@ std::vector<fs::path> CollectSourceFiles(const fs::path& source_root) {
         if (IsHotReloadArtifact(path.filename().string()))
             continue;
 
+        if (path.filename() == "project.godot") {
+            std::ofstream debug_file("debug_log.txt", std::ios::app);
+            debug_file << "NanoCoverage: Found project.godot at " << path.string() << std::endl;
+        }
         files.push_back(path);
+    }
+    {
+        std::ofstream debug_file("debug_log.txt", std::ios::app);
+        debug_file << "NanoCoverage: Collected " << files.size() << " files." << std::endl;
     }
     return files;
 }
@@ -105,6 +125,11 @@ void CopyOrLinkFile(const fs::path& src, const fs::path& dst) {
 
     if (IsCopyMandatory(src)) {
         fs::copy_file(src, dst, fs::copy_options::overwrite_existing, ec);
+        if (ec) {
+            std::ofstream debug_file("debug_log.txt", std::ios::app);
+            debug_file << "NanoCoverage: Failed to mandatory copy " << src.string() << " to " << dst.string()
+                       << ". Error: " << ec.message() << std::endl;
+        }
     } else {
         CreateSymlinkOrCopy(src, dst);
     }
@@ -197,13 +222,22 @@ void PatchProjectSettings(const fs::path& temp_project_root, const fs::path& ori
 String InstrumentedProjectBuilder::build_instrumented_project() {
     // Resolve Paths
     String res_path_gd = ProjectSettings::get_singleton()->globalize_path("res://");
-    fs::path source_root(res_path_gd.utf8().get_data());
+
+    // Explicitly hold CharString to ensure pointer validity for fs::path
+    CharString res_path_utf8 = res_path_gd.utf8();
+    fs::path source_root(res_path_utf8.get_data());
+
     fs::path temp_root;
-    String custom_path_setting = ProjectSettings::get_singleton()->get_setting("nano_coverage/general/temp_directory");
+
+    // Use SettingsGateway for robust fallback and defaults
+    CoverageSettings settings = SettingsGateway::load();
+    String custom_path_setting = settings.temp_directory;
 
     if (!custom_path_setting.is_empty()) {
         String global_custom = ProjectSettings::get_singleton()->globalize_path(custom_path_setting);
-        temp_root = fs::path(global_custom.utf8().get_data());
+        // Explicitly hold CharString
+        CharString custom_utf8 = global_custom.utf8();
+        temp_root = fs::path(custom_utf8.get_data());
     } else {
         temp_root = fs::temp_directory_path() / "nano_coverage_godot_runs";
     }
@@ -217,6 +251,12 @@ String InstrumentedProjectBuilder::build_instrumented_project() {
         fs::remove_all(dest_root, ec);
     fs::create_directories(dest_root, ec);
 
+    // Verify creation
+    if (ec) {
+        UtilityFunctions::printerr("NanoCoverage: Failed to create temp dir: ", String(dest_root.string().c_str()));
+        return "";
+    }
+
     UtilityFunctions::print("NanoCoverage: Building temp project at ", String(dest_root.string().c_str()));
 
     // Process Files (Collect, Copy, Instrument)
@@ -228,6 +268,11 @@ String InstrumentedProjectBuilder::build_instrumented_project() {
         auto target = dest_root / relative;
 
         fs::create_directories(target.parent_path(), ec);
+        if (ec) {
+            std::ofstream debug_file("debug_log.txt", std::ios::app);
+            debug_file << "NanoCoverage: Failed to create directory " << target.parent_path().string()
+                       << ". Error: " << ec.message() << std::endl;
+        }
 
         CopyOrLinkFile(src_path, target);
 

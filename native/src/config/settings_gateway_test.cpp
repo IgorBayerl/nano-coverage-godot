@@ -1,12 +1,12 @@
-#include "../config/settings_gateway.h"
+#include "settings_gateway.h"
 
 #include <filesystem>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/variant/string.hpp>
 #include <gtest/gtest.h>
 
-#include "../config/settings_keys.h"
-#include "test_utils.h"
+#include "settings_keys.h"
+#include "testing/test_utils.h"
 
 using namespace godot;
 

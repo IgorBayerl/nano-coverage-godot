@@ -1,10 +1,10 @@
-#include <gtest/gtest.h>
 #include <filesystem>
 #include <fstream>
+#include <gtest/gtest.h>
 #include <string>
 #include <vector>
 
-#include "../instrumentation/instrumenter.h"
+#include "instrumenter.h"
 
 namespace fs = std::filesystem;
 using namespace godot;
@@ -16,7 +16,7 @@ static std::string normalize_newlines(const std::string& input) {
     for (size_t i = 0; i < input.size(); ++i) {
         if (input[i] == '\r') {
             if (i + 1 < input.size() && input[i + 1] == '\n') {
-                continue; // Skip \r followed by \n
+                continue;  // Skip \r followed by \n
             }
         }
         output.push_back(input[i]);
@@ -59,7 +59,6 @@ func _ready():
 # A comment
 )";
 
-
     // 4. Run Instrumenter
     // We pass a dummy "res://" path to ensure deterministic output in the hit() call
     InstrumentResult result = Instrumenter::instrument_text(gd_source, "res://test_golden.gd");
@@ -75,7 +74,7 @@ func _ready():
     std::string norm_actual = normalize_newlines(result.instrumented_code);
 
     EXPECT_EQ(norm_actual, norm_expected);
-    
+
     // Also verify strict line reporting
     // Lines 4, 5, 6 should be in covered_lines
     // Lines 4, 5, 6, 8 should be in covered_lines

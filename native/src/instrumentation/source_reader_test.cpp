@@ -1,15 +1,16 @@
-#include <gtest/gtest.h>
-#include "../instrumentation/source_reader.h"
-#include <fstream>
-#include <filesystem>
-#include <vector>
+#include "source_reader.h"
+
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
+#include <vector>
 
 using namespace NanoCoverage;
 namespace fs = std::filesystem;
 
 class SourceReaderTest : public ::testing::Test {
-protected:
+   protected:
     fs::path temp_file_path;
 
     void SetUp() override {
@@ -31,7 +32,7 @@ protected:
 };
 
 TEST_F(SourceReaderTest, ValidUtf8NoBom) {
-    std::string content = "Hello World! \xF0\x9F\x98\x80"; // includes emoji
+    std::string content = "Hello World! \xF0\x9F\x98\x80";  // includes emoji
     std::vector<uint8_t> data(content.begin(), content.end());
     WriteFile(data);
 

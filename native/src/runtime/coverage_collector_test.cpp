@@ -1,5 +1,6 @@
+#include "coverage_collector.h"
+
 #include <gtest/gtest.h>
-#include "../runtime/coverage_collector.h"
 
 namespace godot {
 
@@ -32,7 +33,7 @@ TEST(CoverageCollectorTest, ClearResetsData) {
 
     collector.clear();
     EXPECT_EQ(collector.get_total_hits(), 0);
-    
+
     CoverageData snap = collector.snapshot();
     EXPECT_TRUE(snap.empty());
 }
@@ -42,8 +43,8 @@ TEST(CoverageCollectorTest, IgnoreInvalidInput) {
     collector.record_hit("", 1);
     collector.record_hit("res://test.gd", 0);
     collector.record_hit("res://test.gd", -1);
-    
+
     EXPECT_EQ(collector.get_total_hits(), 0);
 }
 
-} // namespace godot
+}  // namespace godot

@@ -5,9 +5,9 @@
 #include <gtest/gtest.h>
 
 #include "../config/settings_keys.h"
-#include "../data/persistence.h"
 #include "../runtime/coverage_monitor.h"
-#include "test_utils.h"
+#include "persistence.h"
+#include "testing/test_utils.h"
 
 namespace godot {
 

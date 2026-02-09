@@ -7,7 +7,7 @@
 #include "editor/plugin.h"
 #include "runtime/coverage_monitor.h"
 #ifdef TESTS_ENABLED
-#include "tests/test_main.h"
+#include "testing/test_main.h"
 #endif
 
 using namespace godot;

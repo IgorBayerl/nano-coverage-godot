@@ -1,10 +1,11 @@
-#include <gtest/gtest.h>
+#include "lcov_writer.h"
+
 #include <filesystem>
 #include <fstream>
+#include <gtest/gtest.h>
 #include <string>
 #include <vector>
 
-#include "../runtime/lcov_writer.h"
 #include "../config/settings_gateway.h"
 #include "../data/persistence.h"
 
@@ -14,7 +15,7 @@ using namespace godot;
 TEST(LCOVFormatTest, GeneratesValidReport) {
     // Setup Data
     CoverageData data;
-    
+
     // File A: player.gd
     // Line 10: 2 hits
     // Line 15: 1 hit
@@ -24,13 +25,13 @@ TEST(LCOVFormatTest, GeneratesValidReport) {
     // File B: enemy.gd
     // Line 5: 1 hit
     data["res://scripts/enemy.gd"][5] = 1;
-    
+
     // Setup Settings
     fs::path temp_dir = fs::temp_directory_path();
     CoverageSettings settings;
     settings.paths_report_dir = String(temp_dir.string().c_str());
     settings.report_lcov_filename = "lcov_test_output.info";
-    settings.report_use_absolute_source_paths = false; // Test relative paths
+    settings.report_use_absolute_source_paths = false;  // Test relative paths
 
     // Clean up previous run
     fs::path output_file = temp_dir / "lcov_test_output.info";
@@ -46,7 +47,7 @@ TEST(LCOVFormatTest, GeneratesValidReport) {
     ASSERT_TRUE(in.is_open()) << "Failed to open generated LCOV file at " << output_file;
 
     std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-    
+
     // Check for File A
     EXPECT_NE(content.find("SF:res://scripts/player.gd"), std::string::npos);
     EXPECT_NE(content.find("DA:10,2"), std::string::npos);
@@ -106,7 +107,7 @@ TEST(LCOVFormatTest, GeneratesAbsolutePaths) {
     // Linux: /...
     // Just checking it DOES NOT start with res:// is a good proxy, assuming the original was res://
     EXPECT_EQ(content.find("SF:res://"), std::string::npos);
-    
+
     // It should contain "scripts/player.gd"
     EXPECT_NE(content.find("scripts/player.gd"), std::string::npos);
 

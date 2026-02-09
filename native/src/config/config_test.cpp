@@ -1,7 +1,8 @@
-#include <gtest/gtest.h>
-#include "../config/settings_keys.h"
 #include <cstring>
+#include <gtest/gtest.h>
 #include <string>
+
+#include "settings_keys.h"
 
 using namespace godot;
 
@@ -13,7 +14,7 @@ TEST(SettingsKeysTest, ConstantsAreDefined) {
     EXPECT_GT(std::strlen(SettingsKeys::PATHS_TEMP_DIR), 0);
     EXPECT_GT(std::strlen(SettingsKeys::PATHS_REPORT_DIR), 0);
     EXPECT_GT(std::strlen(SettingsKeys::PATHS_DATA_STORE_DIR), 0);
-    
+
     EXPECT_GT(std::strlen(SettingsKeys::REPORT_LCOV_FILENAME), 0);
     EXPECT_GT(std::strlen(SettingsKeys::REPORT_USE_ABSOLUTE_SOURCE_PATHS), 0);
 

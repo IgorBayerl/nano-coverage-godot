@@ -81,8 +81,8 @@ CoverageSettings SettingsGateway::load() {
 
     settings.paths_temp_dir = get_path(SettingsKeys::PATHS_TEMP_DIR, "");
     // Default for report dir is res://coverage_report. If retrieval gives "", use default.
-    settings.paths_report_dir = get_path(SettingsKeys::PATHS_REPORT_DIR, "res://coverage_report");
-    settings.paths_data_store_dir = get_path(SettingsKeys::PATHS_DATA_STORE_DIR, "res://coverage_data");
+    settings.paths_report_dir = get_path(SettingsKeys::PATHS_REPORT_DIR, "res://coverage-report");
+    settings.paths_data_store_dir = get_path(SettingsKeys::PATHS_DATA_STORE_DIR, "res://coverage-data");
 
     settings.report_lcov_filename = get_safe(SettingsKeys::REPORT_LCOV_FILENAME, "lcov.info");
     settings.report_use_absolute_source_paths = get_safe(SettingsKeys::REPORT_USE_ABSOLUTE_SOURCE_PATHS, false);

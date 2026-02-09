@@ -2,8 +2,8 @@
 
 #include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/engine.hpp>
-#include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <gtest/gtest.h>
@@ -77,7 +77,8 @@ TEST(EngineIntegrationTest, SingletonIsRegisteredAndAccessible) {
     Object* obj = Engine::get_singleton()->get_singleton("NanoCoverage");
     ASSERT_NE(obj, nullptr) << "CRITICAL: Retrieved singleton is null.";
     NanoCoverage* coverage = Object::cast_to<NanoCoverage>(obj);
-    EXPECT_NE(coverage, nullptr) << "CRITICAL: Singleton object is not of type NanoCoverage! (Possible shadowing by GDScript)";
+    EXPECT_NE(coverage, nullptr)
+        << "CRITICAL: Singleton object is not of type NanoCoverage! (Possible shadowing by GDScript)";
 }
 
 // Verifies that we can record coverage hits in memory and that save_session()
@@ -86,10 +87,10 @@ TEST(NanoCoverageTest, RecordsHitsAndSavesSession) {
     // Setup
     NanoCoverage* cov = memnew(NanoCoverage);
     String test_file = "res://test_unit_gen.gd";
-    
+
     // Use a temp folder to avoid polluting project root
     String temp_dir = "res://temp_session_test";
-    TestUtils::clean_dir(temp_dir); // Ensure clean start
+    TestUtils::clean_dir(temp_dir);  // Ensure clean start
     DirAccess::make_dir_recursive_absolute(temp_dir);
 
     // Override "nano_coverage/output_dir" so save_session() writes there
@@ -101,10 +102,10 @@ TEST(NanoCoverageTest, RecordsHitsAndSavesSession) {
 
     // Assert Hits in Memory
     EXPECT_EQ(cov->get_total_hit_count(), 2);
-    
+
     // Test Save
     cov->save_session();
-    
+
     // Verify file exists (optional, but good for sanity)
     EXPECT_TRUE(FileAccess::file_exists(temp_dir + "/coverage.data"));
 
@@ -132,11 +133,12 @@ void NanoCoverageTestRunner::_bind_methods() {
 int NanoCoverageTestRunner::run_all_tests() {
     {
         Ref<FileAccess> f = FileAccess::open("res://test_log.txt", FileAccess::WRITE);
-        if (f.is_valid()) f->store_line("--- STARTING TESTS ---");
+        if (f.is_valid())
+            f->store_line("--- STARTING TESTS ---");
     }
 
     UtilityFunctions::print("NanoCoverage: --- STARTING GTEST SUITE ---");
-    
+
     PackedStringArray user_args = OS::get_singleton()->get_cmdline_user_args();
     int argc = user_args.size() + 1;
     std::vector<char*> argv_vec;
@@ -151,7 +153,7 @@ int NanoCoverageTestRunner::run_all_tests() {
         argv_vec.push_back((char*)arg_strings[i].c_str());
     }
     argv_vec.push_back(nullptr);
-    
+
     char** argv = argv_vec.data();
 
     if (!::testing::GTEST_FLAG(list_tests)) {
