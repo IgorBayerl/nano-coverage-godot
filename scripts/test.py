@@ -15,6 +15,31 @@ GREEN = '\033[92m'
 RED = '\033[91m'
 RESET = '\033[0m'
 
+def prime_godot_cache(godot_exe):
+    """
+    Runs Godot in headless editor mode briefly to force it to 
+    scan GDExtensions and update the internal class cache (.godot folder).
+    """
+    print(f"{GREEN}[+] Priming Godot Cache...{RESET}")
+    
+    # --headless: No window
+    # --editor: Runs editor logic (scans plugins/extensions)
+    # --quit: Exits immediately after initialization
+    cmd = [
+        godot_exe,
+        "--headless",
+        "--path", GODOT_PROJECT_DIR,
+        "--editor",
+        "--quit"
+    ]
+    
+    try:
+        # We assume success if it exits with 0
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
+        print(f"    {GREEN}Cache updated successfully.{RESET}")
+    except subprocess.CalledProcessError:
+        print(f"    {RED}Warning: Cache priming exited with error. Tests might fail.{RESET}")
+
 def find_godot_executable():
     """
     Finds the Godot executable in the project root directory.
@@ -72,6 +97,7 @@ def main():
         sys.exit(1)
     
     godot_exe = find_godot_executable()
+    prime_godot_cache(godot_exe)
     runner_script_path = os.path.join(GODOT_PROJECT_DIR, "addons", "run_cpp_tests.gd")
     
     # 1. Create the temporary GDScript runner

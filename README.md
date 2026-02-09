@@ -120,8 +120,8 @@ You can customize the tool via **Project > Project Settings > Nano Coverage**
 
 | Setting                         | Description                                                 | Default                 |
 |:--------------------------------|:------------------------------------------------------------|:------------------------|
-| **Paths / Report Dir**          | Where the `lcov.info` file is saved.                        | `res://coverage_report` |
-| **Paths / Data Store**          | Where raw coverage data is kept.                            | `res://coverage_data`   |
+| **Paths / Report Dir**          | Where the `lcov.info` file is saved.                        | `res://coverage-report` |
+| **Paths / Data Store**          | Where raw coverage data is kept.                            | `res://coverage-data`   |
 | **Report / Use Absolute Paths** | If true, uses full system paths in reports (useful for CI). | `false`                 |
 | **UI / Show All Buttons**       | Hides/Shows the toolbar buttons.                            | `true`                  |
 

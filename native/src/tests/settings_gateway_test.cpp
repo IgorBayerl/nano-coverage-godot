@@ -1,9 +1,11 @@
-#include <gtest/gtest.h>
 #include "../config/settings_gateway.h"
-#include "../config/settings_keys.h"
+
+#include <filesystem>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/variant/string.hpp>
-#include <filesystem>
+#include <gtest/gtest.h>
+
+#include "../config/settings_keys.h"
 #include "test_utils.h"
 
 using namespace godot;
@@ -15,14 +17,14 @@ TEST(SettingsGatewayTest, RegisterAndDefaultValues) {
     CoverageSettings settings = SettingsGateway::load();
 
     EXPECT_EQ(settings.temp_directory, "");
-    EXPECT_EQ(settings.paths_report_dir, "res://coverage_report");
-    EXPECT_EQ(settings.paths_data_store_dir, "res://coverage_data");
+    EXPECT_EQ(settings.paths_report_dir, "res://coverage-report");
+    EXPECT_EQ(settings.paths_data_store_dir, "res://coverage-data");
     EXPECT_TRUE(settings.ui_show_all_buttons);
 }
 
 TEST(SettingsGatewayTest, LoadReadsValuesFromProjectSettings) {
     ProjectSettings* ps = ProjectSettings::get_singleton();
-    
+
     // Setup overrides using RAII
     SettingsOverride s1(SettingsKeys::TEMP_DIRECTORY, "custom/temp");
     SettingsOverride s2(SettingsKeys::PATHS_REPORT_DIR, "custom/report");
@@ -41,14 +43,14 @@ TEST(SettingsGatewayTest, LoadReadsValuesFromProjectSettings) {
     EXPECT_EQ(settings.report_lcov_filename, "custom.info");
     EXPECT_TRUE(settings.report_use_absolute_source_paths);
     EXPECT_FALSE(settings.ui_show_all_buttons);
-    
+
     // Destructors restore original values automatically
 }
 
 TEST(SettingsGatewayTest, RegisterSetsUpKeysAndTypes) {
     SettingsGateway::register_settings();
     ProjectSettings* ps = ProjectSettings::get_singleton();
-    
+
     EXPECT_TRUE(ps->has_setting(SettingsKeys::TEMP_DIRECTORY));
     EXPECT_EQ(ps->get_setting(SettingsKeys::TEMP_DIRECTORY).get_type(), Variant::STRING);
     EXPECT_TRUE(ps->has_setting(SettingsKeys::PATHS_REPORT_DIR));

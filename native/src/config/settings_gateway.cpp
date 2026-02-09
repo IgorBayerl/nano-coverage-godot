@@ -36,8 +36,8 @@ void SettingsGateway::register_settings() {
     // Future keys - Paths
     register_key(SettingsKeys::PATHS_TEMP_DIR, "", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR,
                  "Same as temp_directory (Transition)");
-    register_key(SettingsKeys::PATHS_REPORT_DIR, "res://coverage_report", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR);
-    register_key(SettingsKeys::PATHS_DATA_STORE_DIR, "res://coverage_data", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR);
+    register_key(SettingsKeys::PATHS_REPORT_DIR, "res://coverage-report", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR);
+    register_key(SettingsKeys::PATHS_DATA_STORE_DIR, "res://coverage-data", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR);
 
     // Future keys - Report
     register_key(SettingsKeys::REPORT_LCOV_FILENAME, "lcov.info", Variant::STRING);
