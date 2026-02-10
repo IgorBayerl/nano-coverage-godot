@@ -17,4 +17,4 @@ config/icon="res://logo.svg"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/nano_coverage_godot/plugin.cfg")
+enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/nano_coverage_godot/plugin.cfg")

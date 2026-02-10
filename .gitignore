@@ -99,3 +99,4 @@ godot_project/coverage-data
 
 # This is generated when running build.py
 godot_project/addons/
+godot_project/debug_log.txt
