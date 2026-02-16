@@ -10,8 +10,9 @@ Scope of Automation:
 2.  Git Submodules:  Initializes and updates project submodules.
 3.  Godot CPP:       Enforces the specific git tag for compatibility.
 4.  Google Test:     Downloads and configures Google Test (v1.14.0).
-5.  GdUnit4:         Downloads and installs the GdUnit4 addon (v6.1.1).
-6.  Godot Engine:    Downloads the specific Godot Editor version for testing.
+5.  GdUnit4:         Downloads and installs the GdUnit4 addon (v4.2.0).
+6.  GdUnit4 Tests:   Extracts the internal test suite from GdUnit4 for self-testing.
+7.  Godot Engine:    Downloads the specific Godot Editor version for testing.
 
 Usage:
     python scripts/setup.py
@@ -43,7 +44,7 @@ class Config:
     GODOT_VERSION = "4.5-stable"
     GODOT_CPP_TAG = "godot-4.3-stable"
     GTEST_VERSION = "1.14.0"
-    GDUNIT_VERSION = "6.1.1"
+    GDUNIT_VERSION = "4.2.0"
 
     # URLs
     URL_GTEST = f"https://github.com/google/googletest/archive/refs/tags/v{GTEST_VERSION}.zip"
@@ -247,14 +248,14 @@ def setup_googletest():
 
 def setup_gdunit4():
     """
-    Downloads and installs GdUnit4 into the godot_project/addons folder.
+    Downloads and installs the GdUnit4 addon into the godot_project/addons folder.
     """
-    log_header("Setting up GdUnit4")
+    log_header("Setting up GdUnit4 Addon")
     
     target_dir = os.path.join(Config.ADDONS_DIR, "gdUnit4")
     
     if os.path.exists(target_dir):
-        log_success("GdUnit4 is already installed.")
+        log_success("GdUnit4 addon is already installed.")
         return True
 
     log_info(f"Downloading GdUnit4 v{Config.GDUNIT_VERSION}...")
@@ -264,7 +265,7 @@ def setup_gdunit4():
         with urllib.request.urlopen(Config.URL_GDUNIT) as response:
             zip_data = response.read()
         
-        log_substep("Extracting to project addons...")
+        log_substep("Extracting addon to project...")
         with zipfile.ZipFile(io.BytesIO(zip_data)) as z:
             # We filter the zip content to find 'addons/gdUnit4' and extract it 
             # to the correct location stripping the root folder name.
@@ -284,7 +285,7 @@ def setup_gdunit4():
                     except ValueError:
                         continue
         
-        log_success("GdUnit4 installed successfully.")
+        log_success("GdUnit4 addon installed successfully.")
         return True
 
     except Exception as e:

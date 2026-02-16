@@ -62,6 +62,22 @@ static std::string get_line_indent(const std::string& src, size_t line_start) {
     return src.substr(line_start, i - line_start);
 }
 
+static bool is_continuation_line(const std::string& src, size_t line_start) {
+    size_t i = line_start;
+    while (i < src.size()) {
+        const char c = src[i];
+        if (c == ' ' || c == '\t') {
+            i++;
+            continue;
+        }
+        if (c == '.') {
+            return true;
+        }
+        return false;
+    }
+    return false;
+}
+
 static bool is_line_already_instrumented(const std::string& src, size_t line_start) {
     const size_t line_end = find_line_end(src, line_start);
     const std::string_view line(src.data() + line_start, line_end - line_start);
@@ -79,6 +95,9 @@ static bool is_function_def_node_type(std::string_view t) {
 }
 
 static bool is_block_like_node_type(std::string_view t) {
+    if (t == "match_body") {
+        return false;
+    }
     return t == "block" || t.find("block") != std::string_view::npos || t.find("body") != std::string_view::npos ||
            t.find("suite") != std::string_view::npos;
 }
@@ -118,6 +137,7 @@ static std::string make_injected_line(const std::string& indent, const std::stri
 static void collect_insertions(TSNode node, const std::string& src, const std::string& file_lit,
                                std::vector<TextInsertion>& out_insertions, std::vector<uint32_t>& out_lines) {
     const std::string_view type = ts_node_type(node);
+
     if (is_block_like_node_type(type) && has_function_ancestor(node)) {
         const uint32_t n = ts_node_named_child_count(node);
         for (uint32_t i = 0; i < n; i++) {
@@ -131,16 +151,34 @@ static void collect_insertions(TSNode node, const std::string& src, const std::s
             if (is_line_already_instrumented(src, line_start))
                 continue;
 
+            if (is_continuation_line(src, line_start)) {
+                continue;
+            }
+
             const TSPoint pt = ts_node_start_point(child);
             const uint32_t line_1_based = pt.row + 1;
 
-            const std::string indent = get_line_indent(src, line_start);
+            // 1. Find the first non-whitespace character on this line
+            size_t first_non_ws = line_start;
+            while (first_non_ws < src.size() && (src[first_non_ws] == ' ' || src[first_non_ws] == '\t')) {
+                first_non_ws++;
+            }
 
-            // Record the coverable line
+            // 2. If the statement starts AFTER the first non-whitespace char, it's inline!
+            bool is_inline = stmt_start > first_non_ws;
+
+            // Always track that this line is a coverable line
             out_lines.push_back(line_1_based);
 
-            // Record the injection
-            out_insertions.push_back(TextInsertion{line_start, make_injected_line(indent, file_lit, line_1_based)});
+            if (is_inline) {
+                // INLINE INJECTION: Inject coverage exactly where the statement starts, separated by a semicolon
+                std::string injected = "NanoCoverage.hit(\"" + file_lit + "\", " + std::to_string(line_1_based) + "); ";
+                out_insertions.push_back(TextInsertion{stmt_start, injected});
+            } else {
+                // STANDARD INJECTION: Inject a full line above the current statement
+                const std::string indent = get_line_indent(src, line_start);
+                out_insertions.push_back(TextInsertion{line_start, make_injected_line(indent, file_lit, line_1_based)});
+            }
         }
     }
 
@@ -153,15 +191,9 @@ static void collect_insertions(TSNode node, const std::string& src, const std::s
     }
 }
 
-// [Pure Pipeline]
-// Takes raw source code (UTF-8), parses it with Tree-sitter, identifies coverable lines,
-// and returns the instrumented code and metadata.
-// This function performs NO file I/O and is side-effect free, making it ideal for unit testing.
 InstrumentResult Instrumenter::instrument_text(const std::string& utf8_code, const std::string& res_path) {
     InstrumentResult result;
     result.ok = false;
-
-    // Copy input code as it might be unmodified
     result.instrumented_code = utf8_code;
 
     TSParser* parser = ts_parser_new();
@@ -189,12 +221,9 @@ InstrumentResult Instrumenter::instrument_text(const std::string& utf8_code, con
     insertions.reserve(64);
 
     const std::string file_lit = escape_gd_string(res_path);
-
-    // Pass the vector to collect lines
     collect_insertions(root, utf8_code, file_lit, insertions, result.covered_lines);
     result.insertions = (int)insertions.size();
 
-    // If no insertions, we are done
     if (insertions.empty()) {
         ts_tree_delete(tree);
         ts_parser_delete(parser);
@@ -202,9 +231,7 @@ InstrumentResult Instrumenter::instrument_text(const std::string& utf8_code, con
         return result;
     }
 
-    // Rewrite code
     result.instrumented_code = Rewriter::apply(utf8_code, std::move(insertions));
-
     ts_tree_delete(tree);
     ts_parser_delete(parser);
 
@@ -212,11 +239,6 @@ InstrumentResult Instrumenter::instrument_text(const std::string& utf8_code, con
     return result;
 }
 
-// [I/O Wrapper]
-// Handles the "dirty work" of interacting with the filesystem.
-// * Reads the file using SourceReader (handling BOMs/encoding).
-// * Delegates the logic to instrument_text().
-// * Writes the result back to disk if changes were made.
 bool Instrumenter::instrument_file(const String& path, const String& res_path, std::vector<uint32_t>* out_lines,
                                    int* out_insertions) {
     if (out_lines)
@@ -224,17 +246,12 @@ bool Instrumenter::instrument_file(const String& path, const String& res_path, s
     if (out_insertions)
         *out_insertions = 0;
 
-    // Read
-    // We use NanoCoverage::SourceReader which we just imported
     NanoCoverage::ReadTextResult read_res = NanoCoverage::SourceReader::read_text_file(path.utf8().get_data());
-
     if (!read_res.ok) {
         UtilityFunctions::printerr("NanoCoverage: failed to read: ", path);
-        // If needed, log read_res.error_message
         return false;
     }
 
-    // Instrument
     std::string res_path_std = res_path.utf8().get_data();
     InstrumentResult inst_res = instrument_text(read_res.content, res_path_std);
 
@@ -244,7 +261,6 @@ bool Instrumenter::instrument_file(const String& path, const String& res_path, s
         return false;
     }
 
-    // Output metadata
     if (out_lines) {
         *out_lines = inst_res.covered_lines;
     }
@@ -252,21 +268,16 @@ bool Instrumenter::instrument_file(const String& path, const String& res_path, s
         *out_insertions = inst_res.insertions;
     }
 
-    // Write
     if (inst_res.insertions == 0 && read_res.content == inst_res.instrumented_code) {
         return true;
     }
 
-    // We also typically return true if 0 insertions, same as before, but now we filled the metadata.
-    if (inst_res.insertions == 0) {
-        return true;
-    }
-
-    // Write back
-    std::filesystem::path fs_path(path.utf8().get_data());
-    if (!write_all_bytes(fs_path, inst_res.instrumented_code)) {
-        UtilityFunctions::printerr("NanoCoverage: failed to write: ", path);
-        return false;
+    if (inst_res.insertions > 0) {
+        std::filesystem::path fs_path(path.utf8().get_data());
+        if (!write_all_bytes(fs_path, inst_res.instrumented_code)) {
+            UtilityFunctions::printerr("NanoCoverage: failed to write: ", path);
+            return false;
+        }
     }
 
     return true;

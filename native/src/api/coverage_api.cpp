@@ -26,7 +26,8 @@ void CoverageApi::_bind_methods() {
 }
 
 Dictionary CoverageApi::instrument_project(const Dictionary& options) {
-    String output_path = InstrumentedProjectBuilder::build_instrumented_project();
+    String output_path = InstrumentedProjectBuilder::build_instrumented_project(options);
+
     Dictionary result;
     if (output_path.is_empty()) {
         result["error"] = "Failed to create temp project";

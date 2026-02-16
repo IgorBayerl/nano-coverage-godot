@@ -1,0 +1,5218 @@
+--- START FILE TREE ---
+Exported File Structure:
+.
+├── .clang-format
+├── .gitmodules
+├── README.md
+├── godot_project
+│   ├── main.tscn
+│   ├── nanovision.yaml
+│   └── project.godot
+├── native
+│   ├── SConstruct
+│   ├── addon_resources
+│   │   ├── coverage_api_example.gd
+│   │   ├── integrations
+│   │   │   ├── gdunit4.gd
+│   │   │   └── integration_manager.gd
+│   │   ├── nano_coverage_godot.gdextension
+│   │   ├── plugin.cfg
+│   │   ├── plugin.gd
+│   │   └── runtime.gd
+│   └── src
+│       ├── api
+│       │   ├── coverage_api.cpp
+│       │   ├── coverage_api.h
+│       │   └── coverage_api_test.cpp
+│       ├── config
+│       │   ├── config_test.cpp
+│       │   ├── settings_gateway.cpp
+│       │   ├── settings_gateway.h
+│       │   ├── settings_gateway_test.cpp
+│       │   └── settings_keys.h
+│       ├── data
+│       │   ├── persistence.cpp
+│       │   ├── persistence.h
+│       │   ├── persistence_metadata_test.cpp
+│       │   └── persistence_test.cpp
+│       ├── editor
+│       │   ├── instrumented_project_builder.cpp
+│       │   ├── instrumented_project_builder.h
+│       │   ├── instrumented_project_builder_test.cpp
+│       │   ├── plugin.cpp
+│       │   └── plugin.h
+│       ├── instrumentation
+│       │   ├── instrumenter.cpp
+│       │   ├── instrumenter.h
+│       │   ├── instrumenter_golden_test.cpp
+│       │   ├── rewriter.cpp
+│       │   ├── rewriter.h
+│       │   ├── source_reader.cpp
+│       │   ├── source_reader.h
+│       │   └── source_reader_test.cpp
+│       ├── register_types.cpp
+│       ├── register_types.h
+│       ├── runtime
+│       │   ├── coverage_collector.cpp
+│       │   ├── coverage_collector.h
+│       │   ├── coverage_collector_test.cpp
+│       │   ├── coverage_monitor.cpp
+│       │   ├── coverage_monitor.h
+│       │   ├── coverage_monitor_test.cpp
+│       │   ├── coverage_store.cpp
+│       │   ├── coverage_store.h
+│       │   ├── coverage_store_test.cpp
+│       │   ├── lcov_writer.cpp
+│       │   ├── lcov_writer.h
+│       │   └── lcov_writer_test.cpp
+│       └── testing
+│           ├── test_main.cpp
+│           ├── test_main.h
+│           └── test_utils.h
+└── scripts
+    ├── .gitattributes
+    ├── build.py
+    ├── dev.py
+    ├── setup.py
+    └── test.py
+--- END FILE TREE ---
+
+--- START FILE: .clang-format ---
+---
+Language: Cpp
+BasedOnStyle: Google
+Standard: c++20
+IndentWidth: 4
+UseTab: Never
+ColumnLimit: 120
+
+# Brace wrapping
+BreakBeforeBraces: Attach
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+# Function and control statement formatting
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortLambdasOnASingleLine: Inline
+
+# Spacing and alignment
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 2
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# Alignment
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveBitFields: false
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: false
+AlignEscapedNewlines: Right
+AlignOperands: Align
+AlignTrailingComments: true
+PointerAlignment: Left
+
+# Includes
+SortIncludes: CaseInsensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<.*'
+    Priority: 1
+  - Regex: '.*'
+    Priority: 2
+
+# Constructor initializer list
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+ConstructorInitializerIndentWidth: 4
+
+# Penalties (affects line breaking decisions)
+PenaltyBreakAssignment: 2
+PenaltyBreakBeforeFirstCallParameter: 1
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakString: 1000
+PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 200
+
+# Line breaking
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: BeforeColon
+BreakStringLiterals: true
+
+# Other modern C++ features
+Cpp11BracedListStyle: true
+DisableFormat: false
+ForEachMacros: []
+StatementMacros: []
+TypenameMacros: []
+
+--- END FILE: .clang-format ---
+
+--- START FILE: .gitmodules ---
+[submodule "native/godot-cpp"]
+	path = native/godot-cpp
+	url = https://github.com/godotengine/godot-cpp
+	branch = 4.3 ; we develop for 4.3 and test on 4.5 to make sure we maintain backwards compatibility
+[submodule "native/thirdparty/tree-sitter"]
+	path = native/thirdparty/tree-sitter
+	url = https://github.com/tree-sitter/tree-sitter
+[submodule "native/thirdparty/tree-sitter-gdscript"]
+	path = native/thirdparty/tree-sitter-gdscript
+	url = https://github.com/PrestonKnopp/tree-sitter-gdscript
+
+--- END FILE: .gitmodules ---
+
+--- START FILE: README.md ---
+# Nano Coverage Godot
+
+**Nano Coverage** is a simple, powerful code coverage tool for Godot 4.
+
+It helps you see exactly which parts of your GDScript code are executed when you run your game or your unit tests. This is essential for ensuring your tests actually test your code, helping you find bugs before they happen.
+
+---
+
+## 🚧 Status & Roadmap
+
+**Current State:** Alpha / Developer Preview.  
+**Note:** We currently do not have automated builds (CI/CD). You must build the plugin from source using the instructions below.
+
+### ✅ Current Features
+* **Accurate Coverage:** Uses advanced parsing (Tree-sitter) to ignore comments and empty lines, counting only real code.
+* **Simple UI:** Adds "Run Instrumented" and "Generate Report" buttons directly to the Godot Editor toolbar.
+* **LCOV Support:** Generates standard `lcov.info` files compatible with popular tools like Coveralls, Codecov, or IDE extensions.
+* **Session Merging:** Run your game multiple times; the tool accumulates coverage data across all sessions.
+* **Headless Support:** Works from the command line for automated testing environments.
+
+### 🚀 Planned Features
+* **In editor Reports:** Visualization of covered and uncovered lines inside of code editor.
+* **Godot Asset Library:** We plan to publish this to the Asset Library for one-click installation.
+* **Automated Builds:** Pre-compiled binaries for Windows, Linux, and macOS.
+
+---
+
+## ⚙️ How It Works
+
+1.  **Instrumentation:** When you click "Run Instrumented", Nano Coverage creates a temporary copy of your project. It injects invisible trackers into your GDScript code.
+2.  **Execution:** Your game runs normally. As you play or run tests, the trackers record which lines are hit.
+3.  **Reporting:** When you finish, you click "Generate Report" to combine the data into a LCOV file.
+
+---
+
+## 🛠️ Building from Source
+
+Since pre-compiled binaries aren't available yet, you need to build the plugin yourself. We have automated this process with Python scripts.
+
+### Prerequisites
+* **Python 3.10+**
+* **Git**
+* **C++ Compiler:**
+    * *Windows:* MinGW (recommended) or MSVC.
+    * *Linux:* GCC or Clang.
+    * *macOS:* Xcode Command Line Tools.
+
+### Build Steps
+
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/IgorBayerl/nano-coverage-godot.git
+    cd nano-coverage-godot
+    ```
+
+2.  **Setup Environment:**
+    Downloads the Godot engine (for testing), Google Test, and installs SCons.
+    ```bash
+    python scripts/setup.py
+    ```
+
+3.  **Compile:**
+    Compiles the C++ code into a Godot GDExtension.
+    ```bash
+    python scripts/build.py
+    ```
+
+4.  *(Optional)* **Test the Build:**
+    Runs the included Unit Tests to ensure everything is working.
+    ```bash
+    python scripts/test.py
+    ```
+
+---
+
+## 📥 Installing in Your Project
+
+Once you have built the project, you can install it into your own Godot game.
+
+1.  Locate the **`addons`** folder inside `godot_project/` (generated after the build).
+2.  Copy the `addons/nano_coverage_godot` folder into your own project's root directory.
+    * *Your project structure should look like:* `res://addons/nano_coverage_godot/`
+3.  Open your project in Godot.
+4.  Go to **Project > Project Settings > Plugins**.
+5.  Find **NanoCoverage** and check the **Enable** box.
+
+---
+
+## 🎮 Usage
+
+1.  **Run Instrumented:**
+    Click the **"Run Instrumented"** button in the main editor toolbar. This launches your game with coverage tracking enabled.
+2.  **Play/Test:**
+    Play your game or run your unit test suite.
+3.  **Exit:**
+    Close the game window.
+4.  **Generate Report:**
+    Click the **"Generate Report"** button in the toolbar.
+5.  **View Results:**
+    A file named `lcov.info` will be created in your project folder (usually under `coverage_report/`). You can view this using any LCOV viewer (like the "Coverage Gutters" extension for VS Code).
+
+---
+
+## 🤖 API & Integrations
+
+Nano Coverage exposes a `CoverageApi` class to GDScript.
+
+If you are building a test runner (like **GdUnit4**) or a CI pipeline, you can use this API to programmatically:
+* Instrument the project.
+* Run the instrumented instance.
+* Generate reports without using the Editor UI.
+
+Refer to `addons/nano_coverage_godot/coverage_api_example.gd` or the C++ source for the exact method signatures.
+
+---
+
+## 🔧 Configuration
+
+You can customize the tool via **Project > Project Settings > Nano Coverage**
+
+| Setting                         | Description                                                 | Default                 |
+|:--------------------------------|:------------------------------------------------------------|:------------------------|
+| **Paths / Report Dir**          | Where the `lcov.info` file is saved.                        | `res://coverage-report` |
+| **Paths / Data Store**          | Where raw coverage data is kept.                            | `res://coverage-data`   |
+| **Report / Use Absolute Paths** | If true, uses full system paths in reports (useful for CI). | `false`                 |
+| **UI / Show All Buttons**       | Hides/Shows the toolbar buttons.                            | `true`                  |
+
+---
+--- END FILE: README.md ---
+
+--- START FILE: godot_project/main.tscn ---
+[gd_scene load_steps=3 format=3 uid="uid://c61swf34e68ur"]
+
+[ext_resource type="Texture2D" uid="uid://dxc2ccos2dskb" path="res://logo.svg" id="1_0xm2m"]
+[ext_resource type="Script" uid="uid://6ubmflf3m30g" path="res://logo.gd" id="2_h2yge"]
+
+[node name="Main" type="Node2D"]
+
+[node name="Logo" type="Sprite2D" parent="."]
+position = Vector2(587, 314)
+scale = Vector2(0.11669925, 0.11669925)
+texture = ExtResource("1_0xm2m")
+script = ExtResource("2_h2yge")
+
+--- END FILE: godot_project/main.tscn ---
+
+--- START FILE: godot_project/nanovision.yaml ---
+# nanovision.yaml Configuration
+reports:
+  - "coverage-report/lcov.info"
+
+source_dirs:
+  - "."
+
+output_dir: "coverage-report"
+
+report_types:
+  - "Html"
+  - "TextSummary"
+  - "Lcov"
+
+verbosity: "Info"
+log_format: "text"
+
+ignore_files:
+  - "-vendor/**"
+  - "-**/*_test.go"
+
+--- END FILE: godot_project/nanovision.yaml ---
+
+--- START FILE: godot_project/project.godot ---
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Nano Coverage Godot"
+run/main_scene="uid://c61swf34e68ur"
+config/features=PackedStringArray("4.5", "Forward Plus")
+config/icon="res://logo.svg"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/nano_coverage_godot/plugin.cfg")
+
+[nano_coverage]
+
+integrations/gdunit4/active=true
+
+--- END FILE: godot_project/project.godot ---
+
+--- START FILE: native/SConstruct ---
+#!/usr/bin/env python
+import os
+import sys
+
+# Pylance Fix: Import SCons globals explicity for Intellisense (SCons injects them at runtime anyway)
+from SCons.Script import * # type: ignore
+
+# 1. Load Godot-CPP configuration
+env = SConscript("godot-cpp/SConstruct")
+
+# 2. Clone the environment
+project_env = env.Clone()
+
+# --- INCLUDE PATHS ---
+project_env.Append(CPPPATH=[
+    "src", 
+    "godot-cpp/include", 
+    "godot-cpp/gen/include",
+    "thirdparty/tree-sitter/lib/include",
+    "thirdparty/tree-sitter/lib/src",
+    "thirdparty/tree-sitter-gdscript/src",
+])
+
+# --- SOURCE GATHERING ---
+sources = []
+test_sources = []
+
+for root, dirs, files in os.walk("src"):
+    for file in files:
+        if file.endswith(".cpp"):
+            path = os.path.join(root, file).replace("\\", "/")
+            if file.endswith("_test.cpp") or file == "test_main.cpp":
+                test_sources.append(path)
+            else:
+                sources.append(path)
+
+# --- TREE-SITTER SOURCES ---
+TS_LIB_C = "thirdparty/tree-sitter/lib/src/lib.c"
+GDSCRIPT_PARSER_C = "thirdparty/tree-sitter-gdscript/src/parser.c"
+GDSCRIPT_SCANNER_C = "thirdparty/tree-sitter-gdscript/src/scanner.c"
+
+sources.append(TS_LIB_C)
+sources.append(GDSCRIPT_PARSER_C)
+
+if os.path.exists(GDSCRIPT_SCANNER_C):
+    sources.append(GDSCRIPT_SCANNER_C)
+
+
+# --- AUTOMATIC TEST CONFIGURATION ---
+target_mode = project_env["target"]
+arg_build_tests = ARGUMENTS.get('build_tests', 'auto')
+
+if arg_build_tests == "yes" or (arg_build_tests == "auto" and target_mode == "template_debug"):
+    print(f"[{target_mode}] Building with Tests ENABLED")
+    
+    GTEST_DIR = "thirdparty/googletest/googletest"
+    project_env.Append(CPPPATH=[f"{GTEST_DIR}/include", f"{GTEST_DIR}"])
+    project_env.Append(CPPDEFINES=['TESTS_ENABLED'])
+    
+    sources += test_sources
+    sources.append(f"{GTEST_DIR}/src/gtest-all.cc")
+else:
+    print(f"[{target_mode}] Building with Tests DISABLED")
+
+# --- OUTPUT ---
+output_dir = "../godot_project/addons/nano_coverage_godot/bin/"
+project_env.Execute(Mkdir(output_dir))
+
+base_name = "nano_coverage_godot"
+try:
+    if 'arch' in project_env: arch = project_env['arch']
+    else: arch = "x86_64"
+    suffix = f".{project_env['platform']}.{project_env['target']}.{arch}"
+    target_name = base_name + suffix
+except KeyError:
+    target_name = base_name + ".dll"
+
+shlib_suffix = project_env.subst('$SHLIBSUFFIX')
+if not target_name.endswith(shlib_suffix):
+    target_name += shlib_suffix
+
+# 3. Build Shared Library
+library = project_env.SharedLibrary(
+    output_dir + target_name,
+    [str(s) for s in sources],
+)
+
+comp_db = project_env.CompilationDatabase(target="compile_commands.json", source=sources)
+
+Default(library, comp_db)
+
+# --- INSTALLATION OF RESOURCES ---
+# Define the source directory for scripts/configs
+addon_res_src = Dir("addon_resources")
+
+# Define the destination directory (Root of the addon)
+# output_dir is ".../bin/", so we go up one level
+addon_root_dir = Dir(output_dir).Dir("..")
+
+addon_res_src = Dir("addon_resources")
+
+# Destination: godot_project/addons/nano_coverage_godot/
+# (output_dir is ".../bin/", so we go up one level)
+addon_root_dir = Dir(output_dir).Dir("..")
+
+# Recursively copy EVERYTHING from addon_resources to the addon folder
+for root, dirs, files in os.walk(str(addon_res_src)):
+    for file in files:
+        # Full source path (e.g., native/addon_resources/integrations/gdunit4.gd)
+        source_path = os.path.join(root, file)
+        
+        # Relative path (e.g., integrations/gdunit4.gd)
+        rel_path = os.path.relpath(source_path, str(addon_res_src))
+        
+        # Target node (e.g., .../addons/nano_coverage_godot/integrations/gdunit4.gd)
+        target_node = addon_root_dir.File(rel_path)
+        
+        # InstallAs handles the copy and dependency tracking (only copies if newer)
+        project_env.InstallAs(target=target_node, source=source_path)
+
+# Ensure this runs by default
+project_env.Alias("install_resources", addon_root_dir)
+Default("install_resources")
+--- END FILE: native/SConstruct ---
+
+--- START FILE: native/addon_resources/coverage_api_example.gd ---
+extends RefCounted
+class_name NanoCoverageIntegration
+
+# ==============================================================================
+# NANO COVERAGE API EXAMPLE
+# ==============================================================================
+# This script demonstrates how to control Nano Coverage programmatically.
+# Use this reference if you are building:
+#   - A CI/CD pipeline script
+#   - A custom test runner (e.g., GdUnit4 integration)
+#   - A custom editor tool
+# ==============================================================================
+
+# The API class is registered automatically by the GDExtension.
+# You can instantiate it directly.
+var _api = CoverageApi.new()
+
+func run_full_coverage_cycle():
+	print("--- Starting Coverage Cycle ---")
+
+	# 1. INSTRUMENTATION
+	# Creates a temporary copy of the project with tracking code injected.
+	# Returns: Dictionary { "output_path": String, "error": String }
+	var instr_opts = {}
+	var instr_result = _api.instrument_project(instr_opts)
+	
+	if instr_result.has("error"):
+		printerr("Instrumentation failed: ", instr_result.error)
+		return
+
+	var temp_path = instr_result.output_path
+	print("Project instrumented at: ", temp_path)
+
+	# 2. EXECUTION
+	# Runs the instrumented project.
+	# Options:
+	#   - output_path: (Required) Path from step 1
+	#   - workspace_id: (Optional) ID for session merging (default: "default")
+	#   - blocking: (Optional) If true, waits for game to close (default: false)
+	#   - dry_run: (Optional) Returns command args without running (default: false)
+	var run_opts = {
+		"output_path": temp_path,
+		"workspace_id": "integration_test",
+		"blocking": true # We wait here so we can generate the report immediately after
+	}
+	
+	print("Running game...")
+	var run_result = _api.run_instrumented_project(run_opts)
+	
+	if run_result.has("error"):
+		printerr("Run failed: ", run_result.error)
+		return
+		
+	print("Game run finished. Run ID: ", run_result.run_id)
+
+	# 3. REPORT GENERATION
+	# Merges data and produces the lcov.info file.
+	# Options:
+	#   - workspace_id: Must match the one used in step 2.
+	var report_opts = {
+		"workspace_id": "integration_test"
+	}
+	
+	var report_result = _api.generate_coverage_report(report_opts)
+	
+	if report_result.has("report_path"):
+		print("Success! Report generated at: ", report_result.report_path)
+	else:
+		printerr("Report generation failed.")
+
+func clear_old_data():
+	# Helper to wipe previous data for a specific workspace
+	_api.clear_coverage_data({"workspace_id": "integration_test"})
+--- END FILE: native/addon_resources/coverage_api_example.gd ---
+
+--- START FILE: native/addon_resources/integrations/gdunit4.gd ---
+@tool
+extends RefCounted
+
+const PLUGIN_CFG = "res://addons/gdUnit4/plugin.cfg"
+const GDUNIT_INSPECTOR_GROUP = "GdUnit4Inspector"
+const TOOLBAR_SCRIPT_PATH = "res://addons/gdUnit4/src/ui/parts/InspectorToolBar.gd"
+const RUNNER_SCENE = "res://addons/gdUnit4/src/core/runners/GdUnitTestRunner.tscn"
+const RUNNER_CONFIG_SCRIPT = "res://addons/gdUnit4/src/core/GdUnitRunnerConfig.gd"
+
+var _nano_api
+var _run_button: Button
+var _target_toolbar: Control
+var _target_container: Control
+
+func _init(nano_api):
+	_nano_api = nano_api
+
+static func is_available() -> bool:
+	return FileAccess.file_exists(PLUGIN_CFG)
+
+func enable():
+	call_deferred("_inject_ui")
+
+func disable():
+	if _run_button:
+		_run_button.queue_free()
+		_run_button = null
+	_target_toolbar = null
+	_target_container = null
+
+func _inject_ui():
+	var base = EditorInterface.get_base_control()
+	var inspector = _find_node_by_meta(base, GDUNIT_INSPECTOR_GROUP)
+	if not inspector: return
+
+	_target_toolbar = _find_node_by_script(inspector, TOOLBAR_SCRIPT_PATH)
+	if not _target_toolbar: return
+
+	# FIX 1: Layout Issue
+	# The toolbar script might be attached to a Panel, but the buttons live in an HBoxContainer child.
+	# We search for the first HBoxContainer to ensure our button sits side-by-side.
+	if _target_toolbar is HBoxContainer:
+		_target_container = _target_toolbar
+	else:
+		for child in _target_toolbar.get_children():
+			if child is HBoxContainer:
+				_target_container = child
+				break
+	
+	# Fallback: if no container found, use the toolbar itself
+	if not _target_container:
+		_target_container = _target_toolbar
+
+	if not _run_button:
+		_run_button = Button.new()
+		_run_button.text = "Cov"
+		_run_button.tooltip_text = "Run Selected Tests with Nano Coverage"
+		_run_button.flat = true
+		_run_button.focus_mode = Control.FOCUS_NONE # Cleaner look
+		_run_button.pressed.connect(_on_run_pressed)
+		
+		# Add to the correct layout container
+		_target_container.add_child(_run_button)
+		
+		# Optional: Move to index 0 or after specific buttons if needed
+		# _target_container.move_child(_run_button, 0) 
+
+func _on_run_pressed():
+	print("🚀 NanoCoverage: Starting GdUnit4 Test Run...")
+	var inspector_panel = _target_toolbar.get("inspector")
+	if not inspector_panel: return
+		
+	var tree = inspector_panel.get("_tree")
+	
+	# FIX 2: Crash on Null Selection
+	# We strictly check if a selection exists before proceeding.
+	var selected = tree.get_selected()
+	if not selected:
+		printerr("NanoCoverage: No test selected. Please select a test suite or folder.")
+		return
+
+	var test_cases = inspector_panel.collect_test_cases(selected)
+	if test_cases.is_empty():
+		print("NanoCoverage: No tests found in selection.")
+		return
+
+	var ConfigClass = load(RUNNER_CONFIG_SCRIPT)
+	var runner_config = ConfigClass.new()
+	runner_config.set_server_port(31002)
+	runner_config.add_test_cases(test_cases)
+	runner_config.save_config()
+
+	var result = _nano_api.instrument_project({})
+	if result.has("error"):
+		printerr(result.error)
+		return
+	
+	var args = ["--path", result.output_path, RUNNER_SCENE]
+	OS.create_process(OS.get_executable_path(), args)
+
+func _find_node_by_meta(root: Node, meta_key: String) -> Node:
+	if root.has_meta(meta_key): return root
+	for child in root.get_children():
+		var res = _find_node_by_meta(child, meta_key)
+		if res: return res
+	return null
+
+func _find_node_by_script(root: Node, script_path: String) -> Node:
+	var scr = root.get_script()
+	if scr and scr.resource_path == script_path: return root
+	for child in root.get_children():
+		var res = _find_node_by_script(child, script_path)
+		if res: return res
+	return null
+
+--- END FILE: native/addon_resources/integrations/gdunit4.gd ---
+
+--- START FILE: native/addon_resources/integrations/integration_manager.gd ---
+@tool
+extends RefCounted
+
+const SETTING_PATH = "nano_coverage/integrations/gdunit4/active"
+const GdUnitIntegration = preload("res://addons/nano_coverage_godot/integrations/gdunit4.gd")
+
+var _nano_api
+var _active_integration
+
+func _init(nano_api):
+	_nano_api = nano_api
+	_setup_project_settings()
+	_update_integration_state()
+	ProjectSettings.settings_changed.connect(_on_settings_changed)
+
+func clean_up():
+	if _active_integration:
+		_active_integration.disable()
+		_active_integration = null
+
+func _setup_project_settings():
+	if not ProjectSettings.has_setting(SETTING_PATH):
+		ProjectSettings.set_setting(SETTING_PATH, false)
+	
+	ProjectSettings.add_property_info({
+		"name": SETTING_PATH,
+		"type": TYPE_BOOL,
+		"hint": PROPERTY_HINT_NONE,
+		"hint_string": "Enable integration with GdUnit4"
+	})
+	
+	# FIX: This forces the setting to appear in the standard view (not just Advanced)
+	ProjectSettings.set_as_basic(SETTING_PATH, true)
+
+func _on_settings_changed():
+	_update_integration_state()
+
+func _update_integration_state():
+	var should_be_active = ProjectSettings.get_setting(SETTING_PATH)
+	
+	if should_be_active and not GdUnitIntegration.is_available():
+		printerr("NanoCoverage: GdUnit4 not found! Disabling integration.")
+		ProjectSettings.set_setting(SETTING_PATH, false)
+		should_be_active = false
+	
+	if should_be_active and _active_integration == null:
+		_active_integration = GdUnitIntegration.new(_nano_api)
+		_active_integration.enable()
+		print("NanoCoverage: GdUnit4 Integration Active ✅")
+	elif not should_be_active and _active_integration != null:
+		_active_integration.disable()
+		_active_integration = null
+		print("NanoCoverage: GdUnit4 Integration Deactivated ❌")
+
+--- END FILE: native/addon_resources/integrations/integration_manager.gd ---
+
+--- START FILE: native/addon_resources/nano_coverage_godot.gdextension ---
+[configuration]
+
+entry_symbol = "nano_coverage_godot_library_init"
+compatibility_minimum = "4.1"
+
+[libraries]
+
+windows.debug.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.windows.template_debug.x86_64.dll"
+windows.release.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.windows.template_release.x86_64.dll"
+linux.debug.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.linux.template_debug.x86_64.so"
+linux.release.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.linux.template_release.x86_64.so"
+macos.debug = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.macos.template_debug.framework"
+macos.release = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.macos.template_release.framework"
+
+--- END FILE: native/addon_resources/nano_coverage_godot.gdextension ---
+
+--- START FILE: native/addon_resources/plugin.cfg ---
+[plugin]
+
+name="NanoCoverage"
+description="Code coverage for Godot 4"
+author="Igor Bayerl"
+version="1.0"
+script="plugin.gd"
+
+--- END FILE: native/addon_resources/plugin.cfg ---
+
+--- START FILE: native/addon_resources/plugin.gd ---
+@tool
+extends EditorPlugin
+
+var plugin_instance
+var _integration_manager
+
+func _enter_tree():
+	print("--- 🔌 NanoCoverage Plugin Loading ---")
+	
+	# 1. Instantiate C++ Plugin
+	if ClassDB.class_exists("NanoCoverageEditorPlugin"):
+		plugin_instance = ClassDB.instantiate("NanoCoverageEditorPlugin")
+		add_child(plugin_instance)
+		print("✅ C++ Editor Plugin instantiated")
+	else:
+		printerr("❌ Error: NanoCoverageEditorPlugin class not found!")
+
+	# 2. Check CoverageApi
+	if not ClassDB.class_exists("CoverageApi"):
+		printerr("❌ Error: CoverageApi class not found in ClassDB!")
+		return
+	
+	var api = ClassDB.instantiate("CoverageApi")
+	if not api:
+		printerr("❌ Error: Failed to instantiate CoverageApi")
+		return
+	print("✅ CoverageApi instantiated")
+
+	# 3. Load Integration Manager Script
+	var manager_path = "res://addons/nano_coverage_godot/integrations/integration_manager.gd"
+	if not FileAccess.file_exists(manager_path):
+		printerr("❌ Error: Integration Manager file missing at: ", manager_path)
+		return
+		
+	var ManagerScript = load(manager_path)
+	if not ManagerScript:
+		printerr("❌ Error: Failed to load Integration Manager script (Check for syntax errors in integration_manager.gd)")
+		return
+		
+	# 4. Initialize Manager
+	_integration_manager = ManagerScript.new(api)
+	print("✅ Integration Manager initialized")
+
+func _exit_tree():
+	if _integration_manager:
+		_integration_manager.clean_up()
+	if plugin_instance:
+		remove_child(plugin_instance)
+		plugin_instance.queue_free()
+		plugin_instance = null
+
+--- END FILE: native/addon_resources/plugin.gd ---
+
+--- START FILE: native/addon_resources/runtime.gd ---
+extends Node
+
+# C++ singleton reference here.
+var _agent
+
+func _enter_tree() -> void:
+	_agent = Engine.get_singleton("NanoCoverage")
+
+func hit(file: String, line: int) -> void:
+	_agent.hit(file, line)
+
+func _notification(what: int) -> void:
+	# Handle application exit to flush data to disk
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_EXIT_TREE:
+		if _agent:
+			# We assume the C++ side handles the pathing based on ProjectSettings
+			_agent.save_session()
+
+--- END FILE: native/addon_resources/runtime.gd ---
+
+--- START FILE: native/src/api/coverage_api.cpp ---
+#include "coverage_api.h"
+
+#include <cstdlib>  // For rand
+#include <godot_cpp/classes/dir_access.hpp>
+#include <godot_cpp/classes/os.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/variant/packed_string_array.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
+#include <godot_cpp/variant/variant.hpp>
+
+#include "../config/settings_gateway.h"
+#include "../data/persistence.h"
+#include "../editor/instrumented_project_builder.h"
+#include "../runtime/coverage_collector.h"
+#include "../runtime/coverage_store.h"
+#include "../runtime/lcov_writer.h"
+
+namespace godot {
+
+void CoverageApi::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("instrument_project", "options"), &CoverageApi::instrument_project);
+    ClassDB::bind_method(D_METHOD("run_instrumented_project", "options"), &CoverageApi::run_instrumented_project);
+    ClassDB::bind_method(D_METHOD("generate_coverage_report", "options"), &CoverageApi::generate_coverage_report);
+    ClassDB::bind_method(D_METHOD("clear_coverage_data", "options"), &CoverageApi::clear_coverage_data);
+}
+
+Dictionary CoverageApi::instrument_project(const Dictionary& options) {
+    String output_path = InstrumentedProjectBuilder::build_instrumented_project();
+    Dictionary result;
+    if (output_path.is_empty()) {
+        result["error"] = "Failed to create temp project";
+        return result;
+    }
+
+    result["output_path"] = output_path;
+    return result;
+}
+
+Dictionary CoverageApi::run_instrumented_project(const Dictionary& options) {
+    Dictionary result;
+    if (!options.has("output_path")) {
+        result["error"] = "Missing 'output_path' in options";
+        return result;
+    }
+
+    String project_path = options["output_path"];
+    String workspace_id = options.get("workspace_id", "default");
+    bool blocking = options.get("blocking", false);
+
+    // Generate a unique run ID
+    int64_t time = (int64_t)std::time(nullptr);
+    int64_t rnd = std::rand();
+    String run_id = String::num_int64(time) + "-" + String::num_int64(rnd);
+
+    String output_filename = run_id + ".covdata";
+
+    // Load Settings
+    CoverageSettings settings = SettingsGateway::load();
+    String data_store_dir = settings.paths_data_store_dir;
+
+    String data_store_base = ProjectSettings::get_singleton()->globalize_path(data_store_dir);
+    String store_runs_dir = data_store_base + "/" + workspace_id + "/runs";
+
+    // Ensure runs directory exists (also for logs)
+    if (!DirAccess::dir_exists_absolute(store_runs_dir)) {
+        DirAccess::make_dir_recursive_absolute(store_runs_dir);
+    }
+
+    // Define Log File Path
+    String log_file_path = store_runs_dir + "/" + run_id + ".log";
+
+    PackedStringArray args;
+    args.push_back("--path");
+    args.push_back(project_path);
+
+    // Add Log File Argument (Must be before '++')
+    args.push_back("--log-file");
+    args.push_back(log_file_path);
+
+    // Inject overrides
+    // Use ++ separator to denote user arguments
+    args.push_back("++");
+    args.push_back("nano_coverage/output_dir=" + store_runs_dir);
+    args.push_back("nano_coverage/output_name=" + output_filename);
+
+    bool dry_run = options.get("dry_run", false);
+    if (dry_run) {
+        result["args"] = args;
+        result["run_id"] = run_id;
+        result["expected_output_file"] = store_runs_dir + "/" + output_filename;
+        result["log_file"] = log_file_path;  // Return log path in dry run too
+        return result;
+    }
+
+    if (blocking) {
+        Array output;
+        int32_t ret =
+            OS::get_singleton()->execute(OS::get_singleton()->get_executable_path(), args, output, true, true);
+
+        // In blocking mode, we can just pipe stdout directly if captured
+        if (output.size() > 0) {
+            UtilityFunctions::print(output[0]);
+        }
+
+        result["exit_code"] = Variant((int64_t)ret);
+        result["run_id"] = run_id;
+        result["output_file"] = store_runs_dir + "/" + output_filename;
+        result["log_file"] = log_file_path;
+        return result;
+    }
+
+    int32_t pid = OS::get_singleton()->create_process(OS::get_singleton()->get_executable_path(), args);
+    if (pid == -1) {
+        result["error"] = "Failed to create process";
+        return result;
+    }
+
+    result["pid"] = Variant((int64_t)pid);
+    result["run_id"] = run_id;
+    result["output_file"] = store_runs_dir + "/" + output_filename;
+    result["log_file"] = log_file_path;  // Pass log path so Plugin can tail it
+
+    return result;
+}
+
+Dictionary CoverageApi::generate_coverage_report(const Dictionary& options) {
+    Dictionary result;
+
+    String workspace_id = options.get("workspace_id", "default");
+
+    CoverageSettings settings = SettingsGateway::load();
+    String data_store_dir = settings.paths_data_store_dir;
+
+    String data_store_base = ProjectSettings::get_singleton()->globalize_path(data_store_dir);
+
+    // Convert to std::string for CoverageStore
+    std::string base_str = data_store_base.utf8().get_data();
+    std::string ws_id_str = workspace_id.utf8().get_data();
+
+    // Load Execution Hits
+    CoverageStore store(base_str, ws_id_str);
+    CoverageData raw_hits = store.load_and_merge();
+
+    // Load Static Metadata (Coverable Lines)
+    CoverageMetadata meta;
+
+    // Construct path using Godot String to handle separators gracefully on all OS
+    String meta_path_godot = data_store_base.path_join("coverage.meta");
+
+    // Use Persistence directly (std::ifstream) to check/load, avoiding FileAccess inconsistency with absolute paths
+    if (!Persistence::load_metadata(meta_path_godot.utf8().get_data(), meta)) {
+        UtilityFunctions::printerr("NanoCoverage: Failed to load coverage.meta from ", meta_path_godot);
+        result["error"] = "Metadata file missing or unreadable. Did you run instrumentation?";
+        return result;
+    }
+
+    // Merge Hits into Metadata
+    CoverageData final_data;
+
+    for (const auto& meta_kv : meta) {
+        const std::string& file_path = meta_kv.first;
+        const std::vector<uint32_t>& coverable_lines = meta_kv.second;
+
+        std::unordered_map<uint32_t, uint64_t>& file_lines = final_data[file_path];
+
+        auto hit_file_it = raw_hits.find(file_path);
+        bool has_hits = (hit_file_it != raw_hits.end());
+
+        for (uint32_t line : coverable_lines) {
+            uint64_t count = 0;
+
+            if (has_hits) {
+                auto hit_line_it = hit_file_it->second.find(line);
+                if (hit_line_it != hit_file_it->second.end()) {
+                    count = hit_line_it->second;
+                }
+            }
+            // Assign count (0 if not found, >0 if found)
+            file_lines[line] = count;
+        }
+    }
+
+    // Write Report
+    LCOVWriter::write_lcov_report(final_data, settings);
+
+    result["status"] = "ok";
+    result["report_path"] = settings.paths_report_dir;
+
+    return result;
+}
+
+Dictionary CoverageApi::clear_coverage_data(const Dictionary& options) {
+    Dictionary result;
+    String workspace_id = options.get("workspace_id", "default");
+    CoverageSettings settings = SettingsGateway::load();
+    String data_store_dir = settings.paths_data_store_dir;
+
+    String data_store_base = ProjectSettings::get_singleton()->globalize_path(data_store_dir);
+
+    CoverageStore store(data_store_base.utf8().get_data(), workspace_id.utf8().get_data());
+    store.clear();
+
+    result["status"] = "ok";
+    return result;
+}
+
+}  // namespace godot
+--- END FILE: native/src/api/coverage_api.cpp ---
+
+--- START FILE: native/src/api/coverage_api.h ---
+#pragma once
+
+#include <godot_cpp/classes/ref_counted.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
+
+namespace godot {
+
+class CoverageApi : public RefCounted {
+    GDCLASS(CoverageApi, RefCounted)
+
+   private:
+    static void _bind_methods();
+
+   public:
+    /// Instruments the project found at 'res://' (or configured path).
+    /// Returns: { "workspace_id": ..., "output_path": ... }
+    Dictionary instrument_project(const Dictionary& options);
+
+    /// Runs the instrumented project.
+    /// Expects options: { "output_path": ..., "workspace_id": ..., "blocking": bool }
+    /// Returns: { "pid": ..., "output_file": ... }
+    Dictionary run_instrumented_project(const Dictionary& options);
+
+    /// Generates the LCOV report from collected run data.
+    /// Expects options: { "workspace_id": ... }
+    /// Returns: { "report_path": ... }
+    Dictionary generate_coverage_report(const Dictionary& options);
+
+    /// Clears data from previous runs.
+    /// Expects options: { "workspace_id": ... }
+    /// Returns: { "status": "ok" }
+    Dictionary clear_coverage_data(const Dictionary& options);
+};
+
+}  // namespace godot
+
+--- END FILE: native/src/api/coverage_api.h ---
+
+--- START FILE: native/src/api/coverage_api_test.cpp ---
+#include "coverage_api.h"
+
+#include <godot_cpp/classes/ref.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
+#include <godot_cpp/variant/string.hpp>
+#include <gtest/gtest.h>
+
+using namespace godot;
+
+TEST(CoverageApiTest, ContractTest) {
+    // Instantiate API
+    Ref<CoverageApi> api;
+    api.instantiate();
+
+    ASSERT_TRUE(api.is_valid());
+
+    // Test instrument_project
+    Dictionary instr_opts;
+    Dictionary instr_result = api->instrument_project(instr_opts);
+
+    // Verify success immediately
+    ASSERT_FALSE(instr_result.has("error"))
+        << "Instrumentation failed: " << String(instr_result.get("error", "")).utf8().get_data();
+
+    ASSERT_TRUE(instr_result.has("output_path")) << "instrument_project missing output_path";
+    String output_path = instr_result["output_path"];
+
+    // Test run_instrumented_project
+    Dictionary run_opts;
+    run_opts["output_path"] = output_path;
+    run_opts["workspace_id"] = "test_workspace";
+    run_opts["blocking"] = false;
+    run_opts["dry_run"] = true;
+
+    Dictionary run_result = api->run_instrumented_project(run_opts);
+    EXPECT_TRUE(run_result.has("args"));
+    EXPECT_TRUE(run_result.has("run_id"));
+    EXPECT_TRUE(run_result.has("expected_output_file"));
+
+    // VERIFY LOG FILE RETURN
+    EXPECT_TRUE(run_result.has("log_file")) << "API should return log_file path for tailing";
+    String log_file = run_result["log_file"];
+    EXPECT_FALSE(log_file.is_empty());
+    EXPECT_TRUE(log_file.ends_with(".log"));
+
+    // Test generate_coverage_report
+    // Must run before clearing data, as it requires coverage.meta
+    Dictionary report_opts;
+    report_opts["workspace_id"] = "test_workspace";
+    Dictionary report_result = api->generate_coverage_report(report_opts);
+
+    ASSERT_FALSE(report_result.has("error"))
+        << "Report generation failed: " << String(report_result.get("error", "")).utf8().get_data();
+
+    EXPECT_TRUE(report_result.has("status"));
+    EXPECT_EQ(String(report_result["status"]), "ok");
+
+    // Test clear_coverage_data
+    // This deletes coverage.meta and .covdata files
+    Dictionary clear_opts;
+    clear_opts["workspace_id"] = "test_workspace";
+    Dictionary clear_result = api->clear_coverage_data(clear_opts);
+    EXPECT_TRUE(clear_result.has("status"));
+    EXPECT_EQ(String(clear_result["status"]), "ok");
+}
+--- END FILE: native/src/api/coverage_api_test.cpp ---
+
+--- START FILE: native/src/config/config_test.cpp ---
+#include <cstring>
+#include <gtest/gtest.h>
+#include <string>
+
+#include "settings_keys.h"
+
+using namespace godot;
+
+TEST(SettingsKeysTest, ConstantsAreDefined) {
+    // Basic check to ensure the header is linkable and constants are not empty
+    EXPECT_GT(std::strlen(SettingsKeys::TEMP_DIRECTORY), 0);
+    EXPECT_EQ(std::string(SettingsKeys::TEMP_DIRECTORY), "nano_coverage/general/temp_directory");
+
+    EXPECT_GT(std::strlen(SettingsKeys::PATHS_TEMP_DIR), 0);
+    EXPECT_GT(std::strlen(SettingsKeys::PATHS_REPORT_DIR), 0);
+    EXPECT_GT(std::strlen(SettingsKeys::PATHS_DATA_STORE_DIR), 0);
+
+    EXPECT_GT(std::strlen(SettingsKeys::REPORT_LCOV_FILENAME), 0);
+    EXPECT_GT(std::strlen(SettingsKeys::REPORT_USE_ABSOLUTE_SOURCE_PATHS), 0);
+
+    EXPECT_GT(std::strlen(SettingsKeys::UI_SHOW_ALL_BUTTONS), 0);
+    EXPECT_GT(std::strlen(SettingsKeys::UI_SHOW_RUN_INSTRUMENTED_BUTTON), 0);
+    EXPECT_GT(std::strlen(SettingsKeys::UI_SHOW_GENERATE_REPORT_BUTTON), 0);
+    EXPECT_GT(std::strlen(SettingsKeys::UI_SHOW_CLEAR_DATA_BUTTON), 0);
+}
+
+--- END FILE: native/src/config/config_test.cpp ---
+
+--- START FILE: native/src/config/settings_gateway.cpp ---
+#include "settings_gateway.h"
+
+#include <godot_cpp/classes/global_constants.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
+
+#include "settings_keys.h"
+
+namespace godot {
+
+void SettingsGateway::register_settings() {
+    ProjectSettings* ps = ProjectSettings::get_singleton();
+
+    // Helper lambda to register a setting
+    auto register_key = [&](const String& path, const Variant& default_value, Variant::Type type,
+                            PropertyHint hint = PROPERTY_HINT_NONE, const String& hint_string = "") {
+        if (!ps->has_setting(path)) {
+            ps->set_setting(path, default_value);
+        }
+        ps->set_initial_value(path, default_value);
+
+        Dictionary property_info;
+        property_info["name"] = path;
+        property_info["type"] = type;
+        property_info["hint"] = hint;
+        property_info["hint_string"] = hint_string;
+        ps->add_property_info(property_info);
+        ps->set_as_basic(path, true);
+    };
+
+    // Current keys
+    register_key(SettingsKeys::TEMP_DIRECTORY, "", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR,
+                 "Folder to store the instrumented project");
+
+    // Future keys - Paths
+    register_key(SettingsKeys::PATHS_TEMP_DIR, "", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR,
+                 "Same as temp_directory (Transition)");
+    register_key(SettingsKeys::PATHS_REPORT_DIR, "res://coverage-report", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR);
+    register_key(SettingsKeys::PATHS_DATA_STORE_DIR, "res://coverage-data", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR);
+
+    // Future keys - Report
+    register_key(SettingsKeys::REPORT_LCOV_FILENAME, "lcov.info", Variant::STRING);
+    register_key(SettingsKeys::REPORT_USE_ABSOLUTE_SOURCE_PATHS, false, Variant::BOOL);
+
+    // Future keys - UI
+    register_key(SettingsKeys::UI_SHOW_ALL_BUTTONS, true, Variant::BOOL);
+    register_key(SettingsKeys::UI_SHOW_RUN_INSTRUMENTED_BUTTON, true, Variant::BOOL);
+    register_key(SettingsKeys::UI_SHOW_GENERATE_REPORT_BUTTON, true, Variant::BOOL);
+    register_key(SettingsKeys::UI_SHOW_CLEAR_DATA_BUTTON, true, Variant::BOOL);
+}
+
+CoverageSettings SettingsGateway::load() {
+    ProjectSettings* ps = ProjectSettings::get_singleton();
+    CoverageSettings settings;
+
+    // Helper implementation to safely get a setting
+    auto get_safe = [&](const String& path, const Variant& default_val) -> Variant {
+        if (ps->has_setting(path)) {
+            return ps->get_setting(path);
+        }
+        // Fallback: Try getting it anyway, in case has_setting is false but it exists (e.g. dynamic override)
+        Variant val = ps->get_setting(path);
+        if (val.get_type() != Variant::NIL) {
+            return val;
+        }
+        return default_val;
+    };
+
+    settings.temp_directory = get_safe(SettingsKeys::TEMP_DIRECTORY, "");
+
+    // For paths, if we get an empty string, we should probably use default if default is non-empty.
+    // This protects against "set to empty" pollution or user error.
+
+    auto get_path = [&](const String& key, const String& def) -> String {
+        String val = get_safe(key, def);
+        if (val.is_empty() && !def.is_empty())
+            return def;
+        return val;
+    };
+
+    settings.paths_temp_dir = get_path(SettingsKeys::PATHS_TEMP_DIR, "");
+    // Default for report dir is res://coverage_report. If retrieval gives "", use default.
+    settings.paths_report_dir = get_path(SettingsKeys::PATHS_REPORT_DIR, "res://coverage-report");
+    settings.paths_data_store_dir = get_path(SettingsKeys::PATHS_DATA_STORE_DIR, "res://coverage-data");
+
+    settings.report_lcov_filename = get_safe(SettingsKeys::REPORT_LCOV_FILENAME, "lcov.info");
+    settings.report_use_absolute_source_paths = get_safe(SettingsKeys::REPORT_USE_ABSOLUTE_SOURCE_PATHS, false);
+
+    settings.ui_show_all_buttons = get_safe(SettingsKeys::UI_SHOW_ALL_BUTTONS, true);
+    settings.ui_show_run_instrumented_button = get_safe(SettingsKeys::UI_SHOW_RUN_INSTRUMENTED_BUTTON, true);
+    settings.ui_show_generate_report_button = get_safe(SettingsKeys::UI_SHOW_GENERATE_REPORT_BUTTON, true);
+    settings.ui_show_clear_data_button = get_safe(SettingsKeys::UI_SHOW_CLEAR_DATA_BUTTON, true);
+
+    return settings;
+}
+
+}  // namespace godot
+
+--- END FILE: native/src/config/settings_gateway.cpp ---
+
+--- START FILE: native/src/config/settings_gateway.h ---
+#ifndef SETTINGS_GATEWAY_H
+#define SETTINGS_GATEWAY_H
+
+#include <godot_cpp/variant/string.hpp>
+
+namespace godot {
+
+struct CoverageSettings {
+    // Current keys
+    String temp_directory;
+
+    // Future keys
+    String paths_temp_dir;
+    String paths_report_dir;
+    String paths_data_store_dir;
+
+    String report_lcov_filename;
+    bool report_use_absolute_source_paths;
+
+    bool ui_show_all_buttons;
+    bool ui_show_run_instrumented_button;
+    bool ui_show_generate_report_button;
+    bool ui_show_clear_data_button;
+};
+
+class SettingsGateway {
+   public:
+    static void register_settings();
+    static CoverageSettings load();
+};
+
+}  // namespace godot
+
+#endif  // SETTINGS_GATEWAY_H
+
+--- END FILE: native/src/config/settings_gateway.h ---
+
+--- START FILE: native/src/config/settings_gateway_test.cpp ---
+#include "settings_gateway.h"
+
+#include <filesystem>
+#include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/variant/string.hpp>
+#include <gtest/gtest.h>
+
+#include "settings_keys.h"
+#include "testing/test_utils.h"
+
+using namespace godot;
+
+TEST(SettingsGatewayTest, RegisterAndDefaultValues) {
+    // Ensure we are reading clean defaults by overriding potentially dirty ones from other tests
+    // (Though with the fixes above, they should be clean, but this makes this test self-sufficient)
+    SettingsGateway::register_settings();
+    CoverageSettings settings = SettingsGateway::load();
+
+    EXPECT_EQ(settings.temp_directory, "");
+    EXPECT_EQ(settings.paths_report_dir, "res://coverage-report");
+    EXPECT_EQ(settings.paths_data_store_dir, "res://coverage-data");
+    EXPECT_TRUE(settings.ui_show_all_buttons);
+}
+
+TEST(SettingsGatewayTest, LoadReadsValuesFromProjectSettings) {
+    ProjectSettings* ps = ProjectSettings::get_singleton();
+
+    // Setup overrides using RAII
+    SettingsOverride s1(SettingsKeys::TEMP_DIRECTORY, "custom/temp");
+    SettingsOverride s2(SettingsKeys::PATHS_REPORT_DIR, "custom/report");
+    SettingsOverride s3(SettingsKeys::PATHS_DATA_STORE_DIR, "custom/data");
+    SettingsOverride s4(SettingsKeys::REPORT_LCOV_FILENAME, "custom.info");
+    SettingsOverride s5(SettingsKeys::REPORT_USE_ABSOLUTE_SOURCE_PATHS, true);
+    SettingsOverride s6(SettingsKeys::UI_SHOW_ALL_BUTTONS, false);
+
+    // Load settings
+    CoverageSettings settings = SettingsGateway::load();
+
+    // Assert
+    EXPECT_EQ(settings.temp_directory, "custom/temp");
+    EXPECT_EQ(settings.paths_report_dir, "custom/report");
+    EXPECT_EQ(settings.paths_data_store_dir, "custom/data");
+    EXPECT_EQ(settings.report_lcov_filename, "custom.info");
+    EXPECT_TRUE(settings.report_use_absolute_source_paths);
+    EXPECT_FALSE(settings.ui_show_all_buttons);
+
+    // Destructors restore original values automatically
+}
+
+TEST(SettingsGatewayTest, RegisterSetsUpKeysAndTypes) {
+    SettingsGateway::register_settings();
+    ProjectSettings* ps = ProjectSettings::get_singleton();
+
+    EXPECT_TRUE(ps->has_setting(SettingsKeys::TEMP_DIRECTORY));
+    EXPECT_EQ(ps->get_setting(SettingsKeys::TEMP_DIRECTORY).get_type(), Variant::STRING);
+    EXPECT_TRUE(ps->has_setting(SettingsKeys::PATHS_REPORT_DIR));
+}
+--- END FILE: native/src/config/settings_gateway_test.cpp ---
+
+--- START FILE: native/src/config/settings_keys.h ---
+#ifndef SETTINGS_KEYS_H
+#define SETTINGS_KEYS_H
+
+namespace godot {
+
+struct SettingsKeys {
+    // Current keys
+    static constexpr const char* TEMP_DIRECTORY = "nano_coverage/general/temp_directory";
+
+    // Future keys
+    static constexpr const char* PATHS_TEMP_DIR = "nano_coverage/paths/temp_dir";
+    static constexpr const char* PATHS_REPORT_DIR = "nano_coverage/paths/report_dir";
+    static constexpr const char* PATHS_DATA_STORE_DIR = "nano_coverage/paths/data_store_dir";
+
+    static constexpr const char* REPORT_LCOV_FILENAME = "nano_coverage/report/lcov_filename";
+    static constexpr const char* REPORT_USE_ABSOLUTE_SOURCE_PATHS = "nano_coverage/report/use_absolute_source_paths";
+
+    static constexpr const char* UI_SHOW_ALL_BUTTONS = "nano_coverage/ui/show_all_buttons";
+    static constexpr const char* UI_SHOW_RUN_INSTRUMENTED_BUTTON = "nano_coverage/ui/show_run_instrumented_button";
+    static constexpr const char* UI_SHOW_GENERATE_REPORT_BUTTON = "nano_coverage/ui/show_generate_report_button";
+    static constexpr const char* UI_SHOW_CLEAR_DATA_BUTTON = "nano_coverage/ui/show_clear_data_button";
+};
+
+}  // namespace godot
+
+#endif  // SETTINGS_KEYS_H
+
+--- END FILE: native/src/config/settings_keys.h ---
+
+--- START FILE: native/src/data/persistence.cpp ---
+#include "persistence.h"
+
+#include <cstring>  // <--- FIX: Required for strncmp
+#include <fstream>
+#include <iostream>
+
+namespace godot {
+
+namespace {
+
+// Simple Binary Helpers
+template <typename T>
+void write_val(std::ofstream& out, T val) {
+    out.write(reinterpret_cast<const char*>(&val), sizeof(T));
+}
+
+void write_string(std::ofstream& out, const std::string& str) {
+    uint32_t len = static_cast<uint32_t>(str.size());
+    write_val(out, len);
+    out.write(str.data(), len);
+}
+
+template <typename T>
+bool read_val(std::ifstream& in, T& val) {
+    in.read(reinterpret_cast<char*>(&val), sizeof(T));
+    return in.good();
+}
+
+bool read_string(std::ifstream& in, std::string& str) {
+    uint32_t len = 0;
+    if (!read_val(in, len))
+        return false;
+    str.resize(len);
+    in.read(str.data(), len);
+    return in.good();
+}
+
+}  // namespace
+
+bool Persistence::save_metadata(const std::string& path, const CoverageMetadata& metadata) {
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    if (!out.is_open())
+        return false;
+
+    // Header: "COVM" (Coverage Meta)
+    out.write("COVM", 4);
+
+    uint32_t file_count = static_cast<uint32_t>(metadata.size());
+    write_val(out, file_count);
+
+    for (const auto& kv : metadata) {
+        write_string(out, kv.first);  // File Path
+
+        uint32_t line_count = static_cast<uint32_t>(kv.second.size());
+        write_val(out, line_count);
+
+        for (uint32_t line : kv.second) {
+            write_val(out, line);
+        }
+    }
+    return true;
+}
+
+bool Persistence::load_metadata(const std::string& path, CoverageMetadata& out_metadata) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in.is_open())
+        return false;
+
+    char magic[4];
+    in.read(magic, 4);
+    if (strncmp(magic, "COVM", 4) != 0)
+        return false;
+
+    uint32_t file_count = 0;
+    read_val(in, file_count);
+
+    for (uint32_t i = 0; i < file_count; ++i) {
+        std::string file_path;
+        if (!read_string(in, file_path))
+            break;
+
+        uint32_t line_count = 0;
+        read_val(in, line_count);
+
+        std::vector<uint32_t> lines;
+        lines.reserve(line_count);
+        for (uint32_t j = 0; j < line_count; ++j) {
+            uint32_t line;
+            read_val(in, line);
+            lines.push_back(line);
+        }
+        out_metadata[file_path] = std::move(lines);
+    }
+    return true;
+}
+
+bool Persistence::append_execution_data(const std::string& path, const CoverageData& data) {
+    // Open in Append + Binary mode
+    std::ofstream out(path, std::ios::binary | std::ios::app);
+    if (!out.is_open())
+        return false;
+
+    // Session Marker: "SESS"
+    out.write("SESS", 4);
+
+    uint32_t file_count = static_cast<uint32_t>(data.size());
+    write_val(out, file_count);
+
+    for (const auto& file_kv : data) {
+        write_string(out, file_kv.first);  // File Path
+
+        const auto& lines = file_kv.second;
+        uint32_t active_lines = static_cast<uint32_t>(lines.size());
+        write_val(out, active_lines);
+
+        for (const auto& line_kv : lines) {
+            write_val(out, line_kv.first);   // Line Num
+            write_val(out, line_kv.second);  // Hit Count
+        }
+    }
+    return true;
+}
+
+bool Persistence::load_and_merge_execution_data(const std::string& path, CoverageData& out_data) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in.is_open())
+        return false;
+
+    // Loop until EOF to read all concatenated sessions
+    while (in.peek() != EOF) {
+        char magic[4];
+        in.read(magic, 4);
+        // If we fail to read magic or it's wrong, stop (or partial read)
+        if (in.gcount() != 4 || strncmp(magic, "SESS", 4) != 0) {
+            break;
+        }
+
+        uint32_t file_count = 0;
+        read_val(in, file_count);
+
+        for (uint32_t i = 0; i < file_count; ++i) {
+            std::string file_path;
+            read_string(in, file_path);
+
+            uint32_t line_count = 0;
+            read_val(in, line_count);
+
+            for (uint32_t j = 0; j < line_count; ++j) {
+                uint32_t line_num;
+                uint64_t hits;
+                read_val(in, line_num);
+                read_val(in, hits);
+
+                // Merge (Sum) hits
+                out_data[file_path][line_num] += hits;
+            }
+        }
+    }
+    return true;
+}
+
+}  // namespace godot
+--- END FILE: native/src/data/persistence.cpp ---
+
+--- START FILE: native/src/data/persistence.h ---
+#pragma once
+
+#include <cstdint>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+namespace godot {
+
+// Map: FilePath -> List of Line Numbers
+using CoverageMetadata = std::unordered_map<std::string, std::vector<uint32_t>>;
+
+// Map: FilePath -> (Line Number -> Hit Count)
+using CoverageData = std::unordered_map<std::string, std::unordered_map<uint32_t, uint64_t>>;
+
+class Persistence {
+   public:
+    // Writes the static metadata (files and their coverable lines) to a binary file.
+    // Overwrites existing file.
+    static bool save_metadata(const std::string& path, const CoverageMetadata& metadata);
+
+    // Reads metadata from disk.
+    static bool load_metadata(const std::string& path, CoverageMetadata& out_metadata);
+
+    // Appends the current execution hits to a binary file.
+    // Supports appending multiple sessions to the same file.
+    static bool append_execution_data(const std::string& path, const CoverageData& data);
+
+    // Reads an execution data file, merging all sessions found within it.
+    static bool load_and_merge_execution_data(const std::string& path, CoverageData& out_data);
+};
+
+}  // namespace godot
+--- END FILE: native/src/data/persistence.h ---
+
+--- START FILE: native/src/data/persistence_metadata_test.cpp ---
+#include <godot_cpp/classes/dir_access.hpp>
+#include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
+#include <gtest/gtest.h>
+
+#include "../config/settings_keys.h"
+#include "../runtime/coverage_monitor.h"
+#include "persistence.h"
+#include "testing/test_utils.h"
+
+namespace godot {
+
+TEST(NanoCoverageTest, ReportsZeroHitLinesFromMetadata) {
+    NanoCoverage* cov = memnew(NanoCoverage);
+
+    // Setup paths
+    String report_dir = "res://coverage_report_unique";
+
+    // Ensure clean state using recursive delete
+    TestUtils::clean_dir(report_dir);
+    DirAccess::make_dir_recursive_absolute(report_dir);
+
+    // Create a dummy source file
+    String expected_res_path = report_dir + "/test_meta.gd";
+    Ref<FileAccess> f_gen = FileAccess::open(expected_res_path, FileAccess::WRITE);
+    f_gen->store_line("extends Node");
+    f_gen->store_line("func _ready():");
+    f_gen->store_line("    print('hit me')");
+    f_gen->store_line("    if false:");
+    f_gen->store_line("        print('miss me')");
+    f_gen->close();
+
+    // Create REQUIRED Metadata
+    CoverageMetadata meta;
+    meta[expected_res_path.utf8().get_data()] = {3, 5};
+
+    String meta_path_res = report_dir + "/coverage.meta";
+    String meta_path_abs = ProjectSettings::get_singleton()->globalize_path(meta_path_res);
+    Persistence::save_metadata(meta_path_abs.utf8().get_data(), meta);
+
+    // Record Runtime Hits
+    cov->reset();
+    cov->hit(expected_res_path, 3);  // Hit line 3
+
+    // Configure Settings using RAII Helper
+    SettingsOverride s1("nano_coverage/source_root", report_dir);
+    SettingsOverride s2("nano_coverage/output_dir", report_dir);
+    SettingsOverride s3(SettingsKeys::PATHS_REPORT_DIR, report_dir);
+    SettingsOverride s4(SettingsKeys::PATHS_DATA_STORE_DIR, report_dir);
+
+    cov->save_session();
+
+    // Generate Report
+    cov->generate_report();
+
+    // Verify
+    String lcov_path = report_dir + "/lcov.info";
+    ASSERT_TRUE(FileAccess::file_exists(lcov_path));
+
+    memdelete(cov);
+
+    // CLEANUP: Recursively remove the test directory
+    TestUtils::clean_dir(report_dir);
+}
+
+}  // namespace godot
+--- END FILE: native/src/data/persistence_metadata_test.cpp ---
+
+--- START FILE: native/src/data/persistence_test.cpp ---
+#include "persistence.h"
+
+#include <filesystem>
+#include <gtest/gtest.h>
+#include <unordered_map>
+
+namespace fs = std::filesystem;
+using namespace godot;
+
+TEST(PersistenceTest, MetadataSaveAndLoad) {
+    std::string path = "test_meta.bin";
+
+    CoverageMetadata in_meta;
+    in_meta["res://a.gd"] = {1, 2, 5};
+    in_meta["res://b.gd"] = {10, 20};
+
+    // Save
+    ASSERT_TRUE(Persistence::save_metadata(path, in_meta));
+    ASSERT_TRUE(fs::exists(path));
+
+    // Load
+    CoverageMetadata out_meta;
+    ASSERT_TRUE(Persistence::load_metadata(path, out_meta));
+
+    // Verify
+    EXPECT_EQ(out_meta.size(), 2);
+    EXPECT_EQ(out_meta["res://a.gd"].size(), 3);
+    EXPECT_EQ(out_meta["res://b.gd"].size(), 2);
+    EXPECT_EQ(out_meta["res://a.gd"][2], 5);
+
+    fs::remove(path);
+}
+
+TEST(PersistenceTest, ExecutionDataAppendAndMerge) {
+    std::string path = "test_data.bin";
+    if (fs::exists(path))
+        fs::remove(path);
+
+    // Session 1
+    CoverageData s1;
+    s1["res://game.gd"][5] = 10;  // 10 hits on line 5
+    ASSERT_TRUE(Persistence::append_execution_data(path, s1));
+
+    // Session 2
+    CoverageData s2;
+    s2["res://game.gd"][5] = 5;  // 5 more hits on line 5
+    s2["res://game.gd"][6] = 1;  // 1 hit on line 6
+    ASSERT_TRUE(Persistence::append_execution_data(path, s2));
+
+    // Load & Merge
+    CoverageData result;
+    ASSERT_TRUE(Persistence::load_and_merge_execution_data(path, result));
+
+    // Verify
+    EXPECT_EQ(result["res://game.gd"][5], 15);  // 10 + 5
+    EXPECT_EQ(result["res://game.gd"][6], 1);   // 0 + 1
+
+    fs::remove(path);
+}
+--- END FILE: native/src/data/persistence_test.cpp ---
+
+--- START FILE: native/src/editor/instrumented_project_builder.cpp ---
+#include "instrumented_project_builder.h"
+
+#include <algorithm>
+#include <array>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <godot_cpp/classes/config_file.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/classes/resource_uid.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
+#include <string>
+#include <vector>
+
+#include "../config/settings_gateway.h"
+#include "../data/persistence.h"
+#include "../instrumentation/instrumenter.h"
+
+namespace godot {
+
+namespace {
+
+namespace fs = std::filesystem;
+
+// Constants
+const std::array<std::string_view, 8> kMandatoryCopyExtensions = {".gd", ".gdextension", ".cfg", ".dll",
+                                                                  ".so", ".dylib",       ".a",   ".lib"};
+const std::array<std::string_view, 2> kCriticalCacheFiles = {"uid_cache.bin", "extension_list.cfg"};
+const char* kAutoloadName = "NanoCoverage";
+const char* kAutoloadPath = "*res://addons/nano_coverage_godot/runtime.gd";
+const char* kAddonPrefix = "addons/nano_coverage_godot/";
+
+// Helper Predicates
+bool IsEnvTruthy(const char* name) {
+    const char* v = std::getenv(name);
+    return v && *v && std::string_view(v) != "0";
+}
+
+bool IsHotReloadArtifact(const std::string& filename) {
+    return !filename.empty() && filename[0] == '~';
+}
+
+bool ShouldInstrumentFile(const fs::path& relative_path) {
+    if (IsEnvTruthy("NANO_COVERAGE_INSTRUMENT_ADDONS"))
+        return true;
+    std::string rel_str = relative_path.generic_string();
+    return rel_str.find(kAddonPrefix) != 0;
+}
+
+bool IsCopyMandatory(const fs::path& path) {
+    std::string filename = path.filename().string();
+    if (IsHotReloadArtifact(filename))
+        return false;
+    if (filename == "project.godot")
+        return true;
+    std::string ext = path.extension().string();
+    for (const auto& mandatory_ext : kMandatoryCopyExtensions)
+        if (ext == mandatory_ext)
+            return true;
+    return false;
+}
+
+// File Operations
+void CreateSymlinkOrCopy(const fs::path& src, const fs::path& dst) {
+    std::error_code ec;
+    fs::create_symlink(src, dst, ec);
+    if (ec) {
+        ec.clear();
+        fs::copy_file(src, dst, fs::copy_options::overwrite_existing, ec);
+
+        if (ec) {
+            UtilityFunctions::printerr("NanoCoverage: Failed to link/copy ", String(src.string().c_str()));
+            std::ofstream debug_file("debug_log.txt", std::ios::app);
+            debug_file << "NanoCoverage: Failed to link/copy " << src.string() << " to " << dst.string()
+                       << ". Error: " << ec.message() << std::endl;
+        }
+    }
+}
+
+// Pipeline Steps
+
+std::vector<fs::path> CollectSourceFiles(const fs::path& source_root) {
+    std::vector<fs::path> files;
+    if (!fs::exists(source_root))
+        return files;
+
+    {
+        std::ofstream debug_file("debug_log.txt", std::ios::app);
+        debug_file << "NanoCoverage: Collecting files from " << source_root.string() << std::endl;
+        debug_file.close();
+    }
+    UtilityFunctions::print("NanoCoverage: Collecting files from ", String(source_root.string().c_str()));
+    for (const auto& entry : fs::recursive_directory_iterator(source_root)) {
+        const auto& path = entry.path();
+
+        // We handle directory creation based on file paths
+        if (fs::is_directory(path))
+            continue;
+
+        auto relative_path = fs::relative(path, source_root);
+        std::string path_str = relative_path.generic_string();
+
+        // Standard exclusions
+        if (path_str.find(".godot") == 0 || path_str.find(".git") == 0)
+            continue;
+        if (IsHotReloadArtifact(path.filename().string()))
+            continue;
+
+        if (path.filename() == "project.godot") {
+            std::ofstream debug_file("debug_log.txt", std::ios::app);
+            debug_file << "NanoCoverage: Found project.godot at " << path.string() << std::endl;
+        }
+        files.push_back(path);
+    }
+    {
+        std::ofstream debug_file("debug_log.txt", std::ios::app);
+        debug_file << "NanoCoverage: Collected " << files.size() << " files." << std::endl;
+    }
+    return files;
+}
+
+void CopyOrLinkFile(const fs::path& src, const fs::path& dst) {
+    std::error_code ec;
+    // Note: create_directories(parent) is done by caller to avoid repeated checks here
+
+    if (IsCopyMandatory(src)) {
+        fs::copy_file(src, dst, fs::copy_options::overwrite_existing, ec);
+        if (ec) {
+            std::ofstream debug_file("debug_log.txt", std::ios::app);
+            debug_file << "NanoCoverage: Failed to mandatory copy " << src.string() << " to " << dst.string()
+                       << ". Error: " << ec.message() << std::endl;
+        }
+    } else {
+        CreateSymlinkOrCopy(src, dst);
+    }
+}
+
+void InstrumentFileIfNeeded(const fs::path& target_file, const fs::path& relative_path, CoverageMetadata& metadata) {
+    if (target_file.extension() != ".gd")
+        return;
+
+    if (!ShouldInstrumentFile(relative_path))
+        return;
+
+    std::string res_gd = "res://" + relative_path.generic_string();
+    std::replace(res_gd.begin(), res_gd.end(), '\\', '/');
+
+    int insertions = 0;
+    std::vector<uint32_t> lines;
+
+    Instrumenter::instrument_file(String(target_file.string().c_str()), String(res_gd.c_str()), &lines, &insertions);
+
+    if (!lines.empty()) {
+        metadata[res_gd] = std::move(lines);
+    }
+}
+
+void SyncGodotCache(const fs::path& src_root, const fs::path& dst_root) {
+    fs::path src_godot = src_root / ".godot";
+    fs::path dst_godot = dst_root / ".godot";
+
+    if (!fs::exists(src_godot))
+        return;
+
+    std::error_code ec;
+    fs::create_directories(dst_godot, ec);
+
+    for (const auto& filename : kCriticalCacheFiles) {
+        fs::path src_file = src_godot / filename;
+        fs::path dst_file = dst_godot / filename;
+        if (fs::exists(src_file))
+            fs::copy_file(src_file, dst_file, fs::copy_options::overwrite_existing, ec);
+    }
+
+    fs::path src_imported = src_godot / "imported";
+    if (fs::exists(src_imported)) {
+        fs::create_directories(dst_godot / "imported", ec);
+        for (const auto& entry : fs::recursive_directory_iterator(src_imported)) {
+            const auto& path = entry.path();
+            auto relative = fs::relative(path, src_godot);
+            fs::path target = dst_godot / relative;
+            if (fs::is_directory(path))
+                fs::create_directories(target, ec);
+            else
+                CreateSymlinkOrCopy(path, target);
+        }
+    }
+}
+
+void PatchProjectSettings(const fs::path& temp_project_root, const fs::path& original_project_root) {
+    String project_file_str = String((temp_project_root / "project.godot").string().c_str());
+    Ref<ConfigFile> cfg;
+    cfg.instantiate();
+    if (cfg->load(project_file_str) != OK)
+        return;
+
+    String main_scene = ProjectSettings::get_singleton()->get_setting("application/run/main_scene");
+    if (main_scene.begins_with("uid://")) {
+        int64_t uid = ResourceUID::get_singleton()->text_to_id(main_scene);
+        if (uid != -1) {
+            String resolved = ResourceUID::get_singleton()->get_id_path(uid);
+            if (!resolved.is_empty())
+                main_scene = resolved;
+        }
+    }
+    cfg->set_value("application", "run/main_scene", main_scene);
+    cfg->set_value("autoload", kAutoloadName, kAutoloadPath);
+
+    // Prepare paths for runtime output
+    std::string source_root_str = original_project_root.string();
+    std::replace(source_root_str.begin(), source_root_str.end(), '\\', '/');
+
+    // Default output directory is the source project root
+    cfg->set_value("nano_coverage", "output_dir", String(source_root_str.c_str()));
+    cfg->set_value("nano_coverage", "source_root", String(source_root_str.c_str()));
+
+    cfg->save(project_file_str);
+}
+
+}  // namespace
+
+String InstrumentedProjectBuilder::build_instrumented_project() {
+    // Resolve Paths
+    String res_path_gd = ProjectSettings::get_singleton()->globalize_path("res://");
+
+    // Explicitly hold CharString to ensure pointer validity for fs::path
+    CharString res_path_utf8 = res_path_gd.utf8();
+    fs::path source_root(res_path_utf8.get_data());
+
+    fs::path temp_root;
+
+    // Use SettingsGateway for robust fallback and defaults
+    CoverageSettings settings = SettingsGateway::load();
+    String custom_path_setting = settings.temp_directory;
+
+    if (!custom_path_setting.is_empty()) {
+        String global_custom = ProjectSettings::get_singleton()->globalize_path(custom_path_setting);
+        // Explicitly hold CharString
+        CharString custom_utf8 = global_custom.utf8();
+        temp_root = fs::path(custom_utf8.get_data());
+    } else {
+        temp_root = fs::temp_directory_path() / "nano_coverage_godot_runs";
+    }
+
+    std::string project_hash = std::to_string(std::hash<std::string>{}(source_root.string()));
+    fs::path dest_root = temp_root / project_hash;
+    std::error_code ec;
+
+    // Prepare Temp Directory
+    if (fs::exists(dest_root))
+        fs::remove_all(dest_root, ec);
+    fs::create_directories(dest_root, ec);
+
+    // Verify creation
+    if (ec) {
+        UtilityFunctions::printerr("NanoCoverage: Failed to create temp dir: ", String(dest_root.string().c_str()));
+        return "";
+    }
+
+    UtilityFunctions::print("NanoCoverage: Building temp project at ", String(dest_root.string().c_str()));
+
+    // Process Files (Collect, Copy, Instrument)
+    CoverageMetadata global_metadata;
+    auto files = CollectSourceFiles(source_root);
+
+    for (const auto& src_path : files) {
+        auto relative = fs::relative(src_path, source_root);
+        auto target = dest_root / relative;
+
+        fs::create_directories(target.parent_path(), ec);
+        if (ec) {
+            std::ofstream debug_file("debug_log.txt", std::ios::app);
+            debug_file << "NanoCoverage: Failed to create directory " << target.parent_path().string()
+                       << ". Error: " << ec.message() << std::endl;
+        }
+
+        CopyOrLinkFile(src_path, target);
+
+        if (IsCopyMandatory(src_path)) {
+            InstrumentFileIfNeeded(target, relative, global_metadata);
+        }
+    }
+
+    // Sync Cache
+    SyncGodotCache(source_root, dest_root);
+
+    // Finalize Configuration
+    if (fs::exists(dest_root / "project.godot")) {
+        PatchProjectSettings(dest_root, source_root);
+
+        // Save Metadata to Disk
+        CoverageSettings settings = SettingsGateway::load();
+        String data_store_dir = settings.paths_data_store_dir;
+
+        String global_data_dir = ProjectSettings::get_singleton()->globalize_path(data_store_dir);
+        fs::path meta_dir(global_data_dir.utf8().get_data());
+        std::error_code ec_meta;
+        fs::create_directories(meta_dir, ec_meta);
+
+        fs::path meta_path = meta_dir / "coverage.meta";
+
+        UtilityFunctions::print("NanoCoverage: Saving metadata to ", String(meta_path.string().c_str()));
+        if (!Persistence::save_metadata(meta_path.string(), global_metadata)) {
+            UtilityFunctions::printerr("NanoCoverage: Failed to save coverage.meta!");
+        }
+    } else {
+        UtilityFunctions::printerr("NanoCoverage: CRITICAL - project.godot not found in temp directory!");
+        return "";
+    }
+
+    std::string final_path = dest_root.string();
+    std::replace(final_path.begin(), final_path.end(), '\\', '/');
+    return String(final_path.c_str());
+}
+
+}  // namespace godot
+--- END FILE: native/src/editor/instrumented_project_builder.cpp ---
+
+--- START FILE: native/src/editor/instrumented_project_builder.h ---
+#pragma once
+
+#include <godot_cpp/classes/ref.hpp>
+#include <godot_cpp/variant/string.hpp>
+
+namespace godot {
+
+class InstrumentedProjectBuilder {
+   public:
+    /// Copies the project from 'res://' to a system temporary directory.
+    /// Returns the absolute path to the new project folder.
+    static String build_instrumented_project();
+};
+
+}  // namespace godot
+
+--- END FILE: native/src/editor/instrumented_project_builder.h ---
+
+--- START FILE: native/src/editor/instrumented_project_builder_test.cpp ---
+#include "instrumented_project_builder.h"
+
+#include <filesystem>
+#include <godot_cpp/classes/project_settings.hpp>
+#include <gtest/gtest.h>
+#include <string>
+
+namespace fs = std::filesystem;
+using namespace godot;
+
+TEST(InstrumentedProjectBuilderTest, CreatesValidProjectStructure) {
+    // 1. Action
+    String result_path_str = InstrumentedProjectBuilder::build_instrumented_project();
+
+    // Convert to standard string/path
+    std::string path_std = result_path_str.utf8().get_data();
+    fs::path result_path(path_std);
+
+    // 2. Assertions
+
+    // Check path string is not empty
+    EXPECT_FALSE(result_path_str.is_empty()) << "Temp path returned empty string";
+
+    // Check directory existence
+    ASSERT_TRUE(fs::exists(result_path)) << "Temp directory does not exist on disk";
+    EXPECT_TRUE(fs::is_directory(result_path));
+
+    // Check Project file (Mandatory Copy)
+    EXPECT_TRUE(fs::exists(result_path / "project.godot")) << "project.godot missing";
+
+    // Check Main Scene (Verifies general file traversal)
+    EXPECT_TRUE(fs::exists(result_path / "main.tscn")) << "main.tscn missing";
+
+    // Check Plugin Script (Verifies recursive copy + .gd filtering)
+    // We use this because we know it exists in the addons folder
+    fs::path plugin_script = result_path / "addons" / "nano_coverage_godot" / "plugin.gd";
+    EXPECT_TRUE(fs::exists(plugin_script)) << "addons/nano_coverage_godot/plugin.gd missing";
+
+    // Check Caches (Verifies .godot folder handling)
+    EXPECT_TRUE(fs::exists(result_path / ".godot" / "uid_cache.bin")) << "UID cache missing";
+}
+--- END FILE: native/src/editor/instrumented_project_builder_test.cpp ---
+
+--- START FILE: native/src/editor/plugin.cpp ---
+#include "plugin.h"
+
+#include <godot_cpp/classes/control.hpp>
+#include <godot_cpp/classes/editor_interface.hpp>
+#include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/os.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/variant/callable.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
+
+#include "../config/settings_gateway.h"
+
+namespace godot {
+
+void NanoCoverageEditorPlugin::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("_on_run_instrumented_pressed"),
+                         &NanoCoverageEditorPlugin::_on_run_instrumented_pressed);
+    ClassDB::bind_method(D_METHOD("_on_generate_report_pressed"),
+                         &NanoCoverageEditorPlugin::_on_generate_report_pressed);
+    ClassDB::bind_method(D_METHOD("_on_clear_data_pressed"), &NanoCoverageEditorPlugin::_on_clear_data_pressed);
+    ClassDB::bind_method(D_METHOD("_on_settings_changed"), &NanoCoverageEditorPlugin::_on_settings_changed);
+    ClassDB::bind_method(D_METHOD("_on_log_poll_timeout"), &NanoCoverageEditorPlugin::_on_log_poll_timeout);
+}
+
+NanoCoverageEditorPlugin::NanoCoverageEditorPlugin() {
+    coverage_api.instantiate();
+}
+
+NanoCoverageEditorPlugin::~NanoCoverageEditorPlugin() {
+}
+
+void NanoCoverageEditorPlugin::_enter_tree() {
+    // Register Project Setting
+    SettingsGateway::register_settings();
+
+    // Create "Run Instrumented" Button
+    run_instrumented_button = memnew(Button);
+    run_instrumented_button->set_text("Run Instrumented");
+    run_instrumented_button->set_tooltip_text("Run the project in a temporary environment with coverage enabled");
+    run_instrumented_button->connect("pressed", Callable(this, "_on_run_instrumented_pressed"));
+    add_control_to_container(CONTAINER_TOOLBAR, run_instrumented_button);
+
+    // Create "Generate Report" Button
+    generate_report_button = memnew(Button);
+    generate_report_button->set_text("Generate Report");
+    generate_report_button->set_tooltip_text("Merge coverage data and generate lcov report");
+    generate_report_button->connect("pressed", Callable(this, "_on_generate_report_pressed"));
+    add_control_to_container(CONTAINER_TOOLBAR, generate_report_button);
+
+    // Create "Clear Data" Button
+    clear_data_button = memnew(Button);
+    clear_data_button->set_text("Clear Data");
+    clear_data_button->set_tooltip_text("Clear all collected coverage data");
+    clear_data_button->connect("pressed", Callable(this, "_on_clear_data_pressed"));
+    add_control_to_container(CONTAINER_TOOLBAR, clear_data_button);
+
+    // Connect to settings changed
+    ProjectSettings::get_singleton()->connect("settings_changed", Callable(this, "_on_settings_changed"));
+
+    // Log Timer
+    log_poll_timer = memnew(Timer);
+    log_poll_timer->set_wait_time(0.5);  // Check every 500ms
+    log_poll_timer->set_one_shot(false);
+    log_poll_timer->connect("timeout", Callable(this, "_on_log_poll_timeout"));
+    add_child(log_poll_timer);  // Add to tree so it processes
+
+    // Initial visibility update
+    _update_visibility();
+}
+
+void NanoCoverageEditorPlugin::_exit_tree() {
+    if (run_instrumented_button) {
+        remove_control_from_container(CONTAINER_TOOLBAR, run_instrumented_button);
+        run_instrumented_button->queue_free();
+        run_instrumented_button = nullptr;
+    }
+    if (generate_report_button) {
+        remove_control_from_container(CONTAINER_TOOLBAR, generate_report_button);
+        generate_report_button->queue_free();
+        generate_report_button = nullptr;
+    }
+    if (clear_data_button) {
+        remove_control_from_container(CONTAINER_TOOLBAR, clear_data_button);
+        clear_data_button->queue_free();
+        clear_data_button = nullptr;
+    }
+
+    if (ProjectSettings::get_singleton()->is_connected("settings_changed", Callable(this, "_on_settings_changed"))) {
+        ProjectSettings::get_singleton()->disconnect("settings_changed", Callable(this, "_on_settings_changed"));
+    }
+
+    if (log_poll_timer) {
+        log_poll_timer->stop();
+        log_poll_timer->queue_free();
+        log_poll_timer = nullptr;
+    }
+}
+
+void NanoCoverageEditorPlugin::_update_visibility() {
+    CoverageSettings settings = SettingsGateway::load();
+
+    bool show_all = settings.ui_show_all_buttons;
+
+    if (run_instrumented_button) {
+        run_instrumented_button->set_visible(show_all || settings.ui_show_run_instrumented_button);
+    }
+    if (generate_report_button) {
+        generate_report_button->set_visible(show_all || settings.ui_show_generate_report_button);
+    }
+    if (clear_data_button) {
+        clear_data_button->set_visible(show_all || settings.ui_show_clear_data_button);
+    }
+}
+
+void NanoCoverageEditorPlugin::_on_settings_changed() {
+    _update_visibility();
+}
+
+void NanoCoverageEditorPlugin::_on_run_instrumented_pressed() {
+    UtilityFunctions::print("NanoCoverage: Preparing temporary project...");
+
+    if (coverage_api.is_null()) {
+        UtilityFunctions::printerr("NanoCoverage: API not initialized.");
+        return;
+    }
+
+    // Stop previous logging if active
+    if (log_poll_timer->is_stopped() == false) {
+        log_poll_timer->stop();
+    }
+
+    Dictionary instr_opts;
+    Dictionary instr_result = coverage_api->instrument_project(instr_opts);
+
+    if (instr_result.has("error")) {
+        UtilityFunctions::printerr("NanoCoverage: Instrumentation failed: ", instr_result["error"]);
+        return;
+    }
+
+    String output_path = instr_result["output_path"];
+
+    Dictionary run_opts;
+    run_opts["output_path"] = output_path;
+    run_opts["workspace_id"] = "default";
+    run_opts["blocking"] = false;  // Non-blocking so we can tail logs
+
+    UtilityFunctions::print("NanoCoverage: Launching instrumented project...");
+    Dictionary run_result = coverage_api->run_instrumented_project(run_opts);
+
+    if (run_result.has("error")) {
+        UtilityFunctions::printerr("NanoCoverage: Run failed: ", run_result["error"]);
+        return;
+    }
+
+    UtilityFunctions::print("NanoCoverage: Project running. Run ID: ", run_result["run_id"]);
+
+    // Setup Log Tailing
+    if (run_result.has("log_file") && run_result.has("pid")) {
+        current_log_path = run_result["log_file"];
+        current_pid = run_result["pid"];
+        log_read_pos = 0;
+
+        UtilityFunctions::print("NanoCoverage: Tailing log file: ", current_log_path);
+        log_poll_timer->start();
+    }
+}
+
+void NanoCoverageEditorPlugin::_on_log_poll_timeout() {
+    if (current_log_path.is_empty())
+        return;
+
+    Ref<FileAccess> f = FileAccess::open(current_log_path, FileAccess::READ);
+    if (f.is_valid()) {
+        // Seek to where we last left off
+        f->seek(log_read_pos);
+
+        while (f->get_position() < f->get_length()) {
+            String line = f->get_line();
+            // Prefix to distinguish game logs from editor logs
+            UtilityFunctions::print("[Game] ", line);
+        }
+
+        log_read_pos = f->get_position();
+        f->close();
+    }
+
+    // Check if process is still alive
+    if (current_pid != -1) {
+        if (!OS::get_singleton()->is_process_running(current_pid)) {
+            UtilityFunctions::print("NanoCoverage: Game process finished.");
+            log_poll_timer->stop();
+            current_pid = -1;
+        }
+    }
+}
+
+void NanoCoverageEditorPlugin::_on_generate_report_pressed() {
+    if (coverage_api.is_null()) {
+        UtilityFunctions::printerr("NanoCoverage: API not initialized.");
+        return;
+    }
+
+    Dictionary opts;
+    opts["workspace_id"] = "default";
+
+    UtilityFunctions::print("NanoCoverage: Generating report...");
+    Dictionary result = coverage_api->generate_coverage_report(opts);
+
+    if (result.has("status") && String(result["status"]) == "ok") {
+        UtilityFunctions::print("NanoCoverage: Report generated at: ", result["report_path"]);
+    } else {
+        UtilityFunctions::printerr("NanoCoverage: Report generation failed.");
+    }
+}
+
+void NanoCoverageEditorPlugin::_on_clear_data_pressed() {
+    if (coverage_api.is_null()) {
+        return;
+    }
+
+    Dictionary opts;
+    opts["workspace_id"] = "default";
+
+    coverage_api->clear_coverage_data(opts);
+    UtilityFunctions::print("NanoCoverage: Coverage data cleared.");
+}
+
+}  // namespace godot
+--- END FILE: native/src/editor/plugin.cpp ---
+
+--- START FILE: native/src/editor/plugin.h ---
+#pragma once
+
+#include <godot_cpp/classes/button.hpp>
+#include <godot_cpp/classes/editor_plugin.hpp>
+#include <godot_cpp/classes/timer.hpp>
+
+#include "../api/coverage_api.h"
+
+namespace godot {
+
+class NanoCoverageEditorPlugin : public EditorPlugin {
+    GDCLASS(NanoCoverageEditorPlugin, EditorPlugin)
+
+   private:
+    Ref<CoverageApi> coverage_api;
+    Button* run_instrumented_button = nullptr;
+    Button* generate_report_button = nullptr;
+    Button* clear_data_button = nullptr;
+
+    // Log Tailing State
+    Timer* log_poll_timer = nullptr;
+    String current_log_path;
+    int64_t current_pid = -1;
+    uint64_t log_read_pos = 0;
+
+   protected:
+    static void _bind_methods();
+    void _update_visibility();
+
+   public:
+    NanoCoverageEditorPlugin();
+    ~NanoCoverageEditorPlugin();
+
+    void _enter_tree() override;
+    void _exit_tree() override;
+
+    void _on_run_instrumented_pressed();
+    void _on_generate_report_pressed();
+    void _on_clear_data_pressed();
+    void _on_settings_changed();
+
+    // Called by Timer to read new log lines
+    void _on_log_poll_timeout();
+};
+
+}  // namespace godot
+--- END FILE: native/src/editor/plugin.h ---
+
+--- START FILE: native/src/instrumentation/instrumenter.cpp ---
+#include "instrumenter.h"
+
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <godot_cpp/variant/utility_functions.hpp>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "rewriter.h"
+#include "source_reader.h"
+
+extern "C" {
+#include <tree_sitter/api.h>
+const TSLanguage* tree_sitter_gdscript(void);
+}
+
+namespace godot {
+
+static bool is_debug_enabled() {
+    const char* v = std::getenv("NANO_COVERAGE_DEBUG");
+    return v && *v && std::string_view(v) != "0";
+}
+
+static bool write_all_bytes(const std::filesystem::path& p, const std::string& data) {
+    std::ofstream f(p, std::ios::binary | std::ios::trunc);
+    if (!f.is_open())
+        return false;
+    f.write(data.data(), (std::streamsize)data.size());
+    return true;
+}
+
+static size_t find_line_start(const std::string& src, size_t byte_pos) {
+    if (byte_pos > src.size())
+        byte_pos = src.size();
+    while (byte_pos > 0) {
+        if (src[byte_pos - 1] == '\n')
+            break;
+        byte_pos--;
+    }
+    return byte_pos;
+}
+
+static size_t find_line_end(const std::string& src, size_t line_start) {
+    size_t i = line_start;
+    while (i < src.size() && src[i] != '\n')
+        i++;
+    return i;
+}
+
+static std::string get_line_indent(const std::string& src, size_t line_start) {
+    size_t i = line_start;
+    while (i < src.size()) {
+        const char c = src[i];
+        if (c == ' ' || c == '\t') {
+            i++;
+            continue;
+        }
+        break;
+    }
+    return src.substr(line_start, i - line_start);
+}
+
+static bool is_line_already_instrumented(const std::string& src, size_t line_start) {
+    const size_t line_end = find_line_end(src, line_start);
+    const std::string_view line(src.data() + line_start, line_end - line_start);
+    return line.find("NanoCoverage.hit(") != std::string_view::npos;
+}
+
+static bool is_comment_node(TSNode n) {
+    const char* t = ts_node_type(n);
+    return t && std::string_view(t).find("comment") != std::string_view::npos;
+}
+
+static bool is_function_def_node_type(std::string_view t) {
+    return t.find("function") != std::string_view::npos || t.find("method") != std::string_view::npos ||
+           t.find("func") != std::string_view::npos;
+}
+
+static bool is_block_like_node_type(std::string_view t) {
+    return t == "block" || t.find("block") != std::string_view::npos || t.find("body") != std::string_view::npos ||
+           t.find("suite") != std::string_view::npos;
+}
+
+static bool has_function_ancestor(TSNode n) {
+    for (TSNode cur = ts_node_parent(n); !ts_node_is_null(cur); cur = ts_node_parent(cur)) {
+        if (is_function_def_node_type(ts_node_type(cur)))
+            return true;
+    }
+    return false;
+}
+
+static std::string escape_gd_string(std::string_view s) {
+    std::string out;
+    out.reserve(s.size() + 8);
+    for (char c : s) {
+        if (c == '\\')
+            out += "\\\\";
+        else if (c == '"')
+            out += "\\\"";
+        else if (c == '\n')
+            out += "\\n";
+        else if (c == '\r')
+            out += "\\r";
+        else if (c == '\t')
+            out += "\\t";
+        else
+            out.push_back(c);
+    }
+    return out;
+}
+
+static std::string make_injected_line(const std::string& indent, const std::string& file_lit, uint32_t line_1_based) {
+    return indent + "NanoCoverage.hit(\"" + file_lit + "\", " + std::to_string(line_1_based) + ")\n";
+}
+
+static void collect_insertions(TSNode node, const std::string& src, const std::string& file_lit,
+                               std::vector<TextInsertion>& out_insertions, std::vector<uint32_t>& out_lines) {
+    const std::string_view type = ts_node_type(node);
+    if (is_block_like_node_type(type) && has_function_ancestor(node)) {
+        const uint32_t n = ts_node_named_child_count(node);
+        for (uint32_t i = 0; i < n; i++) {
+            const TSNode child = ts_node_named_child(node, i);
+            if (ts_node_is_null(child) || is_comment_node(child))
+                continue;
+
+            const size_t stmt_start = (size_t)ts_node_start_byte(child);
+            const size_t line_start = find_line_start(src, stmt_start);
+
+            if (is_line_already_instrumented(src, line_start))
+                continue;
+
+            const TSPoint pt = ts_node_start_point(child);
+            const uint32_t line_1_based = pt.row + 1;
+
+            const std::string indent = get_line_indent(src, line_start);
+
+            // Record the coverable line
+            out_lines.push_back(line_1_based);
+
+            // Record the injection
+            out_insertions.push_back(TextInsertion{line_start, make_injected_line(indent, file_lit, line_1_based)});
+        }
+    }
+
+    const uint32_t child_count = ts_node_child_count(node);
+    for (uint32_t i = 0; i < child_count; i++) {
+        const TSNode c = ts_node_child(node, i);
+        if (!ts_node_is_null(c)) {
+            collect_insertions(c, src, file_lit, out_insertions, out_lines);
+        }
+    }
+}
+
+// [Pure Pipeline]
+// Takes raw source code (UTF-8), parses it with Tree-sitter, identifies coverable lines,
+// and returns the instrumented code and metadata.
+// This function performs NO file I/O and is side-effect free, making it ideal for unit testing.
+InstrumentResult Instrumenter::instrument_text(const std::string& utf8_code, const std::string& res_path) {
+    InstrumentResult result;
+    result.ok = false;
+
+    // Copy input code as it might be unmodified
+    result.instrumented_code = utf8_code;
+
+    TSParser* parser = ts_parser_new();
+    if (!parser) {
+        result.error_message = "Failed to create tree-sitter parser";
+        return result;
+    }
+
+    if (!ts_parser_set_language(parser, tree_sitter_gdscript())) {
+        result.error_message = "tree-sitter-gdscript language init failed";
+        ts_parser_delete(parser);
+        return result;
+    }
+
+    TSTree* tree = ts_parser_parse_string(parser, nullptr, utf8_code.data(), (uint32_t)utf8_code.size());
+    if (!tree) {
+        result.error_message = "Failed to parse code";
+        ts_parser_delete(parser);
+        return result;
+    }
+
+    const TSNode root = ts_tree_root_node(tree);
+
+    std::vector<TextInsertion> insertions;
+    insertions.reserve(64);
+
+    const std::string file_lit = escape_gd_string(res_path);
+
+    // Pass the vector to collect lines
+    collect_insertions(root, utf8_code, file_lit, insertions, result.covered_lines);
+    result.insertions = (int)insertions.size();
+
+    // If no insertions, we are done
+    if (insertions.empty()) {
+        ts_tree_delete(tree);
+        ts_parser_delete(parser);
+        result.ok = true;
+        return result;
+    }
+
+    // Rewrite code
+    result.instrumented_code = Rewriter::apply(utf8_code, std::move(insertions));
+
+    ts_tree_delete(tree);
+    ts_parser_delete(parser);
+
+    result.ok = true;
+    return result;
+}
+
+// [I/O Wrapper]
+// Handles the "dirty work" of interacting with the filesystem.
+// * Reads the file using SourceReader (handling BOMs/encoding).
+// * Delegates the logic to instrument_text().
+// * Writes the result back to disk if changes were made.
+bool Instrumenter::instrument_file(const String& path, const String& res_path, std::vector<uint32_t>* out_lines,
+                                   int* out_insertions) {
+    if (out_lines)
+        out_lines->clear();
+    if (out_insertions)
+        *out_insertions = 0;
+
+    // Read
+    // We use NanoCoverage::SourceReader which we just imported
+    NanoCoverage::ReadTextResult read_res = NanoCoverage::SourceReader::read_text_file(path.utf8().get_data());
+
+    if (!read_res.ok) {
+        UtilityFunctions::printerr("NanoCoverage: failed to read: ", path);
+        // If needed, log read_res.error_message
+        return false;
+    }
+
+    // Instrument
+    std::string res_path_std = res_path.utf8().get_data();
+    InstrumentResult inst_res = instrument_text(read_res.content, res_path_std);
+
+    if (!inst_res.ok) {
+        UtilityFunctions::printerr("NanoCoverage: instrumentation failed for: ", path,
+                                   " error: ", String(inst_res.error_message.c_str()));
+        return false;
+    }
+
+    // Output metadata
+    if (out_lines) {
+        *out_lines = inst_res.covered_lines;
+    }
+    if (out_insertions) {
+        *out_insertions = inst_res.insertions;
+    }
+
+    // Write
+    if (inst_res.insertions == 0 && read_res.content == inst_res.instrumented_code) {
+        return true;
+    }
+
+    // We also typically return true if 0 insertions, same as before, but now we filled the metadata.
+    if (inst_res.insertions == 0) {
+        return true;
+    }
+
+    // Write back
+    std::filesystem::path fs_path(path.utf8().get_data());
+    if (!write_all_bytes(fs_path, inst_res.instrumented_code)) {
+        UtilityFunctions::printerr("NanoCoverage: failed to write: ", path);
+        return false;
+    }
+
+    return true;
+}
+
+}  // namespace godot
+--- END FILE: native/src/instrumentation/instrumenter.cpp ---
+
+--- START FILE: native/src/instrumentation/instrumenter.h ---
+#pragma once
+
+#include <filesystem>
+#include <string>
+#include <vector>
+
+#include "godot_cpp/variant/string.hpp"
+
+namespace godot {
+
+struct InstrumentResult {
+    bool ok = false;
+    std::string instrumented_code;
+    std::vector<uint32_t> covered_lines;
+    int insertions = 0;
+    std::string error_message;
+};
+
+class Instrumenter {
+   public:
+    // Pure logic: takes code, returns instrumented code. No I/O.
+    static InstrumentResult instrument_text(const std::string& utf8_code, const std::string& res_path);
+
+    // I/O Wrapper: reads file, instruments, writes back.
+    static bool instrument_file(const String& path, const String& res_path, std::vector<uint32_t>* out_lines = nullptr,
+                                int* out_insertions = nullptr);
+
+    // Deprecated: kept for compatibility if needed internally, but likely replaced by instrument_file.
+    // We can remove it if we update all callers. Attempting to remove it to stay clean.
+};
+
+}  // namespace godot
+--- END FILE: native/src/instrumentation/instrumenter.h ---
+
+--- START FILE: native/src/instrumentation/instrumenter_golden_test.cpp ---
+#include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
+#include <string>
+#include <vector>
+
+#include "instrumenter.h"
+
+namespace fs = std::filesystem;
+using namespace godot;
+
+// Helper to normalize line endings to \n
+static std::string normalize_newlines(const std::string& input) {
+    std::string output;
+    output.reserve(input.size());
+    for (size_t i = 0; i < input.size(); ++i) {
+        if (input[i] == '\r') {
+            if (i + 1 < input.size() && input[i + 1] == '\n') {
+                continue;  // Skip \r followed by \n
+            }
+        }
+        output.push_back(input[i]);
+    }
+    return output;
+}
+
+TEST(InstrumentationGoldenTest, BaselineBehavior) {
+    // 1. Setup Input
+    const std::string gd_source = R"(extends Node
+
+func _ready():
+	var x = 10
+	if x > 5:
+		print("Hello")
+	else:
+		print("Else")
+
+# A comment
+)";
+
+    // 2. Define Expected Output
+    // Current instrumentation logic:
+    // - Line 4 (var x = 10) is instrumented.
+    // - Line 5 (if x > 5) is instrumented.
+    // - Line 6 (print) is instrumented.
+    const std::string expected_output = R"(extends Node
+
+func _ready():
+	NanoCoverage.hit("res://test_golden.gd", 4)
+	var x = 10
+	NanoCoverage.hit("res://test_golden.gd", 5)
+	if x > 5:
+		NanoCoverage.hit("res://test_golden.gd", 6)
+		print("Hello")
+	else:
+		NanoCoverage.hit("res://test_golden.gd", 8)
+		print("Else")
+
+# A comment
+)";
+
+    // 4. Run Instrumenter
+    // We pass a dummy "res://" path to ensure deterministic output in the hit() call
+    InstrumentResult result = Instrumenter::instrument_text(gd_source, "res://test_golden.gd");
+
+    ASSERT_TRUE(result.ok) << "Instrumentation failed: " << result.error_message;
+
+    // 5. Cleanup
+    // (No file I/O to cleanup)
+
+    // 6. Verify
+    // Normalize both to ensure test passes on Windows/Linux regardless of checkout settings
+    std::string norm_expected = normalize_newlines(expected_output);
+    std::string norm_actual = normalize_newlines(result.instrumented_code);
+
+    EXPECT_EQ(norm_actual, norm_expected);
+
+    // Also verify strict line reporting
+    // Lines 4, 5, 6 should be in covered_lines
+    // Lines 4, 5, 6, 8 should be in covered_lines
+    ASSERT_EQ(result.covered_lines.size(), 4);
+    EXPECT_EQ(result.covered_lines[0], 4);
+    EXPECT_EQ(result.covered_lines[1], 5);
+    EXPECT_EQ(result.covered_lines[2], 6);
+    EXPECT_EQ(result.covered_lines[3], 8);
+}
+
+--- END FILE: native/src/instrumentation/instrumenter_golden_test.cpp ---
+
+--- START FILE: native/src/instrumentation/rewriter.cpp ---
+#include "rewriter.h"
+
+#include <algorithm>
+
+namespace godot {
+
+std::string Rewriter::apply(const std::string& src, std::vector<TextInsertion> insertions) {
+    std::string out = src;
+
+    std::sort(insertions.begin(), insertions.end(),
+              [](const TextInsertion& a, const TextInsertion& b) { return a.byte_offset > b.byte_offset; });
+
+    for (const auto& ins : insertions) {
+        if (ins.byte_offset > out.size()) {
+            continue;
+        }
+        out.insert(ins.byte_offset, ins.text);
+    }
+
+    return out;
+}
+
+}  // namespace godot
+
+--- END FILE: native/src/instrumentation/rewriter.cpp ---
+
+--- START FILE: native/src/instrumentation/rewriter.h ---
+#pragma once
+
+#include <cstddef>
+#include <string>
+#include <vector>
+
+namespace godot {
+
+struct TextInsertion {
+    size_t byte_offset = 0;
+    std::string text;
+};
+
+class Rewriter {
+   public:
+    // Applies insertions in descending byte_offset order.
+    static std::string apply(const std::string& src, std::vector<TextInsertion> insertions);
+};
+
+}  // namespace godot
+
+--- END FILE: native/src/instrumentation/rewriter.h ---
+
+--- START FILE: native/src/instrumentation/source_reader.cpp ---
+#include "source_reader.h"
+
+#include <cstdint>
+#include <fstream>
+#include <vector>
+
+namespace NanoCoverage {
+
+namespace {
+
+// Helper to check if a buffer starts with a sequence
+bool starts_with(const std::vector<uint8_t>& buffer, const std::vector<uint8_t>& prefix) {
+    if (buffer.size() < prefix.size())
+        return false;
+    for (size_t i = 0; i < prefix.size(); ++i) {
+        if (buffer[i] != prefix[i])
+            return false;
+    }
+    return true;
+}
+
+// Simple UTF-8 validation
+bool is_valid_utf8(const std::string& str) {
+    const unsigned char* bytes = (const unsigned char*)str.data();
+    size_t len = str.size();
+    size_t i = 0;
+    while (i < len) {
+        unsigned char c = bytes[i];
+        if (c < 0x80) {  // 0xxxxxxx
+            i++;
+        } else if ((c & 0xE0) == 0xC0) {  // 110xxxxx 10xxxxxx
+            if (i + 1 >= len || (bytes[i + 1] & 0xC0) != 0x80)
+                return false;
+            i += 2;
+        } else if ((c & 0xF0) == 0xE0) {  // 1110xxxx 10xxxxxx 10xxxxxx
+            if (i + 2 >= len || (bytes[i + 1] & 0xC0) != 0x80 || (bytes[i + 2] & 0xC0) != 0x80)
+                return false;
+            i += 3;
+        } else if ((c & 0xF8) == 0xF0) {  // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+            if (i + 3 >= len || (bytes[i + 1] & 0xC0) != 0x80 || (bytes[i + 2] & 0xC0) != 0x80 ||
+                (bytes[i + 3] & 0xC0) != 0x80)
+                return false;
+            i += 4;
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::string utf16le_to_utf8(const std::vector<uint8_t>& data, size_t offset) {
+    std::string res;
+    res.reserve(data.size());  // Estimate
+    for (size_t i = offset; i + 1 < data.size(); i += 2) {
+        uint16_t c = data[i] | (data[i + 1] << 8);
+        if (c < 0x80) {
+            res.push_back((char)c);
+        } else if (c < 0x800) {
+            res.push_back((char)(0xC0 | (c >> 6)));
+            res.push_back((char)(0x80 | (c & 0x3F)));
+        } else {
+            // Basic BMP support
+            res.push_back((char)(0xE0 | (c >> 12)));
+            res.push_back((char)(0x80 | ((c >> 6) & 0x3F)));
+            res.push_back((char)(0x80 | (c & 0x3F)));
+        }
+    }
+    return res;
+}
+
+std::string utf16be_to_utf8(const std::vector<uint8_t>& data, size_t offset) {
+    std::string res;
+    res.reserve(data.size());
+    for (size_t i = offset; i + 1 < data.size(); i += 2) {
+        uint16_t c = (data[i] << 8) | data[i + 1];
+        if (c < 0x80) {
+            res.push_back((char)c);
+        } else if (c < 0x800) {
+            res.push_back((char)(0xC0 | (c >> 6)));
+            res.push_back((char)(0x80 | (c & 0x3F)));
+        } else {
+            // Basic BMP support
+            res.push_back((char)(0xE0 | (c >> 12)));
+            res.push_back((char)(0x80 | ((c >> 6) & 0x3F)));
+            res.push_back((char)(0x80 | (c & 0x3F)));
+        }
+    }
+    return res;
+}
+
+}  // namespace
+
+ReadTextResult SourceReader::read_text_file(const std::string& path) {
+    ReadTextResult result;
+    std::ifstream file(path, std::ios::binary);
+
+    if (!file.is_open()) {
+        result.ok = false;
+        result.error_message = "Could not open file: " + path;
+        return result;
+    }
+
+    std::vector<uint8_t> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+    if (buffer.empty()) {
+        result.ok = true;
+        result.content = "";
+        return result;
+    }
+
+    // Check BOMs
+    // UTF-8: EF BB BF
+    if (starts_with(buffer, {0xEF, 0xBB, 0xBF})) {
+        result.content.assign(reinterpret_cast<const char*>(buffer.data() + 3), buffer.size() - 3);
+        result.ok = true;
+    }
+    // UTF-16 LE: FF FE
+    else if (starts_with(buffer, {0xFF, 0xFE})) {
+        result.content = utf16le_to_utf8(buffer, 2);
+        result.ok = true;
+    }
+    // UTF-16 BE: FE FF
+    else if (starts_with(buffer, {0xFE, 0xFF})) {
+        result.content = utf16be_to_utf8(buffer, 2);
+        result.ok = true;
+    } else {
+        // No BOM
+        std::string raw(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+        if (is_valid_utf8(raw)) {
+            result.content = raw;
+            result.ok = true;
+        } else {
+            result.ok = false;
+            result.error_message = "File is not valid UTF-8 and has no BOM.";
+        }
+    }
+
+    return result;
+}
+
+}  // namespace NanoCoverage
+
+--- END FILE: native/src/instrumentation/source_reader.cpp ---
+
+--- START FILE: native/src/instrumentation/source_reader.h ---
+#ifndef NANO_COVERAGE_SOURCE_READER_H
+#define NANO_COVERAGE_SOURCE_READER_H
+
+#include <string>
+
+namespace NanoCoverage {
+
+struct ReadTextResult {
+    bool ok = false;
+    std::string content;
+    std::string error_message;
+};
+
+class SourceReader {
+   public:
+    static ReadTextResult read_text_file(const std::string& path);
+};
+
+}  // namespace NanoCoverage
+
+#endif  // NANO_COVERAGE_SOURCE_READER_H
+
+--- END FILE: native/src/instrumentation/source_reader.h ---
+
+--- START FILE: native/src/instrumentation/source_reader_test.cpp ---
+#include "source_reader.h"
+
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
+#include <vector>
+
+using namespace NanoCoverage;
+namespace fs = std::filesystem;
+
+class SourceReaderTest : public ::testing::Test {
+   protected:
+    fs::path temp_file_path;
+
+    void SetUp() override {
+        // Create a unique temporary file path
+        temp_file_path = fs::temp_directory_path() / ("source_reader_test_" + std::to_string(std::rand()) + ".txt");
+    }
+
+    void TearDown() override {
+        if (fs::exists(temp_file_path)) {
+            fs::remove(temp_file_path);
+        }
+    }
+
+    void WriteFile(const std::vector<uint8_t>& data) {
+        std::ofstream file(temp_file_path, std::ios::binary);
+        file.write(reinterpret_cast<const char*>(data.data()), data.size());
+        file.close();
+    }
+};
+
+TEST_F(SourceReaderTest, ValidUtf8NoBom) {
+    std::string content = "Hello World! \xF0\x9F\x98\x80";  // includes emoji
+    std::vector<uint8_t> data(content.begin(), content.end());
+    WriteFile(data);
+
+    ReadTextResult result = SourceReader::read_text_file(temp_file_path.string());
+    EXPECT_TRUE(result.ok);
+    EXPECT_EQ(result.content, content);
+}
+
+TEST_F(SourceReaderTest, Utf8WithBom) {
+    std::vector<uint8_t> data = {0xEF, 0xBB, 0xBF, 'H', 'e', 'l', 'l', 'o'};
+    WriteFile(data);
+
+    ReadTextResult result = SourceReader::read_text_file(temp_file_path.string());
+    EXPECT_TRUE(result.ok);
+    EXPECT_EQ(result.content, "Hello");
+}
+
+TEST_F(SourceReaderTest, Utf16LeWithBom) {
+    // "Hi" in UTF-16LE: H (0048), i (0069)
+    std::vector<uint8_t> data = {0xFF, 0xFE, 0x48, 0x00, 0x69, 0x00};
+    WriteFile(data);
+
+    ReadTextResult result = SourceReader::read_text_file(temp_file_path.string());
+    EXPECT_TRUE(result.ok);
+    EXPECT_EQ(result.content, "Hi");
+}
+
+TEST_F(SourceReaderTest, Utf16BeWithBom) {
+    // "Hi" in UTF-16BE: H (0048), i (0069)
+    std::vector<uint8_t> data = {0xFE, 0xFF, 0x00, 0x48, 0x00, 0x69};
+    WriteFile(data);
+
+    ReadTextResult result = SourceReader::read_text_file(temp_file_path.string());
+    EXPECT_TRUE(result.ok);
+    EXPECT_EQ(result.content, "Hi");
+}
+
+TEST_F(SourceReaderTest, InvalidUtf8NoBom) {
+    // Invalid UTF-8 sequence: 0xFF is never valid
+    std::vector<uint8_t> data = {'H', 'e', 0xFF, 'l', 'l', 'o'};
+    WriteFile(data);
+
+    ReadTextResult result = SourceReader::read_text_file(temp_file_path.string());
+    EXPECT_FALSE(result.ok);
+    EXPECT_NE(result.error_message, "");
+}
+
+TEST_F(SourceReaderTest, EmptyFile) {
+    WriteFile({});
+
+    ReadTextResult result = SourceReader::read_text_file(temp_file_path.string());
+    EXPECT_TRUE(result.ok);
+    EXPECT_EQ(result.content, "");
+}
+
+TEST_F(SourceReaderTest, MissingFile) {
+    fs::remove(temp_file_path);
+    ReadTextResult result = SourceReader::read_text_file(temp_file_path.string());
+    EXPECT_FALSE(result.ok);
+}
+
+--- END FILE: native/src/instrumentation/source_reader_test.cpp ---
+
+--- START FILE: native/src/register_types.cpp ---
+#include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/godot.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
+
+#include "api/coverage_api.h"
+#include "editor/plugin.h"
+#include "runtime/coverage_monitor.h"
+#ifdef TESTS_ENABLED
+#include "testing/test_main.h"
+#endif
+
+using namespace godot;
+
+static NanoCoverage* g_nano_coverage_singleton = nullptr;
+
+void initialize_nano_coverage_godot_module(ModuleInitializationLevel p_level) {
+    // 1. SCENE LEVEL: Register Runtime classes (TestRunner, Singletons, etc.)
+    // These are available in both the Editor and the running Game.
+    if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
+#ifdef TESTS_ENABLED
+        ClassDB::register_class<NanoCoverageTestRunner>();
+#endif
+
+        ClassDB::register_class<NanoCoverage>();
+        ClassDB::register_class<CoverageApi>();
+
+        if (g_nano_coverage_singleton == nullptr) {
+            g_nano_coverage_singleton = memnew(NanoCoverage);
+            Engine::get_singleton()->register_singleton("NanoCoverage", g_nano_coverage_singleton);
+        }
+
+        // Future: ClassDB::register_class<NanoCoverageRuntime>();
+    }
+
+    // 2. EDITOR LEVEL: Register Editor-only classes (Plugins, UI, etc.)
+    // These are only available when the Editor is open.
+    if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
+        ClassDB::register_class<NanoCoverageEditorPlugin>();
+        UtilityFunctions::print("NanoCoverageGodot: Editor classes registered.");
+    }
+}
+
+void uninitialize_nano_coverage_godot_module(ModuleInitializationLevel p_level) {
+    if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
+        if (g_nano_coverage_singleton != nullptr) {
+            Engine::get_singleton()->unregister_singleton("NanoCoverage");
+            memdelete(g_nano_coverage_singleton);
+            g_nano_coverage_singleton = nullptr;
+        }
+    }
+}
+
+extern "C" {
+// Initialization.
+#ifdef _WIN32
+__declspec(dllexport) GDExtensionBool nano_coverage_godot_library_init(
+    GDExtensionInterfaceGetProcAddress p_get_proc_address, const GDExtensionClassLibraryPtr p_library,
+    GDExtensionInitialization* r_initialization) {
+#else
+GDExtensionBool GDE_EXPORT nano_coverage_godot_library_init(GDExtensionInterfaceGetProcAddress p_get_proc_address,
+                                                            const GDExtensionClassLibraryPtr p_library,
+                                                            GDExtensionInitialization* r_initialization) {
+#endif
+    godot::GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
+
+    init_obj.register_initializer(initialize_nano_coverage_godot_module);
+    init_obj.register_terminator(uninitialize_nano_coverage_godot_module);
+
+    init_obj.set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_SCENE);
+
+    return init_obj.init();
+}
+}
+--- END FILE: native/src/register_types.cpp ---
+
+--- START FILE: native/src/register_types.h ---
+#pragma once
+
+--- END FILE: native/src/register_types.h ---
+
+--- START FILE: native/src/runtime/coverage_collector.cpp ---
+#include "coverage_collector.h"
+
+namespace godot {
+
+void CoverageCollector::record_hit(const String& file, int line) {
+    if (file.is_empty() || line <= 0) {
+        return;
+    }
+
+    std::string path_std = file.utf8().get_data();
+
+    std::lock_guard<std::mutex> lock(mtx);
+    data[path_std][line]++;
+    total_hits++;
+}
+
+CoverageData CoverageCollector::snapshot() const {
+    std::lock_guard<std::mutex> lock(mtx);
+    return data;
+}
+
+void CoverageCollector::clear() {
+    std::lock_guard<std::mutex> lock(mtx);
+    data.clear();
+    total_hits = 0;
+}
+
+uint64_t CoverageCollector::get_total_hits() const {
+    std::lock_guard<std::mutex> lock(mtx);
+    return total_hits;
+}
+
+}  // namespace godot
+
+--- END FILE: native/src/runtime/coverage_collector.cpp ---
+
+--- START FILE: native/src/runtime/coverage_collector.h ---
+#pragma once
+
+#include <godot_cpp/variant/string.hpp>
+#include <mutex>
+#include <string>
+
+#include "../data/persistence.h"
+
+namespace godot {
+
+class CoverageCollector {
+   public:
+    // Records a hit for a specific file and line.
+    // Thread-safe.
+    void record_hit(const String& file, int line);
+
+    // Returns a copy of the current coverage data.
+    // Thread-safe.
+    CoverageData snapshot() const;
+
+    // Clears all recorded data.
+    // Thread-safe.
+    void clear();
+
+    // Returns the total number of hits recorded.
+    // Thread-safe.
+    uint64_t get_total_hits() const;
+
+   private:
+    mutable std::mutex mtx;
+    CoverageData data;
+    uint64_t total_hits = 0;
+};
+
+}  // namespace godot
+
+--- END FILE: native/src/runtime/coverage_collector.h ---
+
+--- START FILE: native/src/runtime/coverage_collector_test.cpp ---
+#include "coverage_collector.h"
+
+#include <gtest/gtest.h>
+
+namespace godot {
+
+TEST(CoverageCollectorTest, RecordHitIncrementsCount) {
+    CoverageCollector collector;
+    collector.record_hit("res://test.gd", 1);
+    collector.record_hit("res://test.gd", 1);
+    collector.record_hit("res://test.gd", 2);
+
+    EXPECT_EQ(collector.get_total_hits(), 3);
+}
+
+TEST(CoverageCollectorTest, SnapshotReturnsCopy) {
+    CoverageCollector collector;
+    collector.record_hit("res://test.gd", 1);
+
+    CoverageData snap = collector.snapshot();
+    EXPECT_EQ(snap["res://test.gd"][1], 1);
+
+    // Modify collector, snapshot should remain unchanged
+    collector.record_hit("res://test.gd", 1);
+    EXPECT_EQ(snap["res://test.gd"][1], 1);
+    EXPECT_EQ(collector.get_total_hits(), 2);
+}
+
+TEST(CoverageCollectorTest, ClearResetsData) {
+    CoverageCollector collector;
+    collector.record_hit("res://test.gd", 1);
+    EXPECT_EQ(collector.get_total_hits(), 1);
+
+    collector.clear();
+    EXPECT_EQ(collector.get_total_hits(), 0);
+
+    CoverageData snap = collector.snapshot();
+    EXPECT_TRUE(snap.empty());
+}
+
+TEST(CoverageCollectorTest, IgnoreInvalidInput) {
+    CoverageCollector collector;
+    collector.record_hit("", 1);
+    collector.record_hit("res://test.gd", 0);
+    collector.record_hit("res://test.gd", -1);
+
+    EXPECT_EQ(collector.get_total_hits(), 0);
+}
+
+}  // namespace godot
+
+--- END FILE: native/src/runtime/coverage_collector_test.cpp ---
+
+--- START FILE: native/src/runtime/coverage_monitor.cpp ---
+#include "coverage_monitor.h"
+
+#include <filesystem>
+#include <godot_cpp/classes/dir_access.hpp>
+#include <godot_cpp/classes/os.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>  // <--- FIX: Required for UtilityFunctions::print
+#include <mutex>
+
+#include "../config/settings_gateway.h"
+#include "../data/persistence.h"
+#include "../instrumentation/instrumenter.h"
+#include "../instrumentation/source_reader.h"
+#include "lcov_writer.h"
+
+namespace godot {
+namespace fs = std::filesystem;
+
+namespace {
+String get_override_from_args(const String& key_prefix) {
+    PackedStringArray user_args = OS::get_singleton()->get_cmdline_user_args();
+    for (const String& arg : user_args) {
+        if (arg.begins_with(key_prefix)) {
+            return arg.substr(key_prefix.length());
+        }
+    }
+    return "";
+}
+
+String get_output_dir() {
+    String override = get_override_from_args("nano_coverage/output_dir=");
+    if (!override.is_empty())
+        return override;
+
+    if (ProjectSettings::get_singleton()->has_setting("nano_coverage/output_dir")) {
+        String val = ProjectSettings::get_singleton()->get_setting("nano_coverage/output_dir");
+        if (!val.is_empty())
+            return val;
+    }
+    return "res://";
+}
+}  // namespace
+
+void NanoCoverage::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("hit", "file_path", "line"), &NanoCoverage::hit);
+    ClassDB::bind_method(D_METHOD("save_session"), &NanoCoverage::save_session);
+    ClassDB::bind_method(D_METHOD("generate_report"), &NanoCoverage::generate_report);
+    ClassDB::bind_method(D_METHOD("reset"), &NanoCoverage::reset);
+    ClassDB::bind_method(D_METHOD("get_total_hit_count"), &NanoCoverage::get_total_hit_count);
+    ClassDB::bind_method(D_METHOD("get_snapshot"), &NanoCoverage::get_snapshot);
+}
+
+void NanoCoverage::hit(String file_path, int32_t line) {
+    collector.record_hit(file_path, line);
+}
+
+void NanoCoverage::reset() {
+    collector.clear();
+}
+
+void NanoCoverage::save_session() {
+    String out_dir_godot = get_output_dir();
+    String global_out_dir = ProjectSettings::get_singleton()->globalize_path(out_dir_godot);
+    String out_filename = "coverage.data";
+
+    String name_override = get_override_from_args("nano_coverage/output_name=");
+    if (!name_override.is_empty()) {
+        out_filename = name_override;
+    } else if (ProjectSettings::get_singleton()->has_setting("nano_coverage/output_name")) {
+        String val = ProjectSettings::get_singleton()->get_setting("nano_coverage/output_name");
+        if (!val.is_empty())
+            out_filename = val;
+    }
+    fs::path data_path = fs::path(global_out_dir.utf8().get_data()) / out_filename.utf8().get_data();
+
+    CoverageData snapshot = collector.snapshot();
+
+    UtilityFunctions::print("NanoCoverage: Appending execution data to ", String(data_path.string().c_str()));
+
+    // Ensure parent directory exists
+    std::error_code ec;
+    fs::create_directories(data_path.parent_path(), ec);
+    if (ec) {
+        UtilityFunctions::printerr("NanoCoverage: Failed to create session directory: ", String(ec.message().c_str()));
+    }
+
+    if (!Persistence::append_execution_data(data_path.string(), snapshot)) {
+        UtilityFunctions::printerr("NanoCoverage: Failed to save session data.");
+    }
+}
+
+void NanoCoverage::generate_report() {
+    // Load Settings
+    CoverageSettings settings = SettingsGateway::load();
+    // UtilityFunctions::print("NanoCoverage: Report Dir Setting: ", settings.paths_report_dir);
+
+    // Load Metadata
+    CoverageMetadata meta;
+
+    String data_store_dir = settings.paths_data_store_dir;
+    String global_data_dir = ProjectSettings::get_singleton()->globalize_path(data_store_dir);
+    fs::path meta_path = fs::path(global_data_dir.utf8().get_data()) / "coverage.meta";
+
+    if (fs::exists(meta_path)) {
+        UtilityFunctions::print("NanoCoverage: Loading metadata from ", String(meta_path.string().c_str()));
+        if (!Persistence::load_metadata(meta_path.string(), meta)) {
+            UtilityFunctions::printerr("NanoCoverage: Failed to parse coverage.meta");
+            return;
+        }
+    } else {
+        UtilityFunctions::printerr("NanoCoverage: No metadata found at ", String(meta_path.string().c_str()),
+                                   ". Did you run the instrumented project?");
+        return;
+    }
+
+    // Load Execution Data (Hits)
+    // Execution Data is in output_dir (where the game wrote it)
+    String out_dir_godot = get_output_dir();
+    String global_out_dir = ProjectSettings::get_singleton()->globalize_path(out_dir_godot);
+    fs::path data_root = fs::path(global_out_dir.utf8().get_data());
+    fs::path data_path = data_root / "coverage.data";
+
+    CoverageData hits;
+    if (fs::exists(data_path)) {
+        Persistence::load_and_merge_execution_data(data_path.string(), hits);
+    }
+
+    // Merge Metadata and Hits
+    CoverageData final_data;
+    for (const auto& meta_kv : meta) {
+        const std::string& file_path = meta_kv.first;
+        const std::vector<uint32_t>& coverable_lines = meta_kv.second;
+
+        std::unordered_map<uint32_t, uint64_t>& file_lines = final_data[file_path];
+
+        // Check if we have hits for this file
+        auto hit_file_it = hits.find(file_path);
+
+        for (uint32_t line : coverable_lines) {
+            uint64_t count = 0;
+            if (hit_file_it != hits.end()) {
+                auto hit_line_it = hit_file_it->second.find(line);
+                if (hit_line_it != hit_file_it->second.end()) {
+                    count = hit_line_it->second;
+                }
+            }
+            file_lines[line] = count;
+        }
+    }
+
+    // Write LCOV Report
+    LCOVWriter::write_lcov_report(final_data, settings);
+}
+
+int64_t NanoCoverage::get_total_hit_count() const {
+    return (int64_t)collector.get_total_hits();
+}
+
+Dictionary NanoCoverage::get_snapshot() const {
+    Dictionary out;
+    CoverageData snapshot = collector.snapshot();
+
+    for (const auto& f : snapshot) {
+        Dictionary lines;
+        for (const auto& l : f.second)
+            lines[l.first] = (int64_t)l.second;
+        out[String(f.first.c_str())] = lines;
+    }
+    return out;
+}
+
+}  // namespace godot
+--- END FILE: native/src/runtime/coverage_monitor.cpp ---
+
+--- START FILE: native/src/runtime/coverage_monitor.h ---
+#pragma once
+#include <godot_cpp/classes/object.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
+#include <godot_cpp/variant/string.hpp>
+
+#include "coverage_collector.h"
+
+namespace godot {
+
+class NanoCoverage : public Object {
+    GDCLASS(NanoCoverage, Object)
+
+   protected:
+    static void _bind_methods();
+
+   public:
+    NanoCoverage() = default;
+    ~NanoCoverage() override = default;
+
+    // Called by injected code: NanoCoverage.hit("res://foo.gd", 10)
+    void hit(String file_path, int32_t line);
+
+    void reset();
+
+    // Dumps current memory execution data to "coverage.data" (appends).
+    void save_session();
+
+    // Reads "coverage.meta" and "coverage.data", merges them, and outputs "lcov.info".
+    void generate_report();
+
+    // Debugging helpers
+    int64_t get_total_hit_count() const;
+    Dictionary get_snapshot() const;  // Returns raw internal state
+
+   private:
+    CoverageCollector collector;
+};
+}  // namespace godot
+--- END FILE: native/src/runtime/coverage_monitor.h ---
+
+--- START FILE: native/src/runtime/coverage_monitor_test.cpp ---
+#include "coverage_monitor.h"
+
+#include <filesystem>
+#include <godot_cpp/classes/dir_access.hpp>
+#include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
+#include <gtest/gtest.h>
+
+#include "../config/settings_keys.h"
+#include "../data/persistence.h"
+#include "testing/test_main.h"
+#include "testing/test_utils.h"
+
+namespace godot {
+
+TEST(NanoCoverageTest, GeneratesReportAndCreatesDirectories) {
+    NanoCoverage* cov = memnew(NanoCoverage);
+
+    // Setup paths
+    String output_dir = "res://coverage_report_gen_test";
+    String data_dir = "res://coverage_data_gen_test";
+
+    TestUtils::clean_dir(output_dir);
+    TestUtils::clean_dir(data_dir);
+    DirAccess::make_dir_recursive_absolute(data_dir);
+
+    // Create Dummy Metadata
+    String test_file = "res://test_report.gd";
+    CoverageMetadata meta;
+    meta[test_file.utf8().get_data()] = {5};
+
+    String meta_path_abs = ProjectSettings::get_singleton()->globalize_path(data_dir + "/coverage.meta");
+    Persistence::save_metadata(meta_path_abs.utf8().get_data(), meta);
+
+    // Setup Settings Overrides
+    SettingsOverride s1(SettingsKeys::PATHS_REPORT_DIR, output_dir);
+    SettingsOverride s2(SettingsKeys::PATHS_DATA_STORE_DIR, data_dir);
+    SettingsOverride s3("nano_coverage/output_dir", data_dir);
+
+    // Record Hits & Save
+    cov->reset();
+    cov->hit(test_file, 5);
+    cov->save_session();
+
+    // Generate
+    cov->generate_report();
+
+    // Verify
+    EXPECT_TRUE(DirAccess::dir_exists_absolute(output_dir)) << "Report directory was not created.";
+    String output_file = output_dir + "/lcov.info";
+    EXPECT_TRUE(FileAccess::file_exists(output_file)) << "Report file was not created.";
+
+    // Cleanup
+    memdelete(cov);
+    TestUtils::clean_dir(output_dir);
+    TestUtils::clean_dir(data_dir);
+}
+
+TEST(CoverageLogicTest, ReportsZeroHitsForMissedLines) {
+    // Setup Environment
+    std::filesystem::path test_dir = std::filesystem::temp_directory_path() / "nano_zero_hit_test";
+    if (std::filesystem::exists(test_dir))
+        std::filesystem::remove_all(test_dir);
+    std::filesystem::create_directories(test_dir);
+
+    std::string file_name = "res://player.gd";
+
+    // Create Artificial Metadata (Simulate Build Step)
+    // We say lines 10 and 20 are coverable.
+    CoverageMetadata meta;
+    meta[file_name] = {10, 20};
+
+    std::filesystem::path meta_path = test_dir / "coverage.meta";
+    Persistence::save_metadata(meta_path.string(), meta);
+
+    // Create Artificial Hits (Simulate Run Step)
+    // We only hit line 10. Line 20 is missed.
+    CoverageData hits;
+    hits[file_name][10] = 5;
+
+    std::filesystem::path run_path = test_dir / "runs" / "run_1.covdata";
+    std::filesystem::create_directories(run_path.parent_path());
+    Persistence::append_execution_data(run_path.string(), hits);
+
+    // Merge Logic (Simulating CoverageApi::generate_coverage_report logic)
+
+    // Load Metadata
+    CoverageMetadata loaded_meta;
+    bool meta_loaded = Persistence::load_metadata(meta_path.string(), loaded_meta);
+    ASSERT_TRUE(meta_loaded) << "Failed to load metadata";
+
+    // Load Hits
+    CoverageData loaded_hits;
+    bool hits_loaded = Persistence::load_and_merge_execution_data(run_path.string(), loaded_hits);
+    ASSERT_TRUE(hits_loaded) << "Failed to load hits";
+
+    // Perform Union
+    CoverageData final_data;
+    for (const auto& meta_kv : loaded_meta) {
+        const std::string& f_path = meta_kv.first;
+        const std::vector<uint32_t>& coverable_lines = meta_kv.second;
+
+        std::unordered_map<uint32_t, uint64_t>& file_lines = final_data[f_path];
+
+        auto hit_file_it = loaded_hits.find(f_path);
+        bool has_hits = (hit_file_it != loaded_hits.end());
+
+        for (uint32_t line : coverable_lines) {
+            uint64_t count = 0;
+            if (has_hits) {
+                auto hit_line_it = hit_file_it->second.find(line);
+                if (hit_line_it != hit_file_it->second.end()) {
+                    count = hit_line_it->second;
+                }
+            }
+            // Store the count (even if 0)
+            file_lines[line] = count;
+        }
+    }
+
+    // Assertions
+    // Line 10 should have 5 hits
+    ASSERT_TRUE(final_data[file_name].find(10) != final_data[file_name].end());
+    EXPECT_EQ(final_data[file_name][10], 5);
+
+    // Line 20 should exist and have 0 hits (This confirms the fix)
+    ASSERT_TRUE(final_data[file_name].find(20) != final_data[file_name].end())
+        << "Line 20 (missed) was not present in final data";
+    EXPECT_EQ(final_data[file_name][20], 0);
+
+    // Cleanup
+    std::filesystem::remove_all(test_dir);
+}
+
+}  // namespace godot
+--- END FILE: native/src/runtime/coverage_monitor_test.cpp ---
+
+--- START FILE: native/src/runtime/coverage_store.cpp ---
+#include "coverage_store.h"
+
+#include <filesystem>
+#include <iostream>
+#include <stdexcept>
+
+namespace godot {
+
+namespace fs = std::filesystem;
+
+CoverageStore::CoverageStore(const std::string& data_store_dir, const std::string& workspace_id) {
+    base_path = data_store_dir;
+    fs::path base = fs::path(data_store_dir) / workspace_id;
+    root_path = base.string();
+    runs_path = (base / "runs").string();
+}
+
+void CoverageStore::ensure_paths() {
+    if (!fs::exists(runs_path)) {
+        fs::create_directories(runs_path);
+    }
+}
+
+void CoverageStore::append_run_snapshot(const std::string& run_id, const CoverageData& snapshot) {
+    ensure_paths();
+    fs::path file_path = fs::path(runs_path) / (run_id + ".covdata");
+    Persistence::append_execution_data(file_path.string(), snapshot);
+}
+
+CoverageData CoverageStore::load_and_merge() {
+    CoverageData merged_data;
+    if (!fs::exists(runs_path)) {
+        return merged_data;
+    }
+
+    for (const auto& entry : fs::directory_iterator(runs_path)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".covdata") {
+            Persistence::load_and_merge_execution_data(entry.path().string(), merged_data);
+        }
+    }
+    return merged_data;
+}
+
+void CoverageStore::clear() {
+    // Clear Runs
+    if (fs::exists(runs_path)) {
+        for (const auto& entry : fs::directory_iterator(runs_path)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".covdata") {
+                std::error_code ec;
+                fs::remove(entry.path(), ec);
+                if (ec) {
+                    std::cerr << "CoverageStore: Failed to delete " << entry.path().string() << ": " << ec.message()
+                              << std::endl;
+                }
+            }
+        }
+    }
+
+    // Clear Global Metadata (coverage.meta)
+    // This is stored at the root of the data store (base_path)
+    fs::path meta_path = fs::path(base_path) / "coverage.meta";
+    if (fs::exists(meta_path)) {
+        std::error_code ec;
+        fs::remove(meta_path, ec);
+        if (ec) {
+            std::cerr << "CoverageStore: Failed to delete " << meta_path.string() << ": " << ec.message() << std::endl;
+        }
+    }
+}
+
+}  // namespace godot
+
+--- END FILE: native/src/runtime/coverage_store.cpp ---
+
+--- START FILE: native/src/runtime/coverage_store.h ---
+#pragma once
+
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "../data/persistence.h"
+
+namespace godot {
+
+class CoverageStore {
+   public:
+    CoverageStore(const std::string& data_store_dir, const std::string& workspace_id);
+
+    // Persists the given snapshot to a file named <run_id>.covdata in the store directory.
+    // The format is binary as defined by Persistence::append_execution_data.
+    void append_run_snapshot(const std::string& run_id, const CoverageData& snapshot);
+
+    // Iterates all .covdata files in the store directory and merges them into a single CoverageData map.
+    CoverageData load_and_merge();
+
+    // Deletes all .covdata files in the runs directory.
+    void clear();
+
+   private:
+    std::string base_path;
+    std::string root_path;
+    std::string runs_path;
+
+    void ensure_paths();
+};
+
+}  // namespace godot
+
+--- END FILE: native/src/runtime/coverage_store.h ---
+
+--- START FILE: native/src/runtime/coverage_store_test.cpp ---
+#include "coverage_store.h"
+
+#include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
+
+namespace fs = std::filesystem;
+using namespace godot;
+
+class CoverageStoreTest : public ::testing::Test {
+   protected:
+    fs::path temp_dir;
+    std::string root_dir;
+    std::string workspace_id;
+
+    void SetUp() override {
+        // Create unique temp dir for each test
+        temp_dir = fs::temp_directory_path() / ("cov_store_test_" + std::to_string(std::rand()));
+        if (fs::exists(temp_dir)) {
+            fs::remove_all(temp_dir);
+        }
+        fs::create_directories(temp_dir);
+
+        root_dir = temp_dir.string();
+        workspace_id = "test_ws";
+    }
+
+    void TearDown() override {
+        if (fs::exists(temp_dir)) {
+            fs::remove_all(temp_dir);
+        }
+    }
+};
+
+TEST_F(CoverageStoreTest, AppendAndLoadSingleRun) {
+    CoverageStore store(root_dir, workspace_id);
+
+    CoverageData run1;
+    run1["res://file1.gd"][1] = 5;
+    run1["res://file1.gd"][2] = 2;
+
+    store.append_run_snapshot("run_1", run1);
+
+    CoverageData loaded = store.load_and_merge();
+
+    ASSERT_EQ(loaded.size(), 1);
+    ASSERT_EQ(loaded["res://file1.gd"].size(), 2);
+    EXPECT_EQ(loaded["res://file1.gd"][1], 5);
+    EXPECT_EQ(loaded["res://file1.gd"][2], 2);
+}
+
+TEST_F(CoverageStoreTest, MergeMultipleRuns) {
+    CoverageStore store(root_dir, workspace_id);
+
+    CoverageData run1;
+    run1["res://file1.gd"][1] = 5;
+    run1["res://file1.gd"][2] = 10;
+
+    CoverageData run2;
+    run2["res://file1.gd"][1] = 3;  // Should sum to 8
+    run2["res://file2.gd"][5] = 1;  // New file
+
+    store.append_run_snapshot("run_A", run1);
+    store.append_run_snapshot("run_B", run2);
+
+    CoverageData loaded = store.load_and_merge();
+
+    ASSERT_EQ(loaded.size(), 2);  // file1.gd, file2.gd
+
+    // Check file1.gd
+    EXPECT_EQ(loaded["res://file1.gd"][1], 8);   // 5 + 3
+    EXPECT_EQ(loaded["res://file1.gd"][2], 10);  // 10 + 0
+
+    // Check file2.gd
+    EXPECT_EQ(loaded["res://file2.gd"][5], 1);
+}
+
+TEST_F(CoverageStoreTest, HandlesEmptyStore) {
+    CoverageStore store(root_dir, workspace_id);
+
+    CoverageData loaded = store.load_and_merge();
+    EXPECT_TRUE(loaded.empty());
+}
+
+--- END FILE: native/src/runtime/coverage_store_test.cpp ---
+
+--- START FILE: native/src/runtime/lcov_writer.cpp ---
+#include "lcov_writer.h"
+
+#include <godot_cpp/classes/dir_access.hpp>
+#include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
+
+namespace godot {
+
+void LCOVWriter::write_lcov_report(const CoverageData& data, const CoverageSettings& settings) {
+    // Construct output path
+    String output_dir = settings.paths_report_dir;
+    String filename = settings.report_lcov_filename;
+    String output_path;
+
+    if (output_dir.ends_with("/")) {
+        output_path = output_dir + filename;
+    } else {
+        output_path = output_dir + "/" + filename;
+    }
+
+    // Ensure directory exists
+    // Check if it exists
+    if (!DirAccess::dir_exists_absolute(output_dir)) {
+        Error err = DirAccess::make_dir_recursive_absolute(output_dir);
+        if (err != OK) {
+            UtilityFunctions::printerr("NanoCoverage: Failed to create report directory: ", output_dir);
+        }
+    }
+
+    Ref<FileAccess> file = FileAccess::open(output_path, FileAccess::WRITE);
+    if (file.is_null()) {
+        UtilityFunctions::printerr("NanoCoverage: Could not open report file for writing: ", output_path);
+        return;
+    }
+
+    UtilityFunctions::print("NanoCoverage: Writing LCOV report to ", output_path);
+
+    // Fetch the original project root if available (injected by TempBuilder)
+
+    // Fetch the original project root if available (injected by TempBuilder)
+    String source_root = "";
+    if (settings.report_use_absolute_source_paths) {
+        if (ProjectSettings::get_singleton()->has_setting("nano_coverage/source_root")) {
+            source_root = ProjectSettings::get_singleton()->get_setting("nano_coverage/source_root");
+            // Ensure source_root itself is absolute if it's a resource path
+            if (source_root.begins_with("res://") || source_root.begins_with("user://")) {
+                source_root = ProjectSettings::get_singleton()->globalize_path(source_root);
+            }
+        }
+    }
+
+    for (const auto& file_entry : data) {
+        String file_path = String(file_entry.first.c_str());
+        const auto& lines = file_entry.second;
+
+        // --- Path Resolution Logic ---
+        String display_path = file_path;
+
+        if (settings.report_use_absolute_source_paths) {
+            if (!source_root.is_empty() && file_path.begins_with("res://")) {
+                // Strip "res://" (6 chars) and join with source root
+                String rel_path = file_path.substr(6);
+
+                // Handle slash consistency
+                if (source_root.ends_with("/")) {
+                    display_path = source_root + rel_path;
+                } else {
+                    display_path = source_root + "/" + rel_path;
+                }
+            } else if (file_path.begins_with("res://")) {
+                // Fallback: globalize path if source_root is not set but we want absolute paths
+                display_path = ProjectSettings::get_singleton()->globalize_path(file_path);
+            }
+        }
+        // -----------------------------
+
+        // Write Source File (SF)
+        file->store_line("SF:" + display_path);
+
+        // Write Data Lines (DA)
+        for (const auto& line_entry : lines) {
+            uint32_t line = line_entry.first;
+            uint64_t hits = line_entry.second;
+            file->store_line("DA:" + String::num_int64(line) + "," + String::num_int64(hits));
+        }
+
+        // Close Record
+        file->store_line("end_of_record");
+    }
+
+    file->close();
+}
+
+}  // namespace godot
+--- END FILE: native/src/runtime/lcov_writer.cpp ---
+
+--- START FILE: native/src/runtime/lcov_writer.h ---
+#pragma once
+#include <godot_cpp/variant/string.hpp>
+
+#include "../config/settings_gateway.h"
+#include "../data/persistence.h"
+
+namespace godot {
+
+class LCOVWriter {
+   public:
+    static void write_lcov_report(const CoverageData& data, const CoverageSettings& settings);
+};
+
+}  // namespace godot
+--- END FILE: native/src/runtime/lcov_writer.h ---
+
+--- START FILE: native/src/runtime/lcov_writer_test.cpp ---
+#include "lcov_writer.h"
+
+#include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
+#include <string>
+#include <vector>
+
+#include "../config/settings_gateway.h"
+#include "../data/persistence.h"
+
+namespace fs = std::filesystem;
+using namespace godot;
+
+TEST(LCOVFormatTest, GeneratesValidReport) {
+    // Setup Data
+    CoverageData data;
+
+    // File A: player.gd
+    // Line 10: 2 hits
+    // Line 15: 1 hit
+    data["res://scripts/player.gd"][10] = 2;
+    data["res://scripts/player.gd"][15] = 1;
+
+    // File B: enemy.gd
+    // Line 5: 1 hit
+    data["res://scripts/enemy.gd"][5] = 1;
+
+    // Setup Settings
+    fs::path temp_dir = fs::temp_directory_path();
+    CoverageSettings settings;
+    settings.paths_report_dir = String(temp_dir.string().c_str());
+    settings.report_lcov_filename = "lcov_test_output.info";
+    settings.report_use_absolute_source_paths = false;  // Test relative paths
+
+    // Clean up previous run
+    fs::path output_file = temp_dir / "lcov_test_output.info";
+    if (fs::exists(output_file)) {
+        fs::remove(output_file);
+    }
+
+    // Write Report
+    LCOVWriter::write_lcov_report(data, settings);
+
+    // Read & Verify
+    std::ifstream in(output_file);
+    ASSERT_TRUE(in.is_open()) << "Failed to open generated LCOV file at " << output_file;
+
+    std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+
+    // Check for File A
+    EXPECT_NE(content.find("SF:res://scripts/player.gd"), std::string::npos);
+    EXPECT_NE(content.find("DA:10,2"), std::string::npos);
+    EXPECT_NE(content.find("DA:15,1"), std::string::npos);
+
+    // Check for File B
+    EXPECT_NE(content.find("SF:res://scripts/enemy.gd"), std::string::npos);
+    EXPECT_NE(content.find("DA:5,1"), std::string::npos);
+
+    // Check end_of_record
+    int eor_count = 0;
+    size_t pos = 0;
+    while ((pos = content.find("end_of_record", pos)) != std::string::npos) {
+        eor_count++;
+        pos += std::string("end_of_record").length();
+    }
+    EXPECT_EQ(eor_count, 2);
+
+    // Cleanup
+    in.close();
+    fs::remove(output_file);
+}
+
+TEST(LCOVFormatTest, GeneratesAbsolutePaths) {
+    // Setup Data
+    CoverageData data;
+    data["res://scripts/player.gd"][10] = 1;
+
+    // Setup Settings
+    fs::path temp_dir = fs::temp_directory_path();
+    CoverageSettings settings;
+    settings.paths_report_dir = String(temp_dir.string().c_str());
+    settings.report_lcov_filename = "lcov_abs_test.info";
+    settings.report_use_absolute_source_paths = true;
+
+    // Mock project path (we can rely on globalize_path or verify logic)
+    // Since we can't easily mock ProjectSettings singleton here without partial mocks,
+    // we rely on the fact that globalize_path("res://") usually returns absolute path.
+    // However, LCOVWriter logic first checks "nano_coverage/source_root" setting.
+    // If that's not set, it falls back to globalize_path.
+    // Let's assume globalize_path works.
+
+    // Clean up previous run
+    fs::path output_file = temp_dir / "lcov_abs_test.info";
+    if (fs::exists(output_file)) {
+        fs::remove(output_file);
+    }
+
+    LCOVWriter::write_lcov_report(data, settings);
+
+    std::ifstream in(output_file);
+    ASSERT_TRUE(in.is_open());
+    std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+
+    // We expect SF: to NOT start with res:// and to look absolute
+    // Windows: C:/... or C:\...
+    // Linux: /...
+    // Just checking it DOES NOT start with res:// is a good proxy, assuming the original was res://
+    EXPECT_EQ(content.find("SF:res://"), std::string::npos);
+
+    // It should contain "scripts/player.gd"
+    EXPECT_NE(content.find("scripts/player.gd"), std::string::npos);
+
+    in.close();
+    fs::remove(output_file);
+}
+
+--- END FILE: native/src/runtime/lcov_writer_test.cpp ---
+
+--- START FILE: native/src/testing/test_main.cpp ---
+#include "test_main.h"
+
+#include <godot_cpp/classes/dir_access.hpp>
+#include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/os.hpp>
+#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
+#include <gtest/gtest.h>
+#include <sstream>
+
+#include "../runtime/coverage_monitor.h"
+#include "test_utils.h"
+
+namespace godot {
+
+// CUSTOM TEST LISTENER DOCUMENTATION
+//
+// Why do we need this class?
+// Standard C++ std::cout/std::cerr output is often captured or suppressed by the Godot Engine,
+// especially in Editor or Embedded environments. To ensure test results are visible:
+//
+// We must use `UtilityFunctions::print()`/`printerr()` to route messages through Godot's
+// internal logging system (which displays in the Output dock and console).
+//
+// We optionally log to a file ("res://test_log.txt") to ensure results are preserved even
+// if the engine crashes or the console buffer is cleared.
+//
+// This listener hooks into Google Test's event system to intercept test results and
+// print/log them using Godot's API.
+class GodotGTestPrinter : public ::testing::EmptyTestEventListener {
+    void log_to_file(String message) {
+        Ref<FileAccess> f;
+        if (FileAccess::file_exists("res://test_log.txt")) {
+            f = FileAccess::open("res://test_log.txt", FileAccess::READ_WRITE);
+            f->seek_end();
+        } else {
+            f = FileAccess::open("res://test_log.txt", FileAccess::WRITE);
+        }
+        if (f.is_valid()) {
+            f->store_line(message);
+        }
+    }
+
+    virtual void OnTestPartResult(const ::testing::TestPartResult& result) {
+        if (result.failed()) {
+            std::stringstream ss;
+            ss << "\n[FAILED] " << result.file_name() << ":" << result.line_number() << "\n"
+               << "         " << result.summary() << "\n";
+            String msg = String(ss.str().c_str());
+            UtilityFunctions::printerr(msg);
+            log_to_file(msg);
+        }
+    }
+
+    virtual void OnTestEnd(const ::testing::TestInfo& test_info) {
+        if (test_info.result()->Failed()) {
+            String msg = "[TEST FAILED] " + String(test_info.test_suite_name()) + "." + String(test_info.name());
+            UtilityFunctions::printerr(msg);
+            log_to_file(msg);
+        } else {
+            String msg = "[TEST PASSED] " + String(test_info.test_suite_name()) + "." + String(test_info.name());
+            UtilityFunctions::print(msg);
+            log_to_file(msg);
+        }
+    }
+};
+
+// TEST CASES
+
+// Checks if the NanoCoverage singleton is properly registered with the Godot Engine.
+// It verifies that we can retrieve it by name and that it is the correct C++ type.
+TEST(EngineIntegrationTest, SingletonIsRegisteredAndAccessible) {
+    bool has_singleton = Engine::get_singleton()->has_singleton("NanoCoverage");
+    ASSERT_TRUE(has_singleton) << "CRITICAL: 'NanoCoverage' singleton is NOT registered with the Engine.";
+
+    Object* obj = Engine::get_singleton()->get_singleton("NanoCoverage");
+    ASSERT_NE(obj, nullptr) << "CRITICAL: Retrieved singleton is null.";
+    NanoCoverage* coverage = Object::cast_to<NanoCoverage>(obj);
+    EXPECT_NE(coverage, nullptr)
+        << "CRITICAL: Singleton object is not of type NanoCoverage! (Possible shadowing by GDScript)";
+}
+
+// Verifies that we can record coverage hits in memory and that save_session()
+// writes the coverage data to a file on disk.
+TEST(NanoCoverageTest, RecordsHitsAndSavesSession) {
+    // Setup
+    NanoCoverage* cov = memnew(NanoCoverage);
+    String test_file = "res://test_unit_gen.gd";
+
+    // Use a temp folder to avoid polluting project root
+    String temp_dir = "res://temp_session_test";
+    TestUtils::clean_dir(temp_dir);  // Ensure clean start
+    DirAccess::make_dir_recursive_absolute(temp_dir);
+
+    // Override "nano_coverage/output_dir" so save_session() writes there
+    SettingsOverride s1("nano_coverage/output_dir", temp_dir);
+
+    cov->reset();
+    cov->hit(test_file, 10);
+    cov->hit(test_file, 10);
+
+    // Assert Hits in Memory
+    EXPECT_EQ(cov->get_total_hit_count(), 2);
+
+    // Test Save
+    cov->save_session();
+
+    // Verify file exists (optional, but good for sanity)
+    EXPECT_TRUE(FileAccess::file_exists(temp_dir + "/coverage.data"));
+
+    // Cleanup
+    TestUtils::clean_dir(temp_dir);
+    memdelete(cov);
+}
+
+// RUNNER IMPLEMENTATION
+
+void NanoCoverageTestRunner::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("run_all_tests"), &NanoCoverageTestRunner::run_all_tests);
+}
+
+// How Tests are Run:
+// ------------------
+// The invocation chain starts with scripts/test.py (Python).
+// The script creates a temporary GDScript file (addons/run_cpp_tests.gd) which
+// instantiates NanoCoverageTestRunner (this class) and calls run_all_tests().
+//
+// Python launches Godot in --headless mode, executing the GDScript.
+// NanoCoverageTestRunner initializes Google Test within the running Godot process.
+// It runs ALL registered Google Tests (TEST() macros) found in the binary.
+// Results are printed back to Godot, which Python captures via stdout.
+int NanoCoverageTestRunner::run_all_tests() {
+    {
+        Ref<FileAccess> f = FileAccess::open("res://test_log.txt", FileAccess::WRITE);
+        if (f.is_valid())
+            f->store_line("--- STARTING TESTS ---");
+    }
+
+    UtilityFunctions::print("NanoCoverage: --- STARTING GTEST SUITE ---");
+
+    PackedStringArray user_args = OS::get_singleton()->get_cmdline_user_args();
+    int argc = user_args.size() + 1;
+    std::vector<char*> argv_vec;
+    std::vector<std::string> arg_strings;
+
+    arg_strings.push_back("nano_coverage_tests");
+    for (const String& arg : user_args) {
+        arg_strings.push_back(arg.utf8().get_data());
+    }
+
+    for (size_t i = 0; i < arg_strings.size(); ++i) {
+        argv_vec.push_back((char*)arg_strings[i].c_str());
+    }
+    argv_vec.push_back(nullptr);
+
+    char** argv = argv_vec.data();
+
+    if (!::testing::GTEST_FLAG(list_tests)) {
+        ::testing::InitGoogleTest(&argc, argv);
+        ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();
+        listeners.Append(new GodotGTestPrinter);
+    }
+
+    int res = RUN_ALL_TESTS();
+    if (res == 0) {
+        UtilityFunctions::print("NanoCoverage: --- ALL TESTS PASSED ---");
+    } else {
+        UtilityFunctions::printerr("NanoCoverage: --- TESTS FAILED ---");
+    }
+
+    return res;
+}
+
+}  // namespace godot
+--- END FILE: native/src/testing/test_main.cpp ---
+
+--- START FILE: native/src/testing/test_main.h ---
+#pragma once
+
+#include <godot_cpp/classes/node.hpp>
+
+namespace godot {
+
+class NanoCoverageTestRunner : public Node {
+    GDCLASS(NanoCoverageTestRunner, Node)
+
+   protected:
+    static void _bind_methods();
+
+   public:
+    // Runs all registered C++ unit tests. Returns the number of failures.
+    int run_all_tests();
+};
+
+}  // namespace godot
+
+--- END FILE: native/src/testing/test_main.h ---
+
+--- START FILE: native/src/testing/test_utils.h ---
+#pragma once
+#include <filesystem>
+#include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
+#include <godot_cpp/variant/variant.hpp>
+
+namespace godot {
+
+// RAII helper to automatically restore settings
+class SettingsOverride {
+    String key;
+    Variant old_value;
+    bool existed;
+
+   public:
+    SettingsOverride(const String& p_key, const Variant& p_value) {
+        key = p_key;
+        ProjectSettings* ps = ProjectSettings::get_singleton();
+        if (ps->has_setting(key)) {
+            old_value = ps->get_setting(key);
+            existed = true;
+        } else {
+            existed = false;
+        }
+        ps->set_setting(key, p_value);
+    }
+
+    ~SettingsOverride() {
+        ProjectSettings* ps = ProjectSettings::get_singleton();
+        if (existed) {
+            ps->set_setting(key, old_value);
+        } else {
+            ps->set_setting(key, Variant());
+        }
+    }
+};
+
+class TestUtils {
+   public:
+    // Recursively removes a directory using Godot's paths (res://...) converted to global paths
+    // Uses std::error_code to avoid exceptions since godot-cpp builds with -fno-exceptions
+    static void clean_dir(const String& res_path) {
+        String global_path = ProjectSettings::get_singleton()->globalize_path(res_path);
+        std::string path_str = global_path.utf8().get_data();
+
+        std::error_code ec;
+        if (std::filesystem::exists(path_str, ec)) {
+            std::filesystem::remove_all(path_str, ec);
+            if (ec) {
+                UtilityFunctions::printerr("TestUtils: Failed to cleanup ", res_path,
+                                           ". Error: ", String(ec.message().c_str()));
+            }
+        }
+    }
+};
+
+}  // namespace godot
+--- END FILE: native/src/testing/test_utils.h ---
+
+--- START FILE: scripts/.gitattributes ---
+* linguist-vendored
+
+--- END FILE: scripts/.gitattributes ---
+
+--- START FILE: scripts/build.py ---
+import os
+import subprocess
+import sys
+import argparse
+import shutil
+import multiprocessing
+
+# --- CONFIGURATION ---
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Assumes 'native' is where your SConstruct file lives
+NATIVE_DIR = os.path.join(PROJECT_ROOT, "native") 
+
+# --- COLORS ---
+os.system('') # Enable ANSI
+GREEN = '\033[92m'
+CYAN = '\033[96m'
+YELLOW = '\033[93m'
+RED = '\033[91m'
+RESET = '\033[0m'
+
+def print_step(msg):      print(f"{CYAN}[+]{RESET} {msg}")
+def print_substep(msg):   print(f"    {msg}")
+def print_error(msg):     print(f"{RED}[!] {msg}{RESET}")
+def print_success(msg):   print(f"{GREEN}[✓] {msg}{RESET}")
+
+def run_scons(args):
+    print_step("Preparing Build...")
+
+    # 1. Construct Base Command (Always use python module for reliability)
+    cmd = [sys.executable, "-m", "SCons"]
+    
+    # 2. Parallel Builds (Use all cores)
+    cpu_count = multiprocessing.cpu_count()
+    cmd.append(f"-j{cpu_count}")
+    print_substep(f"Using {cpu_count} CPU threads")
+
+    # 3. Handle Clean
+    if args.clean:
+        print_step("Cleaning build targets...")
+        subprocess.run(cmd + ["-c"], cwd=NATIVE_DIR, shell=(os.name == 'nt'))
+        print_success("Clean complete.")
+        if args.only_clean:
+            return
+
+    # 4. Platform & Target
+    if args.platform != "auto":
+        cmd.append(f"platform={args.platform}")
+    
+    cmd.append(f"target={args.target}")
+
+    # 5. Test Configuration
+    # The SConstruct defaults to 'yes' for template_debug, and 'no' for template_release.
+    # We only need to intervene if the user explicitly wants NO tests.
+    if args.no_tests:
+        print_substep(f"{YELLOW}Forcing tests DISABLED{RESET}")
+        cmd.append("build_tests=no")
+
+    # 6. Smart MinGW Detection (Windows Only)
+    # If we are on Windows, have G++, but NO MSVC (cl.exe), force MinGW.
+    if os.name == 'nt':
+        has_gpp = shutil.which("g++") is not None
+        has_msvc = shutil.which("cl") is not None
+        
+        if has_gpp and not has_msvc:
+            print_substep(f"{YELLOW}Auto-detected MinGW (no MSVC found). Adding use_mingw=yes{RESET}")
+            cmd.append("use_mingw=yes")
+
+    # 7. Debug Symbols
+    if args.target == "template_debug":
+        cmd.append("debug_symbols=yes")
+
+    # 8. Execute
+    print_step(f"Compiling in {os.path.basename(NATIVE_DIR)}...")
+    # Print the clean command for the user to see
+    display_cmd = " ".join(cmd)
+    print_substep(f"{YELLOW}> {display_cmd}{RESET}")
+
+    try:
+        # We don't capture output here so the user sees the real-time compilation log
+        subprocess.run(cmd, cwd=NATIVE_DIR, check=True, shell=(os.name == 'nt'))
+        print_success("Build Successful!")
+    except subprocess.CalledProcessError:
+        print_error("Build Failed.")
+        sys.exit(1)
+
+def main():
+    parser = argparse.ArgumentParser(description="Build Manager")
+    parser.add_argument("--platform", choices=["windows", "linux", "macos", "android", "ios", "auto"], default="auto", help="Target platform")
+    parser.add_argument("--target", choices=["template_debug", "template_release"], default="template_debug", help="Build target")
+    parser.add_argument("--clean", action="store_true", help="Clean before building")
+    parser.add_argument("--only-clean", action="store_true", help="Clean and exit")
+    parser.add_argument("--no-tests", action="store_true", help="Force disable unit tests (even in debug)")
+    
+    args = parser.parse_args()
+    
+    # Header
+    print(f"\n{YELLOW}=== Nano Coverage Builder ==={RESET}")
+    print_substep(f"Target:   {args.target}")
+    print_substep(f"Platform: {args.platform}\n")
+    
+    run_scons(args)
+
+if __name__ == "__main__":
+    main()
+--- END FILE: scripts/build.py ---
+
+--- START FILE: scripts/dev.py ---
+import os
+import subprocess
+import sys
+import glob
+import argparse
+
+# --- CONFIGURATION ---
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+GODOT_PROJECT_DIR = os.path.join(PROJECT_ROOT, "godot_project") 
+
+# --- COLORS ---
+os.system('')
+GREEN = '\033[92m'
+CYAN = '\033[96m'
+YELLOW = '\033[93m'
+RED = '\033[91m'
+RESET = '\033[0m'
+
+def print_step(msg):    print(f"{CYAN}[+]{RESET} {msg}")
+def print_error(msg):   print(f"{RED}[!] {msg}{RESET}")
+
+def find_godot_executable():
+    """
+    Smart search for the Godot binary in the current root folder.
+    """
+    # 1. Define patterns based on OS
+    patterns = []
+    if os.name == 'nt':
+        patterns = ["Godot_*.exe"]
+    elif sys.platform == 'darwin':
+        patterns = ["Godot.app"] # On Mac, this is a folder
+    else:
+        # Linux usually has .x86_64 or no extension
+        patterns = ["Godot_*.x86_64", "Godot_*.x86_32", "Godot_v*"]
+
+    # 2. Search
+    found = []
+    for p in patterns:
+        found.extend(glob.glob(os.path.join(PROJECT_ROOT, p)))
+
+    # 3. Validate
+    if not found:
+        print_error("Godot executable not found in root directory.")
+        print(f"    Expected pattern: {patterns}")
+        print("    Please run 'python setup.py' to download it.")
+        sys.exit(1)
+
+    # 4. Return the newest one (if multiple exist)
+    # On Mac, we must point to the inner binary, not the .app folder
+    exe = sorted(found)[-1]
+    if sys.platform == 'darwin' and exe.endswith(".app"):
+        exe = os.path.join(exe, "Contents", "MacOS", "Godot")
+        
+    return os.path.abspath(exe)
+
+def run_godot(args):
+    godot_exe = find_godot_executable()
+    
+    if not os.path.exists(GODOT_PROJECT_DIR):
+        print_error(f"Project directory not found: {GODOT_PROJECT_DIR}")
+        sys.exit(1)
+
+    print_step(f"Found Engine: {os.path.basename(godot_exe)}")
+    
+    # Construct Command
+    cmd = [godot_exe, "--path", GODOT_PROJECT_DIR]
+    
+    mode_str = "GAME"
+    if args.editor:
+        cmd.append("-e") # -e is shorthand for --editor
+        mode_str = "EDITOR"
+    
+    if args.verbose:
+        cmd.append("--verbose")
+        
+    if args.always_on_top:
+        cmd.append("--always-on-top")
+
+    print_step(f"Launching {mode_str}...")
+    print(f"    {YELLOW}{' '.join(cmd)}{RESET}")
+    print("--------------------------------------------------")
+    
+    try:
+        # On Windows, Godot spawns a console. We wait for it to finish.
+        subprocess.run(cmd, check=True)
+    except KeyboardInterrupt:
+        print(f"\n{YELLOW}Interrupted by user.{RESET}")
+    except subprocess.CalledProcessError as e:
+        print_error(f"Godot crashed or exited with error code {e.returncode}")
+
+def main():
+    parser = argparse.ArgumentParser(description="Run Godot Environment")
+    
+    # We use mutually exclusive group so you can't be both editor and game
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--editor", action="store_true", default=True, help="Open Editor (Default)")
+    group.add_argument("--game", action="store_false", dest="editor", help="Run Game directly")
+    
+    parser.add_argument("--verbose", action="store_true", default=True, help="Enable verbose logging")
+    parser.add_argument("--top", dest="always_on_top", action="store_true", help="Keep window on top")
+    
+    args = parser.parse_args()
+    
+    print(f"\n{YELLOW}=== Nano Coverage Runner ==={RESET}")
+    run_godot(args)
+
+if __name__ == "__main__":
+    main()
+--- END FILE: scripts/dev.py ---
+
+--- START FILE: scripts/setup.py ---
+"""
+Nano Coverage Godot - Development Environment Setup Script
+
+This script automates the initialization of the development environment for the
+nano-coverage-godot project. It handles the downloading and configuration of
+dependencies required to build and test the project.
+
+Scope of Automation:
+1.  Build Tools:     Verifies SCons and C++ compiler availability.
+2.  Git Submodules:  Initializes and updates project submodules.
+3.  Godot CPP:       Enforces the specific git tag for compatibility.
+4.  Google Test:     Downloads and configures Google Test (v1.14.0).
+5.  GdUnit4:         Downloads and installs the GdUnit4 addon (v4.2.0).
+6.  GdUnit4 Tests:   Extracts the internal test suite from GdUnit4 for self-testing.
+7.  Godot Engine:    Downloads the specific Godot Editor version for testing.
+
+Usage:
+    python scripts/setup.py
+"""
+
+import os
+import sys
+import shutil
+import platform
+import subprocess
+import urllib.request
+import zipfile
+import io
+
+# --- Configuration & Constants ---
+
+class Config:
+    # Project Paths
+    # We go up one level from the script location to find the real project root
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+    
+    NATIVE_DIR = os.path.join(PROJECT_ROOT, "native")
+    THIRDPARTY_DIR = os.path.join(NATIVE_DIR, "thirdparty")
+    GODOT_CPP_DIR = os.path.join(NATIVE_DIR, "godot-cpp")
+    ADDONS_DIR = os.path.join(PROJECT_ROOT, "godot_project", "addons")
+
+    # Version Control
+    GODOT_VERSION = "4.5-stable"
+    GODOT_CPP_TAG = "godot-4.3-stable"
+    GTEST_VERSION = "1.14.0"
+    GDUNIT_VERSION = "4.2.0"
+
+    # URLs
+    URL_GTEST = f"https://github.com/google/googletest/archive/refs/tags/v{GTEST_VERSION}.zip"
+    URL_GDUNIT = f"https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v{GDUNIT_VERSION}.zip"
+
+class Colors:
+    """ANSI Color codes for terminal output."""
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+
+# --- Logger Utilities ---
+
+def log_header(message):
+    print(f"\n{Colors.HEADER}{Colors.BOLD}=== {message} ==={Colors.RESET}")
+
+def log_info(message):
+    print(f"{Colors.CYAN}[INFO] {message}{Colors.RESET}")
+
+def log_success(message):
+    print(f"{Colors.GREEN}[OK]   {message}{Colors.RESET}")
+
+def log_warning(message):
+    print(f"{Colors.YELLOW}[WARN] {message}{Colors.RESET}")
+
+def log_error(message):
+    print(f"{Colors.RED}[ERR]  {message}{Colors.RESET}")
+
+def log_substep(message):
+    print(f"       -> {message}")
+
+# --- Helper Functions ---
+
+def run_command(command, cwd=None, shell=False):
+    """
+    Executes a shell command and returns success status.
+    """
+    try:
+        # On Windows, shell=True is often required for system commands, 
+        # but for direct executable calls, we prefer shell=False where possible.
+        use_shell = shell or (os.name == 'nt')
+        result = subprocess.run(
+            command, 
+            cwd=cwd, 
+            check=True, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE,
+            text=True,
+            shell=use_shell
+        )
+        return True, result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        return False, e.stderr.strip()
+
+def download_file(url, dest_path):
+    """
+    Downloads a file from a URL with a progress percentage.
+    """
+    try:
+        def progress(block_num, block_size, total_size):
+            downloaded = block_num * block_size
+            if total_size > 0:
+                percent = downloaded * 100 / total_size
+                sys.stdout.write(f"\r       Downloading: {percent:.1f}%")
+                sys.stdout.flush()
+        
+        urllib.request.urlretrieve(url, dest_path, progress)
+        print("") # Newline after progress
+        return True
+    except Exception as e:
+        log_error(f"Download failed: {e}")
+        return False
+
+# --- Setup Tasks ---
+
+def check_system_dependencies():
+    """
+    Checks if SCons and a C++ compiler are installed.
+    """
+    log_header("Checking Build Tools")
+    
+    # 1. Check SCons
+    try:
+        import SCons
+        log_success("SCons library found.")
+    except ImportError:
+        log_warning("SCons library missing. Attempting installation via pip...")
+        ok, err = run_command([sys.executable, "-m", "pip", "install", "scons"])
+        if ok:
+            log_success("SCons installed successfully.")
+        else:
+            log_error(f"Failed to install SCons: {err}")
+            return False
+
+    # 2. Check Compiler
+    compiler_found = False
+    if os.name == 'nt':
+        if shutil.which("g++"):
+            log_success("MinGW (g++) compiler found.")
+            compiler_found = True
+        elif shutil.which("cl"):
+            log_success("MSVC (cl.exe) compiler found.")
+            compiler_found = True
+    else:
+        if shutil.which("g++") or shutil.which("clang++"):
+            log_success("Unix C++ compiler found.")
+            compiler_found = True
+
+    if not compiler_found:
+        log_error("No C++ compiler found (g++, clang++, or MSVC).")
+        return False
+
+    return True
+
+def setup_git_submodules():
+    """
+    Initializes and updates git submodules.
+    """
+    log_header("Initializing Git Submodules")
+    
+    ok, _ = run_command(["git", "submodule", "sync"], cwd=Config.PROJECT_ROOT)
+    if not ok:
+        log_error("Failed to sync submodules.")
+        return False
+        
+    ok, err = run_command(["git", "submodule", "update", "--init", "--recursive"], cwd=Config.PROJECT_ROOT)
+    if ok:
+        log_success("Submodules updated.")
+        return True
+    else:
+        log_error(f"Failed to update submodules: {err}")
+        return False
+
+def configure_godot_cpp():
+    """
+    Ensures godot-cpp is checked out to the correct tag.
+    """
+    log_header(f"Configuring godot-cpp ({Config.GODOT_CPP_TAG})")
+
+    if not os.path.exists(Config.GODOT_CPP_DIR):
+        log_error(f"godot-cpp directory not found at {Config.GODOT_CPP_DIR}")
+        return False
+
+    # Fetch tags to ensure we have the specific one
+    run_command(["git", "fetch", "--tags"], cwd=Config.GODOT_CPP_DIR)
+    
+    ok, err = run_command(["git", "checkout", Config.GODOT_CPP_TAG], cwd=Config.GODOT_CPP_DIR)
+    if ok:
+        log_success(f"godot-cpp locked to tag: {Config.GODOT_CPP_TAG}")
+        return True
+    else:
+        log_error(f"Failed to checkout tag: {err}")
+        return False
+
+def setup_googletest():
+    """
+    Downloads and extracts Google Test to native/thirdparty/googletest.
+    """
+    log_header("Setting up Google Test")
+    
+    target_dir = os.path.join(Config.THIRDPARTY_DIR, "googletest")
+    
+    # Check for a key file to avoid re-downloading
+    if os.path.exists(os.path.join(target_dir, "googletest", "src", "gtest-all.cc")):
+        log_success("Google Test is already installed.")
+        return True
+
+    # Cleanup previous partial installs
+    if os.path.exists(target_dir):
+        shutil.rmtree(target_dir)
+    os.makedirs(Config.THIRDPARTY_DIR, exist_ok=True)
+
+    log_info(f"Downloading Google Test v{Config.GTEST_VERSION}...")
+    zip_path = os.path.join(Config.PROJECT_ROOT, "gtest.zip")
+    
+    if download_file(Config.URL_GTEST, zip_path):
+        try:
+            log_substep("Extracting archive...")
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(Config.THIRDPARTY_DIR)
+            
+            # Rename folder from googletest-1.14.0 to googletest
+            extracted_name = os.path.join(Config.THIRDPARTY_DIR, f"googletest-{Config.GTEST_VERSION}")
+            if os.path.exists(extracted_name):
+                os.rename(extracted_name, target_dir)
+            
+            log_success("Google Test installed successfully.")
+            return True
+        except Exception as e:
+            log_error(f"Extraction failed: {e}")
+            return False
+        finally:
+            if os.path.exists(zip_path):
+                os.remove(zip_path)
+    return False
+
+def setup_gdunit4():
+    """
+    Downloads and installs the GdUnit4 addon into the godot_project/addons folder.
+    """
+    log_header("Setting up GdUnit4 Addon")
+    
+    target_dir = os.path.join(Config.ADDONS_DIR, "gdUnit4")
+    
+    if os.path.exists(target_dir):
+        log_success("GdUnit4 addon is already installed.")
+        return True
+
+    log_info(f"Downloading GdUnit4 v{Config.GDUNIT_VERSION}...")
+    
+    try:
+        # Download into memory
+        with urllib.request.urlopen(Config.URL_GDUNIT) as response:
+            zip_data = response.read()
+        
+        log_substep("Extracting addon to project...")
+        with zipfile.ZipFile(io.BytesIO(zip_data)) as z:
+            # We filter the zip content to find 'addons/gdUnit4' and extract it 
+            # to the correct location stripping the root folder name.
+            for file_info in z.infolist():
+                if "addons/gdUnit4/" in file_info.filename and not file_info.filename.endswith("/"):
+                    # Path splitting to handle zip structure: RootFolder/addons/gdUnit4/...
+                    path_parts = file_info.filename.split("/")
+                    try:
+                        addons_index = path_parts.index("addons")
+                        # Get relative path starting after 'addons' (e.g., gdUnit4/plugin.cfg)
+                        rel_path = os.path.join(*path_parts[addons_index+1:])
+                        dest_path = os.path.join(Config.ADDONS_DIR, rel_path)
+                        
+                        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                        with open(dest_path, "wb") as f:
+                            f.write(z.read(file_info))
+                    except ValueError:
+                        continue
+        
+        log_success("GdUnit4 addon installed successfully.")
+        return True
+
+    except Exception as e:
+        log_error(f"Failed to install GdUnit4: {e}")
+        return False
+
+def setup_godot_editor():
+    """
+    Downloads the Godot Editor executable.
+    """
+    log_header("Setting up Godot Editor")
+    
+    # Determine platform URL and filename
+    base_url = f"https://github.com/godotengine/godot/releases/download/{Config.GODOT_VERSION}/"
+    exe_name = ""
+    download_url = ""
+    
+    if os.name == 'nt':
+        download_url = base_url + f"Godot_v{Config.GODOT_VERSION}_win64.exe.zip"
+        exe_name = f"Godot_v{Config.GODOT_VERSION}_win64.exe"
+    elif sys.platform == 'linux':
+        download_url = base_url + f"Godot_v{Config.GODOT_VERSION}_linux.x86_64.zip"
+        exe_name = f"Godot_v{Config.GODOT_VERSION}_linux.x86_64"
+    elif sys.platform == 'darwin':
+        download_url = base_url + f"Godot_v{Config.GODOT_VERSION}_macos.universal.zip"
+        exe_name = "Godot.app"
+    else:
+        log_error(f"Unsupported platform: {sys.platform}")
+        return False
+
+    final_exe_path = os.path.join(Config.PROJECT_ROOT, exe_name)
+    
+    if os.path.exists(final_exe_path):
+        log_success(f"Found existing Godot executable: {exe_name}")
+        return True
+
+    log_info(f"Downloading Godot {Config.GODOT_VERSION}...")
+    zip_path = os.path.join(Config.PROJECT_ROOT, "godot.zip")
+    
+    if download_file(download_url, zip_path):
+        try:
+            log_substep("Extracting...")
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(Config.PROJECT_ROOT)
+            log_success("Godot Editor installed.")
+            return True
+        except Exception as e:
+            log_error(f"Failed to extract Godot: {e}")
+            return False
+        finally:
+            if os.path.exists(zip_path):
+                os.remove(zip_path)
+    return False
+
+# --- Main Execution ---
+
+def main():
+    print(f"\n{Colors.YELLOW}{Colors.BOLD}Nano Coverage Setup (Host: {platform.system()}){Colors.RESET}")
+    print("---------------------------------------------------------")
+
+    steps = [
+        ("System Dependencies", check_system_dependencies),
+        ("Git Submodules", setup_git_submodules),
+        ("Godot-CPP Version", configure_godot_cpp),
+        ("Google Test", setup_googletest),
+        ("GdUnit4 Addon", setup_gdunit4),
+        ("Godot Editor", setup_godot_editor)
+    ]
+
+    results = []
+    
+    # Execute steps
+    for name, func in steps:
+        try:
+            success = func()
+            results.append((name, success))
+            if not success and name == "System Dependencies":
+                # Critical failure
+                log_error("Critical dependency missing. Stopping setup.")
+                sys.exit(1)
+        except Exception as e:
+            log_error(f"Unexpected error in {name}: {e}")
+            results.append((name, False))
+
+    # Print Summary
+    print("\n---------------------------------------------------------")
+    print(f"{Colors.BOLD}SETUP SUMMARY{Colors.RESET}")
+    print("---------------------------------------------------------")
+    
+    all_passed = True
+    for name, success in results:
+        status = f"{Colors.GREEN}PASS{Colors.RESET}" if success else f"{Colors.RED}FAIL{Colors.RESET}"
+        print(f" {status} : {name}")
+        if not success: all_passed = False
+
+    if all_passed:
+        # Generate build command help
+        scons_cmd = "python -m SCons"
+        flags = ""
+        
+        if os.name == 'nt':
+            flags = " platform=windows"
+            # Hint if using MinGW
+            if shutil.which("g++") and not shutil.which("cl"):
+                flags += " use_mingw=yes"
+        elif sys.platform == 'linux':
+             flags = " platform=linux"
+        elif sys.platform == 'darwin':
+             flags = " platform=macos"
+
+        print("\n---------------------------------------------------------")
+        print(f"{Colors.YELLOW}Environment is ready! You can now build the project.{Colors.RESET}")
+        print(f"Build Command: {Colors.CYAN}{scons_cmd}{flags}{Colors.RESET}")
+        print("---------------------------------------------------------")
+    else:
+        print(f"\n{Colors.RED}Setup completed with errors. Please check the logs above.{Colors.RESET}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
+--- END FILE: scripts/setup.py ---
+
+--- START FILE: scripts/test.py ---
+import os
+import subprocess
+import sys
+import glob
+import argparse
+import build # Import our local build script
+
+# --- CONFIGURATION ---
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+GODOT_PROJECT_DIR = os.path.join(PROJECT_ROOT, "godot_project")
+
+# --- COLORS ---
+os.system('')
+GREEN = '\033[92m'
+RED = '\033[91m'
+RESET = '\033[0m'
+
+def prime_godot_cache(godot_exe):
+    """
+    Runs Godot in headless editor mode briefly to force it to 
+    scan GDExtensions and update the internal class cache (.godot folder).
+    """
+    print(f"{GREEN}[+] Priming Godot Cache...{RESET}")
+    
+    # --headless: No window
+    # --editor: Runs editor logic (scans plugins/extensions)
+    # --quit: Exits immediately after initialization
+    cmd = [
+        godot_exe,
+        "--headless",
+        "--path", GODOT_PROJECT_DIR,
+        "--editor",
+        "--quit"
+    ]
+    
+    try:
+        # We assume success if it exits with 0
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
+        print(f"    {GREEN}Cache updated successfully.{RESET}")
+    except subprocess.CalledProcessError:
+        print(f"    {RED}Warning: Cache priming exited with error. Tests might fail.{RESET}")
+
+def find_godot_executable():
+    """
+    Finds the Godot executable in the project root directory.
+    """
+    patterns = []
+    if os.name == 'nt':
+        patterns = ["Godot_*.exe"]
+    elif sys.platform == 'darwin':
+        patterns = ["Godot.app"] 
+    else:
+        patterns = ["Godot_*.x86_64", "Godot_*.x86_32", "Godot_v*"]
+
+    found = []
+    for p in patterns:
+        found.extend(glob.glob(os.path.join(PROJECT_ROOT, p)))
+
+    if not found:
+        print(f"{RED}[!] Godot executable not found.{RESET}")
+        print("    Please run 'python setup.py' to download it.")
+        sys.exit(1)
+
+    # Pick the latest version found
+    exe = sorted(found)[-1]
+    
+    # MacOS specific handling
+    if sys.platform == 'darwin' and exe.endswith(".app"):
+        exe = os.path.join(exe, "Contents", "MacOS", "Godot")
+        
+    return os.path.abspath(exe)
+
+def main():
+    print(f"\n{GREEN}=== Running Nano Coverage Unit Tests ==={RESET}")
+    
+    # 0. Ensure Debug Build (with Tests) Exists
+    print(f"{GREEN}[+] Verifying Build...{RESET}")
+    
+    # Create a dummy arguments object to pass to build.run_scons
+    class BuildArgs:
+        platform = "auto"
+        target = "template_debug" # Tests are auto-enabled in debug
+        clean = False
+        only_clean = False
+        no_tests = False 
+    
+    try:
+        # This reuses the logic in build.py. 
+        # Because we updated SConstruct to use env.Clone(), 
+        # this will be very fast if no files changed.
+        build.run_scons(BuildArgs())
+    except SystemExit:
+        print(f"{RED}[!] Build Failed. Aborting tests.{RESET}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"{RED}[!] Build Exception: {e}{RESET}")
+        sys.exit(1)
+    
+    godot_exe = find_godot_executable()
+    prime_godot_cache(godot_exe)
+    runner_script_path = os.path.join(GODOT_PROJECT_DIR, "addons", "run_cpp_tests.gd")
+    
+    # 1. Create the temporary GDScript runner
+    # This script instantiates our C++ class and runs the tests
+    gd_script_content = """
+extends SceneTree
+
+func _init():
+    # NanoCoverageTestRunner is registered in register_types.cpp when TESTS_ENABLED is defined
+    var runner = NanoCoverageTestRunner.new()
+    var result = runner.run_all_tests()
+    
+    # Exit with status code (0 = success, 1 = failure)
+    if result == 0:
+        quit(0)
+    else:
+        quit(1)
+"""
+    
+    try:
+        with open(runner_script_path, "w") as f:
+            f.write(gd_script_content)
+
+        # 2. Construct the command
+        cmd = [
+            godot_exe,
+            "--headless",
+            "--path", GODOT_PROJECT_DIR,
+            "--script", "addons/run_cpp_tests.gd"
+        ]
+        
+        print(f"Executing: {' '.join(cmd)}\n")
+        print("-" * 50)
+        
+        # 3. Run Godot and wait for exit
+        # We allow stdout to flow directly to the console so we see GTest output in real-time
+        ret_code = subprocess.call(cmd)
+        print("-" * 50)
+
+        # 4. Check results
+        if ret_code != 0:
+            print(f"\n{RED}❌ TESTS FAILED (Exit Code: {ret_code}){RESET}")
+            sys.exit(ret_code)
+        else:
+            print(f"\n{GREEN}✅ ALL TESTS PASSED{RESET}")
+            sys.exit(0)
+
+    except KeyboardInterrupt:
+        print("\nInterrupted by user.")
+        sys.exit(1)
+    finally:
+        # 5. Cleanup
+        if os.path.exists(runner_script_path):
+            os.remove(runner_script_path)
+
+if __name__ == "__main__":
+    main()
+--- END FILE: scripts/test.py ---
+

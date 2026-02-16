@@ -97,14 +97,27 @@ addon_res_src = Dir("addon_resources")
 # output_dir is ".../bin/", so we go up one level
 addon_root_dir = Dir(output_dir).Dir("..")
 
-# List of files to copy
-# Note: These files must exist in native/addon_resources/
-resource_files = ["plugin.cfg", "plugin.gd", "runtime.gd", "nano_coverage_godot.gdextension"]
+addon_res_src = Dir("addon_resources")
 
-for f in resource_files:
-    # We use the Install command which copies files only if they are newer
-    project_env.Install(addon_root_dir, addon_res_src.File(f))
+# Destination: godot_project/addons/nano_coverage_godot/
+# (output_dir is ".../bin/", so we go up one level)
+addon_root_dir = Dir(output_dir).Dir("..")
 
-# Ensure these copy actions happen when we build the library
+# Recursively copy EVERYTHING from addon_resources to the addon folder
+for root, dirs, files in os.walk(str(addon_res_src)):
+    for file in files:
+        # Full source path (e.g., native/addon_resources/integrations/gdunit4.gd)
+        source_path = os.path.join(root, file)
+        
+        # Relative path (e.g., integrations/gdunit4.gd)
+        rel_path = os.path.relpath(source_path, str(addon_res_src))
+        
+        # Target node (e.g., .../addons/nano_coverage_godot/integrations/gdunit4.gd)
+        target_node = addon_root_dir.File(rel_path)
+        
+        # InstallAs handles the copy and dependency tracking (only copies if newer)
+        project_env.InstallAs(target=target_node, source=source_path)
+
+# Ensure this runs by default
 project_env.Alias("install_resources", addon_root_dir)
 Default("install_resources")
