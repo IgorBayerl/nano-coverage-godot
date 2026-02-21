@@ -1,26 +1,92 @@
-# Godot 4+ specific ignores
+# ------------------------------------------------------------------------------
+# GODOT ENGINE
+# ------------------------------------------------------------------------------
 .godot/
+demo/.godot/
 *.translation
 *.import
 
-# Godot-CPP specific ignores
-native/godot-cpp/gen/
-native/godot-cpp/bin/
-native/godot-cpp/src/gen/
+# Godot Executable (if downloaded locally)
+Godot_*.exe
+Godot_*.zip
+godot.zip
+godot.app
 
-# SCons
+# ------------------------------------------------------------------------------
+# C++ / SCONS BUILD ARTIFACTS
+# ------------------------------------------------------------------------------
+# SCons cache
 .sconsign.dblite
+.scons_env.json
 
-# Compiled Object files
+# Intermediate objects
 *.o
+*.os
 *.obj
 *.a
 *.lib
+*.exp
+*.pdb
+*.ilk
+*.uid
+
+# Compiled Dynamic Libraries
+# (Ignore these so you don't commit binaries, strictly build from source)
 *.so
 *.dylib
 *.dll
-*.exp
-*.pdb
+*.gdextension.zip
+
+# ------------------------------------------------------------------------------
+# DEPENDENCIES (Root Level)
+# ------------------------------------------------------------------------------
+# Godot-CPP generated files (Submodule artifacts)
+godot-cpp/gen/
+godot-cpp/bin/
+godot-cpp/src/gen/
+
+# Thirdparty Downloads
+# (We ignore these because setup.py downloads them. Submodules like tree-sitter are tracked by git automatically)
+thirdparty/googletest/
+
+# ------------------------------------------------------------------------------
+# NANO COVERAGE GODOT (Demo Project)
+# ------------------------------------------------------------------------------
+
+# Ignore the 'gdUnit4' folder in demo (It is a symlink/junction to thirdparty)
+demo/addons/gdUnit4/
+
+# Ignore compiled binaries for YOUR extension
+# We KEEP the script files in demo/addons/nano_coverage_godot/, but ignore the binaries SCons dumps there.
+demo/addons/nano_coverage_godot/bin/
+
+# Test & Coverage Results (Generated during runtime)
+demo/coverage-report/
+demo/coverage-data/
+demo/coverage.lcov
+demo/coverage.meta
+demo/coverage.data
+demo/test_log.txt
+demo/debug_log.txt
+output_report.txt
+demo/reports
+
+# ------------------------------------------------------------------------------
+# DEVELOPMENT / IDE
+# ------------------------------------------------------------------------------
+# VS Code
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Visual Studio / JetBrains
+.idea/
+*.sln
+*.vcxproj
+*.vcxproj.user
+
+# Clang / Compilation databases
+compile_commands.json
 
 # Python
 __pycache__/
@@ -28,76 +94,16 @@ __pycache__/
 *.pyo
 *.pyd
 
-# VS Code
-.vscode/
-!.vscode/c_cpp_properties.json
-
 # OS generated
 .DS_Store
 Thumbs.db
 
-# Binaries
-godot_project/addons/nano_coverage_godot/bin/
-bin/
-native/bin/
+# ------------------------------------------------------------------------------
+# TEMPORARY
+# ------------------------------------------------------------------------------
+# Any temp folders created by your build/test scripts
+instrumented/
+temp_session_test/
+scripts/setup.py
 
-# Godot Executable
-Godot_*.exe
-Godot_*.zip
-godot.zip
-
-
-# SCons / Godot-CPP build artifacts
-*.os
-*.o
-*.obj
-*.a
-*.lib
-
-# Shared Libraries (The final binaries)
-# (Optional: Keep this commented if you WANT to commit the compiled extension)
-# *.dll
-# *.so
-# *.dylib
-# *.gdextension
-
-# Godot 4 Temporary folder
-.godot/
-.scons_env.json
-.sconsign.dblite
-
-# IDEs
-
-.idea/
-*.sln
-*.vcxproj
-*.vcxproj.user
-output_report.txt
-
-
-instrumented
-native/thirdparty/googletest
-compile_commands.json
-native/compile_commands.json
-
-
-# Ignore the test-specific binary in the bin folder
-godot_project/addons/nano_coverage_godot/bin/nano_coverage_tests*
-
-# Ignore object files in the src directory (since we compile in-place effectively)
-native/src/**/*.o
-native/src/**/*.os
-
-godot_project/coverage-report/*
-godot_project/nanovision.exe
-godot_project/coverage.lcov
-
-godot_project/coverage.data
-godot_project/coverage.meta
-godot_project/test_log.txt
-godot_project/coverage-data
-
-# This is generated when running build.py
-godot_project/addons/
-godot_project/debug_log.txt
-godot_project/reports
+demo/nanovision.exe

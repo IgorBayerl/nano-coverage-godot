@@ -31,27 +31,26 @@ import io
 
 class Config:
     # Project Paths
-    # We go up one level from the script location to find the real project root
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
     
-    NATIVE_DIR = os.path.join(PROJECT_ROOT, "native")
-    THIRDPARTY_DIR = os.path.join(NATIVE_DIR, "thirdparty")
-    GODOT_CPP_DIR = os.path.join(NATIVE_DIR, "godot-cpp")
-    ADDONS_DIR = os.path.join(PROJECT_ROOT, "godot_project", "addons")
+    # Updated to match the new flattened structure
+    # 'native' folder is gone, src is at root, but we kept a variable just in case
+    THIRDPARTY_DIR = os.path.join(PROJECT_ROOT, "thirdparty")
+    
+    # Renamed 'godot_project' to 'demo'
+    DEMO_DIR = os.path.join(PROJECT_ROOT, "demo") 
+    ADDONS_DIR = os.path.join(DEMO_DIR, "addons")
 
     # Version Control
     GODOT_VERSION = "4.5-stable"
     GODOT_CPP_TAG = "godot-4.3-stable"
     GTEST_VERSION = "1.14.0"
-    GDUNIT_VERSION = "4.2.0"
-
+    
     # URLs
     URL_GTEST = f"https://github.com/google/googletest/archive/refs/tags/v{GTEST_VERSION}.zip"
-    URL_GDUNIT = f"https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v{GDUNIT_VERSION}.zip"
 
 class Colors:
-    """ANSI Color codes for terminal output."""
     HEADER = '\033[95m'
     BLUE = '\033[94m'
     CYAN = '\033[96m'
@@ -88,8 +87,6 @@ def run_command(command, cwd=None, shell=False):
     Executes a shell command and returns success status.
     """
     try:
-        # On Windows, shell=True is often required for system commands, 
-        # but for direct executable calls, we prefer shell=False where possible.
         use_shell = shell or (os.name == 'nt')
         result = subprocess.run(
             command, 
@@ -123,6 +120,44 @@ def download_file(url, dest_path):
         log_error(f"Download failed: {e}")
         return False
 
+def create_symlink(source, target):
+    """
+    Creates a symlink (Unix) or Directory Junction (Windows) 
+    from source to target.
+    """
+    source = os.path.abspath(source)
+    target = os.path.abspath(target)
+
+    if os.path.exists(target):
+        # Check if it's already a link pointing to the right place
+        if os.path.islink(target) or (os.name == 'nt' and os.path.exists(target)):
+             # Basic check to avoid overwriting valid setups
+             # On Windows os.path.islink is only true for modern symlinks, not junctions usually
+             log_info(f"Target already exists: {os.path.basename(target)}")
+             return True
+        else:
+             log_warning(f"Target exists but is not a link. Backing up...")
+             os.rename(target, target + ".bak")
+
+    # Ensure parent dir exists
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+
+    try:
+        if os.name == 'nt':
+            # Windows: Use mklink /J for Directory Junctions (requires no admin privileges usually)
+            # Python's os.symlink requires Developer Mode on Windows, subprocess mklink is safer.
+            cmd = f'mklink /J "{target}" "{source}"'
+            subprocess.run(cmd, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            # Unix/Linux/Mac
+            os.symlink(source, target)
+        
+        log_success(f"Linked: {os.path.basename(source)} <==> {os.path.basename(target)}")
+        return True
+    except Exception as e:
+        log_error(f"Failed to link {source} to {target}: {e}")
+        return False
+
 # --- Setup Tasks ---
 
 def check_system_dependencies():
@@ -147,19 +182,16 @@ def check_system_dependencies():
     # 2. Check Compiler
     compiler_found = False
     if os.name == 'nt':
-        if shutil.which("g++"):
-            log_success("MinGW (g++) compiler found.")
-            compiler_found = True
-        elif shutil.which("cl"):
-            log_success("MSVC (cl.exe) compiler found.")
+        if shutil.which("g++") or shutil.which("cl"):
+            log_success("Compiler found (MinGW or MSVC).")
             compiler_found = True
     else:
         if shutil.which("g++") or shutil.which("clang++"):
-            log_success("Unix C++ compiler found.")
+            log_success("Compiler found.")
             compiler_found = True
 
     if not compiler_found:
-        log_error("No C++ compiler found (g++, clang++, or MSVC).")
+        log_error("No C++ compiler found (Install Visual Studio or MinGW).")
         return False
 
     return True
@@ -187,16 +219,19 @@ def configure_godot_cpp():
     """
     Ensures godot-cpp is checked out to the correct tag.
     """
-    log_header(f"Configuring godot-cpp ({Config.GODOT_CPP_TAG})")
+    # Look for godot-cpp in root first (new structure), then native (old structure fallback)
+    path = os.path.join(Config.PROJECT_ROOT, "godot-cpp")
+    if not os.path.exists(path):
+        path = os.path.join(Config.PROJECT_ROOT, "native", "godot-cpp")
 
-    if not os.path.exists(Config.GODOT_CPP_DIR):
-        log_error(f"godot-cpp directory not found at {Config.GODOT_CPP_DIR}")
+    log_header(f"Configuring godot-cpp ({Config.GODOT_CPP_TAG})")
+    
+    if not os.path.exists(path):
+        log_error(f"godot-cpp directory not found at {path}")
         return False
 
-    # Fetch tags to ensure we have the specific one
-    run_command(["git", "fetch", "--tags"], cwd=Config.GODOT_CPP_DIR)
-    
-    ok, err = run_command(["git", "checkout", Config.GODOT_CPP_TAG], cwd=Config.GODOT_CPP_DIR)
+    run_command(["git", "fetch", "--tags"], cwd=path)
+    ok, err = run_command(["git", "checkout", Config.GODOT_CPP_TAG], cwd=path)
     if ok:
         log_success(f"godot-cpp locked to tag: {Config.GODOT_CPP_TAG}")
         return True
@@ -206,7 +241,7 @@ def configure_godot_cpp():
 
 def setup_googletest():
     """
-    Downloads and extracts Google Test to native/thirdparty/googletest.
+    Downloads and extracts Google Test to thirdparty/googletest.
     """
     log_header("Setting up Google Test")
     
@@ -246,51 +281,24 @@ def setup_googletest():
                 os.remove(zip_path)
     return False
 
-def setup_gdunit4():
+def setup_gdunit4_symlink():
     """
-    Downloads and installs the GdUnit4 addon into the godot_project/addons folder.
+    Links the gdUnit4 addon from the submodule to the demo project.
     """
-    log_header("Setting up GdUnit4 Addon")
-    
-    target_dir = os.path.join(Config.ADDONS_DIR, "gdUnit4")
-    
-    if os.path.exists(target_dir):
-        log_success("GdUnit4 addon is already installed.")
-        return True
+    log_header("Linking GdUnit4 Addon")
 
-    log_info(f"Downloading GdUnit4 v{Config.GDUNIT_VERSION}...")
+    # Source: thirdparty/gdUnit4/addons/gdUnit4
+    source_path = os.path.join(Config.THIRDPARTY_DIR, "gdUnit4", "addons", "gdUnit4")
     
-    try:
-        # Download into memory
-        with urllib.request.urlopen(Config.URL_GDUNIT) as response:
-            zip_data = response.read()
-        
-        log_substep("Extracting addon to project...")
-        with zipfile.ZipFile(io.BytesIO(zip_data)) as z:
-            # We filter the zip content to find 'addons/gdUnit4' and extract it 
-            # to the correct location stripping the root folder name.
-            for file_info in z.infolist():
-                if "addons/gdUnit4/" in file_info.filename and not file_info.filename.endswith("/"):
-                    # Path splitting to handle zip structure: RootFolder/addons/gdUnit4/...
-                    path_parts = file_info.filename.split("/")
-                    try:
-                        addons_index = path_parts.index("addons")
-                        # Get relative path starting after 'addons' (e.g., gdUnit4/plugin.cfg)
-                        rel_path = os.path.join(*path_parts[addons_index+1:])
-                        dest_path = os.path.join(Config.ADDONS_DIR, rel_path)
-                        
-                        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-                        with open(dest_path, "wb") as f:
-                            f.write(z.read(file_info))
-                    except ValueError:
-                        continue
-        
-        log_success("GdUnit4 addon installed successfully.")
-        return True
+    # Dest: demo/addons/gdUnit4
+    dest_path = os.path.join(Config.ADDONS_DIR, "gdUnit4")
 
-    except Exception as e:
-        log_error(f"Failed to install GdUnit4: {e}")
+    if not os.path.exists(source_path):
+        log_error(f"GdUnit4 submodule source not found at: {source_path}")
+        log_substep("Did you add the submodule correctly?")
         return False
+
+    return create_symlink(source_path, dest_path)
 
 def setup_godot_editor():
     """
@@ -351,7 +359,7 @@ def main():
         ("Git Submodules", setup_git_submodules),
         ("Godot-CPP Version", configure_godot_cpp),
         ("Google Test", setup_googletest),
-        ("GdUnit4 Addon", setup_gdunit4),
+        ("GdUnit4 Link", setup_gdunit4_symlink),
         ("Godot Editor", setup_godot_editor)
     ]
 
@@ -382,23 +390,10 @@ def main():
         if not success: all_passed = False
 
     if all_passed:
-        # Generate build command help
         scons_cmd = "python -m SCons"
-        flags = ""
-        
-        if os.name == 'nt':
-            flags = " platform=windows"
-            # Hint if using MinGW
-            if shutil.which("g++") and not shutil.which("cl"):
-                flags += " use_mingw=yes"
-        elif sys.platform == 'linux':
-             flags = " platform=linux"
-        elif sys.platform == 'darwin':
-             flags = " platform=macos"
-
         print("\n---------------------------------------------------------")
         print(f"{Colors.YELLOW}Environment is ready! You can now build the project.{Colors.RESET}")
-        print(f"Build Command: {Colors.CYAN}{scons_cmd}{flags}{Colors.RESET}")
+        print(f"Build Command: {Colors.CYAN}{scons_cmd}{Colors.RESET}")
         print("---------------------------------------------------------")
     else:
         print(f"\n{Colors.RED}Setup completed with errors. Please check the logs above.{Colors.RESET}")

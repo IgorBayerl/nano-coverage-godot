@@ -1,6 +1,10 @@
-#pragma once
+#ifndef NANO_COVERAGE_TEST_UTILS_H
+#define NANO_COVERAGE_TEST_UTILS_H
+
 #include <filesystem>
+#include <godot_cpp/classes/dir_access.hpp>  // Added for directory operations
 #include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/godot.hpp>  // Ensure core types are available
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/variant/variant.hpp>
 
@@ -30,6 +34,7 @@ class SettingsOverride {
         if (existed) {
             ps->set_setting(key, old_value);
         } else {
+            // Reverting to "undefined" is tricky in Godot, setting to null/empty is best approximation
             ps->set_setting(key, Variant());
         }
     }
@@ -55,3 +60,5 @@ class TestUtils {
 };
 
 }  // namespace godot
+
+#endif  // NANO_COVERAGE_TEST_UTILS_H

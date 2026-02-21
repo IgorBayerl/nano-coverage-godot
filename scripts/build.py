@@ -7,8 +7,7 @@ import multiprocessing
 
 # --- CONFIGURATION ---
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# Assumes 'native' is where your SConstruct file lives
-NATIVE_DIR = os.path.join(PROJECT_ROOT, "native") 
+BUILD_DIR = PROJECT_ROOT 
 
 # --- COLORS ---
 os.system('') # Enable ANSI
@@ -26,58 +25,48 @@ def print_success(msg):   print(f"{GREEN}[✓] {msg}{RESET}")
 def run_scons(args):
     print_step("Preparing Build...")
 
-    # 1. Construct Base Command (Always use python module for reliability)
     cmd = [sys.executable, "-m", "SCons"]
     
-    # 2. Parallel Builds (Use all cores)
     cpu_count = multiprocessing.cpu_count()
     cmd.append(f"-j{cpu_count}")
     print_substep(f"Using {cpu_count} CPU threads")
 
-    # 3. Handle Clean
     if args.clean:
         print_step("Cleaning build targets...")
-        subprocess.run(cmd + ["-c"], cwd=NATIVE_DIR, shell=(os.name == 'nt'))
+        subprocess.run(cmd + ["-c"], cwd=BUILD_DIR, shell=(os.name == 'nt'))
         print_success("Clean complete.")
         if args.only_clean:
             return
 
-    # 4. Platform & Target
     if args.platform != "auto":
         cmd.append(f"platform={args.platform}")
     
     cmd.append(f"target={args.target}")
 
-    # 5. Test Configuration
-    # The SConstruct defaults to 'yes' for template_debug, and 'no' for template_release.
-    # We only need to intervene if the user explicitly wants NO tests.
+    # TEST LOGIC UPDATED
     if args.no_tests:
         print_substep(f"{YELLOW}Forcing tests DISABLED{RESET}")
         cmd.append("build_tests=no")
+    else:
+        # Explicitly enable tests by default
+        cmd.append("build_tests=yes")
 
-    # 6. Smart MinGW Detection (Windows Only)
-    # If we are on Windows, have G++, but NO MSVC (cl.exe), force MinGW.
     if os.name == 'nt':
         has_gpp = shutil.which("g++") is not None
         has_msvc = shutil.which("cl") is not None
-        
         if has_gpp and not has_msvc:
             print_substep(f"{YELLOW}Auto-detected MinGW (no MSVC found). Adding use_mingw=yes{RESET}")
             cmd.append("use_mingw=yes")
 
-    # 7. Debug Symbols
     if args.target == "template_debug":
         cmd.append("debug_symbols=yes")
 
-    # 8. Execute
-    print_step(f"Compiling in {os.path.basename(NATIVE_DIR)}...")
-    # Print the clean command for the user to see
+    print_step(f"Compiling in {os.path.basename(BUILD_DIR) or 'Root'}...")
     display_cmd = " ".join(cmd)
     print_substep(f"{YELLOW}> {display_cmd}{RESET}")
 
     try:
-        # We don't capture output here so the user sees the real-time compilation log
-        subprocess.run(cmd, cwd=NATIVE_DIR, check=True, shell=(os.name == 'nt'))
+        subprocess.run(cmd, cwd=BUILD_DIR, check=True, shell=(os.name == 'nt'))
         print_success("Build Successful!")
     except subprocess.CalledProcessError:
         print_error("Build Failed.")
@@ -89,11 +78,10 @@ def main():
     parser.add_argument("--target", choices=["template_debug", "template_release"], default="template_debug", help="Build target")
     parser.add_argument("--clean", action="store_true", help="Clean before building")
     parser.add_argument("--only-clean", action="store_true", help="Clean and exit")
-    parser.add_argument("--no-tests", action="store_true", help="Force disable unit tests (even in debug)")
+    parser.add_argument("--no-tests", action="store_true", help="Force disable unit tests")
     
     args = parser.parse_args()
     
-    # Header
     print(f"\n{YELLOW}=== Nano Coverage Builder ==={RESET}")
     print_substep(f"Target:   {args.target}")
     print_substep(f"Platform: {args.platform}\n")

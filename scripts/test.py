@@ -16,7 +16,8 @@ import build
 
 # Configuration
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-GODOT_PROJECT_DIR = os.path.join(PROJECT_ROOT, "godot_project")
+# UPDATED: Changed from 'godot_project' to 'demo'
+GODOT_PROJECT_DIR = os.path.join(PROJECT_ROOT, "demo")
 GDUNIT_TEST_DIR = "res://addons/gdUnit4/test/mocker/" # Change to "res://addons/gdUnit4/test/" to run the entire suite
 
 # Formatting
