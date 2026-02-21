@@ -1,17 +1,13 @@
 #!/usr/bin/env python
 import os
-import sys
 
-# 1. Load Godot-CPP
-# We clone the environment so we don't mess up Godot-CPP's internal logic
+# Environment Setup
 env = SConscript("godot-cpp/SConstruct")
 project_env = env.Clone()
 
-# 2. Build Arguments
 build_tests = ARGUMENTS.get("build_tests", "yes")
 
-# 3. Base Configuration
-# Paths are relative to Project Root
+# Include Paths
 project_env.Append(CPPPATH=[
     "src",
     "godot-cpp/include",
@@ -21,56 +17,54 @@ project_env.Append(CPPPATH=[
     "thirdparty/tree-sitter-gdscript/src",
 ])
 
-# 4. Source Collection
+# Source Compilation
 sources = []
 
-# --- Google Test Integration ---
+# Google Test
 if build_tests == "yes":
     print(f"Enabling Tests (build_tests={build_tests})")
     project_env.Append(CPPDEFINES=["TESTS_ENABLED"])
     
-    # Path to the GoogleTest submodule/download
-    # Structure: thirdparty/googletest/googletest/include/gtest/gtest.h
     gtest_root = "thirdparty/googletest/googletest"
     
-    # Add Headers
+    # Add GTest Includes (Root include needed for gtest-all.cc internals)
     project_env.Append(CPPPATH=[
         os.path.join(gtest_root, "include"),
-        gtest_root # <--- CRITICAL FIX: Needed for gtest-all.cc to find internal src files
+        gtest_root 
     ])
     
-    # Add GTest Source (We must compile the library itself)
+    # Compile GTest Library
     sources.append(os.path.join(gtest_root, "src", "gtest-all.cc"))
-    
 else:
     print(f"Disabling Tests (build_tests={build_tests})")
 
-# --- Project Source Collection ---
-# Walk 'src' directory
+# Project Source Files
 for root, dirs, files in os.walk("src"):
     for file in files:
-        if file.endswith(".cpp"):
-            path = os.path.join(root, file).replace("\\", "/")
-            
-            # Logic: If build_tests is 'no', exclude files ending in _test.cpp
-            if build_tests == "no" and ("_test.cpp" in file or file == "test_main.cpp"):
-                continue
-            
-            # Additional check: Don't double-add gtest source if it ended up in src for some reason
-            if "gtest-all.cc" in file:
-                continue
-                
-            sources.append(path)
+        if not file.endswith(".cpp"):
+            continue
 
-# --- Tree Sitter Sources ---
-sources.append("thirdparty/tree-sitter/lib/src/lib.c")
-sources.append("thirdparty/tree-sitter-gdscript/src/parser.c")
+        # Filter tests if disabled
+        if build_tests == "no" and ("_test.cpp" in file or file == "test_main.cpp"):
+            continue
+        
+        # Avoid duplicate inclusion if gtest ends up in src
+        if "gtest-all.cc" in file:
+            continue
+            
+        sources.append(os.path.join(root, file).replace("\\", "/"))
+
+# Tree-sitter Dependencies
+sources.extend([
+    "thirdparty/tree-sitter/lib/src/lib.c",
+    "thirdparty/tree-sitter-gdscript/src/parser.c"
+])
+
 scanner_c = "thirdparty/tree-sitter-gdscript/src/scanner.c"
 if os.path.exists(scanner_c):
     sources.append(scanner_c)
 
-# 5. Compilation output
-# TARGET: Directly into the demo project's addons folder
+# Target Generation
 addon_bin_dir = "demo/addons/nano_coverage_godot/bin/"
 project_env.Execute(Mkdir(addon_bin_dir))
 
@@ -82,6 +76,7 @@ try:
 except KeyError:
     target_name = base_name + ".dll"
 
+# Ensure proper extension for the platform
 shlib_suffix = project_env.subst('$SHLIBSUFFIX')
 if not target_name.endswith(shlib_suffix):
     target_name += shlib_suffix
