@@ -1,0 +1,8 @@
+thirdparty/tree-sitter
+thirdparty/gdUnit4
+thirdparty/tree-sitter-gdscript
+godot-cpp
+cmake-build-debug
+godot_project/addons
+godot_project/logo*
+*.os

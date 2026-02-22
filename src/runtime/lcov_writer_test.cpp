@@ -49,12 +49,12 @@ TEST(LCOVFormatTest, GeneratesValidReport) {
     std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 
     // Check for File A
-    EXPECT_NE(content.find("SF:res://scripts/player.gd"), std::string::npos);
+    EXPECT_NE(content.find("SF:scripts/player.gd"), std::string::npos);
     EXPECT_NE(content.find("DA:10,2"), std::string::npos);
     EXPECT_NE(content.find("DA:15,1"), std::string::npos);
 
     // Check for File B
-    EXPECT_NE(content.find("SF:res://scripts/enemy.gd"), std::string::npos);
+    EXPECT_NE(content.find("SF:scripts/enemy.gd"), std::string::npos);
     EXPECT_NE(content.find("DA:5,1"), std::string::npos);
 
     // Check end_of_record

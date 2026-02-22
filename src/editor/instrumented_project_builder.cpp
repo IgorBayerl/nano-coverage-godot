@@ -25,8 +25,9 @@ namespace fs = std::filesystem;
 // Constants
 const std::array<std::string_view, 8> kMandatoryCopyExtensions = {".gd", ".gdextension", ".cfg", ".dll",
                                                                   ".so", ".dylib",       ".a",   ".lib"};
-const std::array<std::string_view, 2> kCriticalCacheFiles = {"uid_cache.bin", "extension_list.cfg"};
-const char* kAutoloadName = "NanoCoverage";
+const std::array<std::string_view, 3> kCriticalCacheFiles = {"uid_cache.bin", "extension_list.cfg",
+                                                             "global_script_class_cache.cfg"};
+const char* kAutoloadName = "NanoCoverageRuntime";
 const char* kAutoloadPath = "*res://addons/nano_coverage_godot/runtime.gd";
 const char* kAddonPrefix = "addons/nano_coverage_godot/";
 
@@ -219,23 +220,40 @@ void PatchProjectSettings(const fs::path& temp_project_root, const fs::path& ori
 
 }  // namespace
 
-String InstrumentedProjectBuilder::build_instrumented_project() {
+// Helper to check if a path is in the exclusion list
+bool IsExcluded(const std::string& res_path, const std::vector<std::string>& exclusions) {
+    for (const auto& ex : exclusions) {
+        // Simple prefix match.
+        // If ex is "res://addons/gdUnit4", it matches "res://addons/gdUnit4/src/..."
+        if (res_path.find(ex) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+String InstrumentedProjectBuilder::build_instrumented_project(const Dictionary& options) {
+    // 1. Setup Exclusions
+    std::vector<std::string> exclusions;
+    if (options.has("exclude")) {
+        Array ex_array = options["exclude"];
+        for (int i = 0; i < ex_array.size(); i++) {
+            String s = ex_array[i];
+            exclusions.push_back(s.utf8().get_data());
+        }
+    }
+
     // Resolve Paths
     String res_path_gd = ProjectSettings::get_singleton()->globalize_path("res://");
-
-    // Explicitly hold CharString to ensure pointer validity for fs::path
     CharString res_path_utf8 = res_path_gd.utf8();
     fs::path source_root(res_path_utf8.get_data());
-
     fs::path temp_root;
 
-    // Use SettingsGateway for robust fallback and defaults
     CoverageSettings settings = SettingsGateway::load();
     String custom_path_setting = settings.temp_directory;
 
     if (!custom_path_setting.is_empty()) {
         String global_custom = ProjectSettings::get_singleton()->globalize_path(custom_path_setting);
-        // Explicitly hold CharString
         CharString custom_utf8 = global_custom.utf8();
         temp_root = fs::path(custom_utf8.get_data());
     } else {
@@ -251,7 +269,6 @@ String InstrumentedProjectBuilder::build_instrumented_project() {
         fs::remove_all(dest_root, ec);
     fs::create_directories(dest_root, ec);
 
-    // Verify creation
     if (ec) {
         UtilityFunctions::printerr("NanoCoverage: Failed to create temp dir: ", String(dest_root.string().c_str()));
         return "";
@@ -268,37 +285,36 @@ String InstrumentedProjectBuilder::build_instrumented_project() {
         auto target = dest_root / relative;
 
         fs::create_directories(target.parent_path(), ec);
-        if (ec) {
-            std::ofstream debug_file("debug_log.txt", std::ios::app);
-            debug_file << "NanoCoverage: Failed to create directory " << target.parent_path().string()
-                       << ". Error: " << ec.message() << std::endl;
-        }
 
         CopyOrLinkFile(src_path, target);
 
         if (IsCopyMandatory(src_path)) {
-            InstrumentFileIfNeeded(target, relative, global_metadata);
+            // Reconstruct res:// path for checking exclusions
+            std::string rel_str = relative.generic_string();
+            std::string res_path_str = "res://" + rel_str;
+
+            // CHECK EXCLUSION HERE
+            if (!IsExcluded(res_path_str, exclusions)) {
+                InstrumentFileIfNeeded(target, relative, global_metadata);
+            }
         }
     }
 
-    // Sync Cache
+    // Sync Cache (Make sure you still have the kCriticalCacheFiles fix from the previous step!)
     SyncGodotCache(source_root, dest_root);
 
     // Finalize Configuration
     if (fs::exists(dest_root / "project.godot")) {
         PatchProjectSettings(dest_root, source_root);
 
-        // Save Metadata to Disk
         CoverageSettings settings = SettingsGateway::load();
         String data_store_dir = settings.paths_data_store_dir;
-
         String global_data_dir = ProjectSettings::get_singleton()->globalize_path(data_store_dir);
         fs::path meta_dir(global_data_dir.utf8().get_data());
         std::error_code ec_meta;
         fs::create_directories(meta_dir, ec_meta);
 
         fs::path meta_path = meta_dir / "coverage.meta";
-
         UtilityFunctions::print("NanoCoverage: Saving metadata to ", String(meta_path.string().c_str()));
         if (!Persistence::save_metadata(meta_path.string(), global_metadata)) {
             UtilityFunctions::printerr("NanoCoverage: Failed to save coverage.meta!");

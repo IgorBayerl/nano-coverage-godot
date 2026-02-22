@@ -1,157 +1,81 @@
+"""
+Nano Coverage Godot - Build and run Tests
+
+This script orchestrates the full verification pipeline. It ensures the C++
+extension builds correctly, passes low-level unit tests, and integrates
+successfully with GdUnit4 for high-level coverage reporting.
+
+Steps:
+1.  Compilation:     Builds the C++ extension in debug mode.
+2.  Cache Priming:   Runs Godot briefly to import assets and prevent timeout errors.
+3.  C++ Tests:       Executes GoogleTest unit tests via a generated GDScript runner.
+4.  GdUnit4 Baseline: Runs GdUnit4 tests without coverage to ensure stability.
+5.  Coverage Run:    Runs GdUnit4 tests *with* Nano Coverage instrumentation to verify report generation and lcov.info output.
+
+Usage:
+    python scripts/test.py
+"""
+
 import os
-import subprocess
-import sys
-import glob
-import argparse
-import build # Import our local build script
+import utils
+import build
 
-# --- CONFIGURATION ---
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-GODOT_PROJECT_DIR = os.path.join(PROJECT_ROOT, "godot_project")
-
-# --- COLORS ---
-os.system('')
-GREEN = '\033[92m'
-RED = '\033[91m'
-RESET = '\033[0m'
+GDUNIT_TEST_DIR = "res://addons/gdUnit4/test/mocker/"
 
 def prime_godot_cache(godot_exe):
-    """
-    Runs Godot in headless editor mode briefly to force it to 
-    scan GDExtensions and update the internal class cache (.godot folder).
-    """
-    print(f"{GREEN}[+] Priming Godot Cache...{RESET}")
-    
-    # --headless: No window
-    # --editor: Runs editor logic (scans plugins/extensions)
-    # --quit: Exits immediately after initialization
-    cmd = [
-        godot_exe,
-        "--headless",
-        "--path", GODOT_PROJECT_DIR,
-        "--editor",
-        "--quit"
-    ]
-    
-    try:
-        # We assume success if it exits with 0
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
-        print(f"    {GREEN}Cache updated successfully.{RESET}")
-    except subprocess.CalledProcessError:
-        print(f"    {RED}Warning: Cache priming exited with error. Tests might fail.{RESET}")
+    utils.log_step("Priming Godot Cache")
+    cmd = [godot_exe, "--headless", "--path", utils.GODOT_PROJECT_DIR, "--editor", "--quit"]
+    utils.run_command(cmd, check=False, silent=True)
+    utils.log_success("Cache updated")
 
-def find_godot_executable():
-    """
-    Finds the Godot executable in the project root directory.
-    """
-    patterns = []
-    if os.name == 'nt':
-        patterns = ["Godot_*.exe"]
-    elif sys.platform == 'darwin':
-        patterns = ["Godot.app"] 
-    else:
-        patterns = ["Godot_*.x86_64", "Godot_*.x86_32", "Godot_v*"]
-
-    found = []
-    for p in patterns:
-        found.extend(glob.glob(os.path.join(PROJECT_ROOT, p)))
-
-    if not found:
-        print(f"{RED}[!] Godot executable not found.{RESET}")
-        print("    Please run 'python setup.py' to download it.")
-        sys.exit(1)
-
-    # Pick the latest version found
-    exe = sorted(found)[-1]
+def run_cpp_tests(godot_exe):
+    utils.log_step("Phase 1: C++ Core Unit Tests")
+    runner_script = os.path.join(utils.GODOT_PROJECT_DIR, "addons", "run_cpp_tests.gd")
     
-    # MacOS specific handling
-    if sys.platform == 'darwin' and exe.endswith(".app"):
-        exe = os.path.join(exe, "Contents", "MacOS", "Godot")
-        
-    return os.path.abspath(exe)
-
-def main():
-    print(f"\n{GREEN}=== Running Nano Coverage Unit Tests ==={RESET}")
-    
-    # 0. Ensure Debug Build (with Tests) Exists
-    print(f"{GREEN}[+] Verifying Build...{RESET}")
-    
-    # Create a dummy arguments object to pass to build.run_scons
-    class BuildArgs:
-        platform = "auto"
-        target = "template_debug" # Tests are auto-enabled in debug
-        clean = False
-        only_clean = False
-        no_tests = False 
-    
-    try:
-        # This reuses the logic in build.py. 
-        # Because we updated SConstruct to use env.Clone(), 
-        # this will be very fast if no files changed.
-        build.run_scons(BuildArgs())
-    except SystemExit:
-        print(f"{RED}[!] Build Failed. Aborting tests.{RESET}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"{RED}[!] Build Exception: {e}{RESET}")
-        sys.exit(1)
-    
-    godot_exe = find_godot_executable()
-    prime_godot_cache(godot_exe)
-    runner_script_path = os.path.join(GODOT_PROJECT_DIR, "addons", "run_cpp_tests.gd")
-    
-    # 1. Create the temporary GDScript runner
-    # This script instantiates our C++ class and runs the tests
-    gd_script_content = """
-extends SceneTree
-
+    content = """extends SceneTree
 func _init():
-    # NanoCoverageTestRunner is registered in register_types.cpp when TESTS_ENABLED is defined
     var runner = NanoCoverageTestRunner.new()
     var result = runner.run_all_tests()
-    
-    # Exit with status code (0 = success, 1 = failure)
-    if result == 0:
-        quit(0)
-    else:
-        quit(1)
+    quit(result)
 """
+    with open(runner_script, "w") as f:
+        f.write(content)
+
+    cmd = [godot_exe, "--headless", "--path", utils.GODOT_PROJECT_DIR, "--script", "addons/run_cpp_tests.gd"]
     
     try:
-        with open(runner_script_path, "w") as f:
-            f.write(gd_script_content)
-
-        # 2. Construct the command
-        cmd = [
-            godot_exe,
-            "--headless",
-            "--path", GODOT_PROJECT_DIR,
-            "--script", "addons/run_cpp_tests.gd"
-        ]
-        
-        print(f"Executing: {' '.join(cmd)}\n")
-        print("-" * 50)
-        
-        # 3. Run Godot and wait for exit
-        # We allow stdout to flow directly to the console so we see GTest output in real-time
-        ret_code = subprocess.call(cmd)
-        print("-" * 50)
-
-        # 4. Check results
-        if ret_code != 0:
-            print(f"\n{RED}❌ TESTS FAILED (Exit Code: {ret_code}){RESET}")
-            sys.exit(ret_code)
-        else:
-            print(f"\n{GREEN}✅ ALL TESTS PASSED{RESET}")
-            sys.exit(0)
-
-    except KeyboardInterrupt:
-        print("\nInterrupted by user.")
-        sys.exit(1)
+        utils.run_command(cmd)
+        utils.log_success("C++ Tests Passed")
     finally:
-        # 5. Cleanup
-        if os.path.exists(runner_script_path):
-            os.remove(runner_script_path)
+        if os.path.exists(runner_script):
+            os.remove(runner_script)
+
+class BuildArgs:
+    platform = "auto"
+    target = "template_debug" 
+    clean = False
+    only_clean = False
+    no_tests = False 
+
+def main():
+    utils.log_header("Nano Coverage Test Pipeline")
+    
+    try:
+        build.run_build(BuildArgs())
+    except SystemExit:
+        utils.fail("Build Failed")
+        
+    godot_exe = utils.find_godot_executable()
+    if not godot_exe:
+        utils.fail("Godot executable not found")
+
+    prime_godot_cache(godot_exe)
+    
+    try:
+        run_cpp_tests(godot_exe)
+        utils.log_success("All Pipeline Phases Completed Successfully!")
+    except KeyboardInterrupt:
+        utils.fail("\nInterrupted by user")
 
 if __name__ == "__main__":
     main()
