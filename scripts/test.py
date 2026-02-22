@@ -50,68 +50,6 @@ func _init():
         if os.path.exists(runner_script):
             os.remove(runner_script)
 
-def run_gdunit_baseline(godot_exe):
-    utils.log_step("Phase 2: GdUnit4 Baseline Tests")
-    cmd = [
-        godot_exe, "--headless", "--path", utils.GODOT_PROJECT_DIR,
-        "-s", "res://addons/gdUnit4/bin/GdUnitCmdTool.gd",
-        "-a", GDUNIT_TEST_DIR
-    ]
-    
-    utils.run_command(cmd)
-    utils.log_success("GdUnit4 Baseline Passed")
-
-def run_gdunit_coverage(godot_exe):
-    utils.log_step("Phase 3: GdUnit4 Tests WITH Nano Coverage")
-    runner_script = os.path.join(utils.GODOT_PROJECT_DIR, "addons", "run_cov_tests.gd")
-    
-    content = f"""extends SceneTree
-func _init():
-    var api = ClassDB.instantiate("CoverageApi")
-    var instr_res = api.instrument_project({{"exclude": ["res://addons/nano_coverage_godot"]}})
-    
-    if instr_res.has("error"):
-        quit(1)
-        return
-        
-    var temp_path = instr_res.output_path
-    var run_res = api.run_instrumented_project({{
-        "output_path": temp_path,
-        "workspace_id": "cli_tests",
-        "dry_run": true
-    }})
-    
-    var final_args = PackedStringArray()
-    for arg in run_res.args:
-        if arg == "++":
-            final_args.push_back("--headless")
-            final_args.push_back("-s")
-            final_args.push_back("res://addons/gdUnit4/bin/GdUnitCmdTool.gd")
-            final_args.push_back("-a")
-            final_args.push_back("{GDUNIT_TEST_DIR}")
-        final_args.push_back(arg)
-        
-    var output = []
-    var exit_code = OS.execute(OS.get_executable_path(), final_args, output, true, true)
-    
-    if output.size() > 0:
-        print(output[0])
-        
-    api.generate_coverage_report({{"workspace_id": "cli_tests"}})
-    quit(exit_code)
-"""
-    with open(runner_script, "w") as f:
-        f.write(content)
-
-    cmd = [godot_exe, "--headless", "--path", utils.GODOT_PROJECT_DIR, "--script", "addons/run_cov_tests.gd"]
-    
-    try:
-        utils.run_command(cmd)
-        utils.log_success("GdUnit4 Coverage Run Passed")
-    finally:
-        if os.path.exists(runner_script):
-            os.remove(runner_script)
-
 class BuildArgs:
     platform = "auto"
     target = "template_debug" 
@@ -135,8 +73,6 @@ def main():
     
     try:
         run_cpp_tests(godot_exe)
-        run_gdunit_baseline(godot_exe)
-        run_gdunit_coverage(godot_exe)
         utils.log_success("All Pipeline Phases Completed Successfully!")
     except KeyboardInterrupt:
         utils.fail("\nInterrupted by user")

@@ -2,9 +2,9 @@
 extends RefCounted
 ## Integrates NanoCoverage seamlessly into the GdUnit4 Editor UI.
 ##
-## Locates the GdUnit4 Inspector panel and injects a custom coverage execution button.
+## Locates the GdUnit4 Inspector panel and injects custom coverage execution buttons.
 ## When triggered, it intercepts the standard GdUnit4 test session, instruments the
-## project, and reroutes the execution to the temporary instrumented project. 
+## project, and reroutes the execution to the temporary instrumented project.
 ##
 ## It listens to GdUnit4's TCP events to detect when a test session completes, ensuring
 ## the coverage data is safely merged and reported.
@@ -16,6 +16,7 @@ const GDUNIT_SESSION_CLOSE := 9
 
 var _nano_api: Object
 var _run_button: Button
+var _run_all_button: Button
 var _target_toolbar: Control
 var _target_container: Control
 var _is_coverage_run := false
@@ -44,6 +45,10 @@ func disable() -> void:
 	if _run_button:
 		_run_button.queue_free()
 		_run_button = null
+
+	if _run_all_button:
+		_run_all_button.queue_free()
+		_run_all_button = null
 		
 	_target_toolbar = null
 	_target_container = null
@@ -72,10 +77,40 @@ func _inject_ui() -> void:
 	if _run_button:
 		return
 
+	# 1. Create "Run Selected" Button
 	_run_button = Button.new()
+	_apply_button_style(_run_button)
+	_run_button.text = "Cov"
+	_run_button.tooltip_text = "Run Selected Tests with Nano Coverage"
 	
-	# To ensure our button looks exactly like the other GdUnit4 toolbar buttons,
-	# we find a sibling button and copy its style properties.
+	# 2. Create "Run All" Button
+	_run_all_button = Button.new()
+	_apply_button_style(_run_all_button)
+	_run_all_button.text = "All"
+	_run_all_button.tooltip_text = "Run ALL Tests with Nano Coverage"
+
+	var editor_theme := EditorInterface.get_editor_theme()
+	if editor_theme.has_icon("Play", "EditorIcons"):
+		var icon = editor_theme.get_icon("Play", "EditorIcons")
+		_run_button.icon = icon
+		_run_all_button.icon = icon
+		
+	_run_button.pressed.connect(_on_run_pressed)
+	_run_all_button.pressed.connect(_on_run_all_pressed)
+
+	_target_container.add_child(_run_button)
+	_target_container.add_child(_run_all_button)
+	
+	# Move the buttons right next to the standard GdUnit run buttons
+	# We place "All" first, then "Selected" to match standard UI patterns
+	var pos = max(0, _target_container.get_child_count() - 3)
+	_target_container.move_child(_run_all_button, pos)
+	_target_container.move_child(_run_button, pos + 1)
+	
+	print("[NanoCoverage] GdUnit4 UI Integration active.")
+
+func _apply_button_style(btn: Button) -> void:
+	# Match GdUnit Style by copying from a sibling
 	var sibling: Button = null
 	for child in _target_container.get_children():
 		if child is Button:
@@ -83,37 +118,19 @@ func _inject_ui() -> void:
 			break
 	
 	if sibling:
-		# Copy the exact style variation GdUnit is using
-		_run_button.flat = sibling.flat
-		_run_button.theme_type_variation = sibling.theme_type_variation
-		_run_button.focus_mode = sibling.focus_mode
-		_run_button.mouse_default_cursor_shape = sibling.mouse_default_cursor_shape
-		# Ensure alignment matches
-		_run_button.size_flags_vertical = sibling.size_flags_vertical
-		_run_button.size_flags_horizontal = sibling.size_flags_horizontal
-	else:
-		# Fallback default style if no sibling is found
-		_run_button.flat = true
-		_run_button.focus_mode = Control.FOCUS_NONE
+		btn.flat = sibling.flat
+		btn.theme_type_variation = sibling.theme_type_variation
+		btn.focus_mode = sibling.focus_mode
+		btn.mouse_default_cursor_shape = sibling.mouse_default_cursor_shape
+		btn.size_flags_vertical = sibling.size_flags_vertical
+		btn.size_flags_horizontal = sibling.size_flags_horizontal
+		return
 
-	_run_button.text = "Cov"
-	_run_button.tooltip_text = "Run Selected Tests with Nano Coverage"
-	
-	var editor_theme := EditorInterface.get_editor_theme()
-	if editor_theme.has_icon("Play", "EditorIcons"):
-		_run_button.icon = editor_theme.get_icon("Play", "EditorIcons")
-		
-	_run_button.pressed.connect(_on_run_pressed)
-	_target_container.add_child(_run_button)
-	# Move the button right next to the standard GdUnit run buttons
-	_target_container.move_child(_run_button, max(0, _target_container.get_child_count() - 2))
-	
-	print("[NanoCoverage] GdUnit4 UI Integration active.")
+	# Fallback
+	btn.flat = true
+	btn.focus_mode = Control.FOCUS_NONE
 
 func _on_run_pressed() -> void:
-	print("\n--------------------------------------------------")
-	print("[NanoCoverage] Starting GdUnit4 Test Session...")
-	
 	var base_control := EditorInterface.get_base_control()
 	var inspector: Object = base_control.get_meta("GdUnit4Inspector")
 	if not inspector:
@@ -123,6 +140,32 @@ func _on_run_pressed() -> void:
 	var selected_item: TreeItem = inspector._tree.get_selected()
 	var tests_to_execute: Array = inspector.collect_test_cases(selected_item)
 	
+	_run_coverage_session(tests_to_execute)
+
+func _on_run_all_pressed() -> void:
+	# FIX: Instead of passing "res://", we grab the root of the test tree 
+	# and collect actual GdUnitTestCase objects from it.
+	var base_control := EditorInterface.get_base_control()
+	var inspector: Object = base_control.get_meta("GdUnit4Inspector")
+	if not inspector:
+		printerr("[NanoCoverage] Could not find GdUnit4 inspector panel.")
+		return
+	
+	# Access the Tree directly
+	var tree: Tree = inspector._tree
+	if not tree or not tree.get_root():
+		printerr("[NanoCoverage] No tests discovered yet. Please wait for GdUnit to scan.")
+		return
+		
+	var root: TreeItem = tree.get_root()
+	var tests_to_execute: Array = inspector.collect_test_cases(root)
+	
+	_run_coverage_session(tests_to_execute)
+
+func _run_coverage_session(tests_to_execute: Array) -> void:
+	print("\n--------------------------------------------------")
+	print("[NanoCoverage] Starting GdUnit4 Test Session...")
+
 	if tests_to_execute.is_empty():
 		printerr("[NanoCoverage] No tests selected.")
 		return
@@ -135,15 +178,13 @@ func _on_run_pressed() -> void:
 		return
 		
 	# Prepare the test session (Generates GdUnitRunner.cfg and boots TCP server)
+	# Expects Array[GdUnitTestCase]
 	var test_session_command: Object = command_handler.test_session_command
 	test_session_command._prepare_test_session(tests_to_execute)
 	
-	# Instrument Project. 
-	# For regular UI usage, we exclude third-party addons (including GdUnit4) so we don't
-	# pollute the user's coverage report with framework execution data.
+	# Instrument Project
 	var instr_opts := {
 		"exclude": [
-			# "res://addons/gdUnit4",
 			"res://addons/nano_coverage_godot"
 		]
 	}

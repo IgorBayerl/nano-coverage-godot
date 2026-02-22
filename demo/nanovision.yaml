@@ -16,5 +16,7 @@ verbosity: "Info"
 log_format: "text"
 
 ignore_files:
-  - "-vendor/**"
+  - "logo.gd"
+  - "addons/gdUnit4/test/*"
+  - "addons/gdUnit4/bin/*"
   - "-**/*_test.go"

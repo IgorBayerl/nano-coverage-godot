@@ -27,7 +27,7 @@ const std::array<std::string_view, 8> kMandatoryCopyExtensions = {".gd", ".gdext
                                                                   ".so", ".dylib",       ".a",   ".lib"};
 const std::array<std::string_view, 3> kCriticalCacheFiles = {"uid_cache.bin", "extension_list.cfg",
                                                              "global_script_class_cache.cfg"};
-const char* kAutoloadName = "NanoCoverage";
+const char* kAutoloadName = "NanoCoverageRuntime";
 const char* kAutoloadPath = "*res://addons/nano_coverage_godot/runtime.gd";
 const char* kAddonPrefix = "addons/nano_coverage_godot/";
 
