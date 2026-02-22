@@ -73,19 +73,21 @@ jobs:
       - name: Compile Linux
         if: ${{ matrix.platform == 'linux' }}
         run: |
-          # 64-bit x86
+          # Standard x86_64 (Uses default g++)
           scons platform=linux arch=x86_64 target=template_release build_tests=no cache_path=.scons_cache/
-          # 64-bit ARM (Uses the aarch64-linux-gnu-g++ we installed)
-          scons platform=linux arch=arm64 target=template_release build_tests=no cache_path=.scons_cache/
+          
+          # ARM64 (Uses the aarch64 cross-compiler)
+          scons platform=linux arch=arm64 target=template_release build_tests=no cache_path=.scons_cache/ CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++
 
-      # Windows: x86_64 (Standard) + x86_32 (Old PC Support)
+      # Windows: x86_64 (Standard) + x86_32 (32-bit Cross-Compile)
       - name: Compile Windows
         if: ${{ matrix.platform == 'windows' }}
         run: |
-          # 64-bit
+          # Windows 64-bit (MinGW 64)
           scons platform=windows arch=x86_64 target=template_release build_tests=no cache_path=.scons_cache/
-          # 32-bit (Uses i686-w64-mingw32-g++)
-          scons platform=windows arch=x86_32 target=template_release build_tests=no cache_path=.scons_cache/
+          
+          # Windows 32-bit (MinGW 32 - Explicitly use 32-bit compiler)
+          scons platform=windows arch=x86_32 target=template_release build_tests=no cache_path=.scons_cache/ CC=i686-w64-mingw32-gcc CXX=i686-w64-mingw32-g++
 
       # MacOS: x86_64 (Intel) + arm64 (Apple Silicon)
       - name: Compile MacOS
