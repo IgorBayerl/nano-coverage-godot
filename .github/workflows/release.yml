@@ -18,7 +18,7 @@ jobs:
           - platform: linux
             runner: ubuntu-latest
           - platform: windows
-            runner: ubuntu-latest
+            runner: windows-latest
           - platform: macos
             runner: macos-latest
 
@@ -36,69 +36,29 @@ jobs:
           restore-keys: |
             ${{ matrix.platform }}-release-
 
-      # SETUP TOOLS
-
       - name: Setup Python
-        if: ${{ matrix.runner != 'macos-latest' }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
       - name: Install SCons
+        run: pip install scons
+
+      # COMPILE
+
+      - name: Compile (Linux/Windows)
+        if: ${{ matrix.platform != 'macos' }}
+        # Windows runner auto-detects MSVC. Linux runner auto-detects GCC.
         run: |
-          python -m pip install scons
-          if [ "$RUNNER_OS" == "macOS" ]; then
-             brew install scons
-          fi
+          scons platform=${{ matrix.platform }} target=template_release build_tests=no cache_path=.scons_cache/
 
-      # INSTALL COMPILERS
-
-      - name: Install Linux Cross-Compilers
-        if: ${{ matrix.platform == 'linux' }}
-        run: |
-          sudo apt-get update
-          # Install ARM64 compiler for Linux (aarch64)
-          sudo apt-get install -y g++-aarch64-linux-gnu
-
-      - name: Install Windows Cross-Compilers
-        if: ${{ matrix.platform == 'windows' }}
-        run: |
-          sudo apt-get update
-          # MinGW includes both 64-bit and 32-bit compilers
-          sudo apt-get install -y mingw-w64
-
-      # COMPILE (ALL ARCHITECTURES)
-
-      # Linux: x86_64 (Standard) + arm64 (Raspberry Pi/Mobile)
-      - name: Compile Linux
-        if: ${{ matrix.platform == 'linux' }}
-        run: |
-          # Standard x86_64 (Uses default g++)
-          scons platform=linux arch=x86_64 target=template_release build_tests=no cache_path=.scons_cache/
-          
-          # ARM64 (Uses the aarch64 cross-compiler)
-          scons platform=linux arch=arm64 target=template_release build_tests=no cache_path=.scons_cache/ CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++
-
-      # Windows: x86_64 (Standard) + x86_32 (32-bit Cross-Compile)
-      - name: Compile Windows
-        if: ${{ matrix.platform == 'windows' }}
-        run: |
-          # Windows 64-bit (MinGW 64)
-          scons platform=windows arch=x86_64 target=template_release build_tests=no cache_path=.scons_cache/
-          
-          # Windows 32-bit (MinGW 32 - Explicitly use 32-bit compiler)
-          scons platform=windows arch=x86_32 target=template_release build_tests=no cache_path=.scons_cache/ CC=i686-w64-mingw32-gcc CXX=i686-w64-mingw32-g++
-
-      # MacOS: x86_64 (Intel) + arm64 (Apple Silicon)
-      - name: Compile MacOS
+      - name: Compile (MacOS)
         if: ${{ matrix.platform == 'macos' }}
         run: |
-          # Intel Mac
+          # MacOS usually needs both architectures for a universal build
           scons platform=macos arch=x86_64 target=template_release build_tests=no cache_path=.scons_cache/
-          # Silicon Mac
           scons platform=macos arch=arm64 target=template_release build_tests=no cache_path=.scons_cache/
 
-      # 4. UPLOAD
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -129,9 +89,10 @@ jobs:
           cp -r artifacts/lib-windows/* demo/addons/nano_coverage_godot/bin/ || true
           cp -r artifacts/lib-macos/* demo/addons/nano_coverage_godot/bin/ || true
 
-          # Cleanup
+          # Cleanup any temp build files
           rm -f demo/addons/nano_coverage_godot/bin/*.exp
           rm -f demo/addons/nano_coverage_godot/bin/*.lib
+          rm -f demo/addons/nano_coverage_godot/bin/*.pdb
 
           # Zip
           cd demo
