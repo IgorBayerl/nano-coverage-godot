@@ -1,0 +1,126 @@
+name: Create Release
+
+# Trigger manually from the "Actions" tab
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release Version (e.g., v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  # BUILD: Compile for all platforms in parallel
+  build:
+    name: Build ${{ matrix.platform }}
+    strategy:
+      matrix:
+        include:
+          - platform: linux
+            runner: ubuntu-latest
+            container: godotengine/build-containers:linux-x86_64
+          - platform: windows
+            runner: ubuntu-latest
+            container: godotengine/build-containers:windows-x86_64
+          - platform: macos
+            runner: macos-latest
+            container: "" # Mac runs natively
+
+    runs-on: ${{ matrix.runner }}
+    # Only use container if defined (Linux/Windows)
+    container: ${{ matrix.container != '' && matrix.container || null }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Cache
+        uses: actions/cache@v4
+        with:
+          path: .scons_cache/
+          key: ${{ matrix.platform }}-release-${{ github.sha }}
+          restore-keys: |
+            ${{ matrix.platform }}-release-
+
+      - name: Setup Python & SCons (Mac Only)
+        if: ${{ matrix.platform == 'macos' }}
+        run: |
+          brew install python
+          python3 -m pip install scons --break-system-packages
+
+      - name: Compile (Release Mode)
+        # We force target=template_release to ensure optimized, smaller binaries
+        run: |
+          scons platform=${{ matrix.platform }} target=template_release production=yes cache_path=.scons_cache/
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lib-${{ matrix.platform }}
+          # Upload only the compiled binaries
+          path: demo/addons/nano_coverage_godot/bin/
+
+  # Combine binaries into the Asset Lib format
+  package:
+    name: Package Asset
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare Addons Folder
+        run: |
+          # Create the bin directory
+          mkdir -p demo/addons/nano_coverage_godot/bin
+          
+          # Copy compiled libraries from artifacts into the demo folder
+          cp -r artifacts/lib-linux/* demo/addons/nano_coverage_godot/bin/
+          cp -r artifacts/lib-windows/* demo/addons/nano_coverage_godot/bin/
+          cp -r artifacts/lib-macos/* demo/addons/nano_coverage_godot/bin/
+
+          # Clean up unneeded files (like .exp or .lib static refs on Windows)
+          rm -f demo/addons/nano_coverage_godot/bin/*.exp
+          rm -f demo/addons/nano_coverage_godot/bin/*.lib
+
+      - name: Zip for Asset Library
+        run: |
+          # The Asset Library expects the zip to contain the "addons" folder at the root.
+          cd demo
+          zip -r ../nano_coverage_godot_${{ inputs.version }}.zip addons/
+
+      - name: Upload Zip Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-zip
+          path: nano_coverage_godot_${{ inputs.version }}.zip
+
+  # RELEASE: Create a Draft Release on GitHub
+  release:
+    name: Create Draft Release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to create releases
+    steps:
+      - name: Download Zip
+        uses: actions/download-artifact@v4
+        with:
+          name: final-zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ inputs.version }}
+          name: NanoCoverage ${{ inputs.version }}
+          draft: true
+          prerelease: false
+          files: nano_coverage_godot_${{ inputs.version }}.zip
+          generate_release_notes: true
