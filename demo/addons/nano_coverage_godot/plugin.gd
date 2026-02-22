@@ -1,50 +1,56 @@
 @tool
 extends EditorPlugin
 
-var plugin_instance
+var _plugin_instance
 var _integration_manager
 
-func _enter_tree():
-	print("--- 🔌 NanoCoverage Plugin Loading ---")
-	
-	# 1. Instantiate C++ Plugin
-	if ClassDB.class_exists("NanoCoverageEditorPlugin"):
-		plugin_instance = ClassDB.instantiate("NanoCoverageEditorPlugin")
-		add_child(plugin_instance)
-		print("✅ C++ Editor Plugin instantiated")
-	else:
-		printerr("❌ Error: NanoCoverageEditorPlugin class not found!")
 
-	# 2. Check CoverageApi
-	if not ClassDB.class_exists("CoverageApi"):
-		printerr("❌ Error: CoverageApi class not found in ClassDB!")
+func _enter_tree() -> void:
+	print("NanoCoverage Plugin Loading")
+
+	# Instantiate C++ Plugin
+	if not ClassDB.class_exists("NanoCoverageEditorPlugin"):
+		printerr("Error: NanoCoverageEditorPlugin class not found!")
 		return
-	
+
+	_plugin_instance = ClassDB.instantiate("NanoCoverageEditorPlugin")
+	add_child(_plugin_instance)
+	print("C++ Editor Plugin instantiated")
+
+	# Check CoverageApi
+	if not ClassDB.class_exists("CoverageApi"):
+		printerr("Error: CoverageApi class not found in ClassDB!")
+		return
+
 	var api = ClassDB.instantiate("CoverageApi")
 	if not api:
-		printerr("❌ Error: Failed to instantiate CoverageApi")
+		printerr("Error: Failed to instantiate CoverageApi")
 		return
-	print("✅ CoverageApi instantiated")
+	
+	print("CoverageApi instantiated")
 
-	# 3. Load Integration Manager Script
+	# Load Integration Manager Script
 	var manager_path = "res://addons/nano_coverage_godot/integrations/integration_manager.gd"
 	if not FileAccess.file_exists(manager_path):
-		printerr("❌ Error: Integration Manager file missing at: ", manager_path)
+		printerr("Error: Integration Manager file missing at: ", manager_path)
 		return
-		
-	var ManagerScript = load(manager_path)
-	if not ManagerScript:
-		printerr("❌ Error: Failed to load Integration Manager script (Check for syntax errors in integration_manager.gd)")
-		return
-		
-	# 4. Initialize Manager
-	_integration_manager = ManagerScript.new(api)
-	print("✅ Integration Manager initialized")
 
-func _exit_tree():
+	var manager_script = load(manager_path)
+	if not manager_script:
+		printerr("Error: Failed to load Integration Manager script")
+		return
+
+	# Initialize Manager
+	_integration_manager = manager_script.new(api)
+	print("Integration Manager initialized")
+
+
+func _exit_tree() -> void:
 	if _integration_manager:
 		_integration_manager.clean_up()
-	if plugin_instance:
-		remove_child(plugin_instance)
-		plugin_instance.queue_free()
-		plugin_instance = null
+		_integration_manager = null
+
+	if _plugin_instance:
+		remove_child(_plugin_instance)
+		_plugin_instance.queue_free()
+		_plugin_instance = null
