@@ -15,13 +15,10 @@ jobs:
     strategy:
       matrix:
         include:
-          # Linux
           - platform: linux
             runner: ubuntu-latest
-          # Windows (Cross-compile on Linux)
           - platform: windows
             runner: ubuntu-latest
-          # MacOS
           - platform: macos
             runner: macos-latest
 
@@ -39,7 +36,7 @@ jobs:
           restore-keys: |
             ${{ matrix.platform }}-release-
 
-      # --- SETUP ---
+      # SETUP TOOLS
 
       - name: Setup Python
         if: ${{ matrix.runner != 'macos-latest' }}
@@ -54,19 +51,52 @@ jobs:
              brew install scons
           fi
 
-      - name: Install MinGW (Windows Build)
+      # INSTALL COMPILERS
+
+      - name: Install Linux Cross-Compilers
+        if: ${{ matrix.platform == 'linux' }}
+        run: |
+          sudo apt-get update
+          # Install ARM64 compiler for Linux (aarch64)
+          sudo apt-get install -y g++-aarch64-linux-gnu
+
+      - name: Install Windows Cross-Compilers
         if: ${{ matrix.platform == 'windows' }}
         run: |
           sudo apt-get update
+          # MinGW includes both 64-bit and 32-bit compilers
           sudo apt-get install -y mingw-w64
 
-      # --- BUILD ---
+      # COMPILE (ALL ARCHITECTURES)
 
-      - name: Compile Extension
+      # Linux: x86_64 (Standard) + arm64 (Raspberry Pi/Mobile)
+      - name: Compile Linux
+        if: ${{ matrix.platform == 'linux' }}
         run: |
-          # Now ${{ matrix.platform }} is 'macos', which SCons accepts
-          scons platform=${{ matrix.platform }} target=template_release build_tests=no cache_path=.scons_cache/
+          # 64-bit x86
+          scons platform=linux arch=x86_64 target=template_release build_tests=no cache_path=.scons_cache/
+          # 64-bit ARM (Uses the aarch64-linux-gnu-g++ we installed)
+          scons platform=linux arch=arm64 target=template_release build_tests=no cache_path=.scons_cache/
 
+      # Windows: x86_64 (Standard) + x86_32 (Old PC Support)
+      - name: Compile Windows
+        if: ${{ matrix.platform == 'windows' }}
+        run: |
+          # 64-bit
+          scons platform=windows arch=x86_64 target=template_release build_tests=no cache_path=.scons_cache/
+          # 32-bit (Uses i686-w64-mingw32-g++)
+          scons platform=windows arch=x86_32 target=template_release build_tests=no cache_path=.scons_cache/
+
+      # MacOS: x86_64 (Intel) + arm64 (Apple Silicon)
+      - name: Compile MacOS
+        if: ${{ matrix.platform == 'macos' }}
+        run: |
+          # Intel Mac
+          scons platform=macos arch=x86_64 target=template_release build_tests=no cache_path=.scons_cache/
+          # Silicon Mac
+          scons platform=macos arch=arm64 target=template_release build_tests=no cache_path=.scons_cache/
+
+      # 4. UPLOAD
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
