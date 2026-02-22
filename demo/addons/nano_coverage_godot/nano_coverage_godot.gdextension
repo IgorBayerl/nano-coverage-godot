@@ -5,20 +5,12 @@ compatibility_minimum = "4.1"
 
 [libraries]
 
-# WINDOWS (64-bit and 32-bit)
-windows.debug.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.windows.template_debug.x86_64.dll"
+# WINDOWS
 windows.release.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.windows.template_release.x86_64.dll"
-windows.debug.x86_32 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.windows.template_debug.x86_32.dll"
-windows.release.x86_32 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.windows.template_release.x86_32.dll"
 
-# LINUX (x86_64 and ARM64)
-linux.debug.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.linux.template_debug.x86_64.so"
-linux.release.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.linux.template_release.x86_64.so"
-linux.debug.arm64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.linux.template_debug.arm64.so"
-linux.release.arm64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.linux.template_release.arm64.so"
+# LINUX
+linux.release.x86_64 = "res://addons/nano_coverage_godot/bin/libnano_coverage_godot.linux.template_release.x86_64.so"
 
-# MACOS (Intel and Apple Silicon)
-macos.debug.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.macos.template_debug.x86_64.dylib"
-macos.release.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.macos.template_release.x86_64.dylib"
-macos.debug.arm64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.macos.template_debug.arm64.dylib"
-macos.release.arm64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.macos.template_release.arm64.dylib"
+# MACOS
+macos.release.x86_64 = "res://addons/nano_coverage_godot/bin/libnano_coverage_godot.macos.template_release.x86_64.dylib"
+macos.release.arm64 = "res://addons/nano_coverage_godot/bin/libnano_coverage_godot.macos.template_release.arm64.dylib"
