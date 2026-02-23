@@ -14,16 +14,21 @@ TEST(CoverageApiTest, ContractTest) {
 
     ASSERT_TRUE(api.is_valid());
 
-    // Test instrument_project
-    Dictionary instr_opts;
-    Dictionary instr_result = api->instrument_project(instr_opts);
+    // Test instrument_script
+    String source_code = "func foo():\n\tpass";
+    String file_path = "res://foo.gd";
+    Dictionary instr_result = api->instrument_script(source_code, file_path);
 
     // Verify success immediately
-    ASSERT_FALSE(instr_result.has("error"))
+    ASSERT_TRUE(bool(instr_result.get("success", false)))
         << "Instrumentation failed: " << String(instr_result.get("error", "")).utf8().get_data();
 
-    ASSERT_TRUE(instr_result.has("output_path")) << "instrument_project missing output_path";
-    String output_path = instr_result["output_path"];
+    ASSERT_TRUE(instr_result.has("code")) << "instrument_script missing code";
+    ASSERT_TRUE(instr_result.has("lines")) << "instrument_script missing lines";
+
+    api->save_static_metadata();
+
+    String output_path = "res://";
 
     // Test run_instrumented_project
     Dictionary run_opts;

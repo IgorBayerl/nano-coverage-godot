@@ -11,7 +11,7 @@
 
 #include "../config/settings_gateway.h"
 #include "../data/persistence.h"
-#include "../editor/instrumented_project_builder.h"
+#include "../instrumentation/instrumenter.h"
 #include "../runtime/coverage_collector.h"
 #include "../runtime/coverage_store.h"
 #include "../runtime/lcov_writer.h"
@@ -19,23 +19,53 @@
 namespace godot {
 
 void CoverageApi::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("instrument_project", "options"), &CoverageApi::instrument_project);
+    ClassDB::bind_method(D_METHOD("instrument_script", "source_code", "file_path"), &CoverageApi::instrument_script);
+    ClassDB::bind_method(D_METHOD("save_static_metadata"), &CoverageApi::save_static_metadata);
     ClassDB::bind_method(D_METHOD("run_instrumented_project", "options"), &CoverageApi::run_instrumented_project);
     ClassDB::bind_method(D_METHOD("generate_coverage_report", "options"), &CoverageApi::generate_coverage_report);
     ClassDB::bind_method(D_METHOD("clear_coverage_data", "options"), &CoverageApi::clear_coverage_data);
 }
 
-Dictionary CoverageApi::instrument_project(const Dictionary& options) {
-    String output_path = InstrumentedProjectBuilder::build_instrumented_project(options);
-
+Dictionary CoverageApi::instrument_script(const String& source_code, const String& file_path) {
     Dictionary result;
-    if (output_path.is_empty()) {
-        result["error"] = "Failed to create temp project";
+
+    std::string res_path_std = file_path.utf8().get_data();
+    std::string source_std = source_code.utf8().get_data();
+
+    godot::InstrumentResult inst_res = Instrumenter::instrument_text(source_std, res_path_std);
+
+    if (!inst_res.ok) {
+        result["success"] = false;
+        result["error"] = String(inst_res.error_message.c_str());
         return result;
     }
 
-    result["output_path"] = output_path;
+    // Accumulate metadata
+    session_metadata[res_path_std] = inst_res.covered_lines;
+
+    Array covered_lines_arr;
+    for (uint32_t line : inst_res.covered_lines) {
+        covered_lines_arr.push_back((int)line);
+    }
+
+    result["success"] = true;
+    result["code"] = String(inst_res.instrumented_code.c_str());
+    result["lines"] = covered_lines_arr;
+
     return result;
+}
+
+void CoverageApi::save_static_metadata() {
+    CoverageSettings settings = SettingsGateway::load();
+    String data_store_dir = settings.paths_data_store_dir;
+    String global_data_dir = ProjectSettings::get_singleton()->globalize_path(data_store_dir);
+
+    if (!DirAccess::dir_exists_absolute(global_data_dir)) {
+        DirAccess::make_dir_recursive_absolute(global_data_dir);
+    }
+
+    String meta_path_godot = global_data_dir.path_join("coverage.meta");
+    Persistence::save_metadata(meta_path_godot.utf8().get_data(), session_metadata);
 }
 
 Dictionary CoverageApi::run_instrumented_project(const Dictionary& options) {

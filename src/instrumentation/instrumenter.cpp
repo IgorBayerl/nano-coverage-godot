@@ -2,15 +2,12 @@
 
 #include <cstdlib>
 #include <filesystem>
-#include <fstream>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "rewriter.h"
-#include "source_reader.h"
-
 extern "C" {
 #include <tree_sitter/api.h>
 const TSLanguage* tree_sitter_gdscript(void);
@@ -21,14 +18,6 @@ namespace godot {
 static bool is_debug_enabled() {
     const char* v = std::getenv("NANO_COVERAGE_DEBUG");
     return v && *v && std::string_view(v) != "0";
-}
-
-static bool write_all_bytes(const std::filesystem::path& p, const std::string& data) {
-    std::ofstream f(p, std::ios::binary | std::ios::trunc);
-    if (!f.is_open())
-        return false;
-    f.write(data.data(), (std::streamsize)data.size());
-    return true;
 }
 
 static size_t find_line_start(const std::string& src, size_t byte_pos) {
@@ -237,50 +226,6 @@ InstrumentResult Instrumenter::instrument_text(const std::string& utf8_code, con
 
     result.ok = true;
     return result;
-}
-
-bool Instrumenter::instrument_file(const String& path, const String& res_path, std::vector<uint32_t>* out_lines,
-                                   int* out_insertions) {
-    if (out_lines)
-        out_lines->clear();
-    if (out_insertions)
-        *out_insertions = 0;
-
-    NanoCoverage::ReadTextResult read_res = NanoCoverage::SourceReader::read_text_file(path.utf8().get_data());
-    if (!read_res.ok) {
-        UtilityFunctions::printerr("NanoCoverage: failed to read: ", path);
-        return false;
-    }
-
-    std::string res_path_std = res_path.utf8().get_data();
-    InstrumentResult inst_res = instrument_text(read_res.content, res_path_std);
-
-    if (!inst_res.ok) {
-        UtilityFunctions::printerr("NanoCoverage: instrumentation failed for: ", path,
-                                   " error: ", String(inst_res.error_message.c_str()));
-        return false;
-    }
-
-    if (out_lines) {
-        *out_lines = inst_res.covered_lines;
-    }
-    if (out_insertions) {
-        *out_insertions = inst_res.insertions;
-    }
-
-    if (inst_res.insertions == 0 && read_res.content == inst_res.instrumented_code) {
-        return true;
-    }
-
-    if (inst_res.insertions > 0) {
-        std::filesystem::path fs_path(path.utf8().get_data());
-        if (!write_all_bytes(fs_path, inst_res.instrumented_code)) {
-            UtilityFunctions::printerr("NanoCoverage: failed to write: ", path);
-            return false;
-        }
-    }
-
-    return true;
 }
 
 }  // namespace godot

@@ -130,22 +130,12 @@ void NanoCoverageEditorPlugin::_on_run_instrumented_pressed() {
         log_poll_timer->stop();
     }
 
-    Dictionary instr_opts;
-    Dictionary instr_result = coverage_api->instrument_project(instr_opts);
-
-    if (instr_result.has("error")) {
-        UtilityFunctions::printerr("NanoCoverage: Instrumentation failed: ", instr_result["error"]);
-        return;
-    }
-
-    String output_path = instr_result["output_path"];
-
     Dictionary run_opts;
-    run_opts["output_path"] = output_path;
+    run_opts["output_path"] = "res://";
     run_opts["workspace_id"] = "default";
     run_opts["blocking"] = false;  // Non-blocking so we can tail logs
 
-    UtilityFunctions::print("NanoCoverage: Launching instrumented project...");
+    UtilityFunctions::print("NanoCoverage: Launching project with coverage...");
     Dictionary run_result = coverage_api->run_instrumented_project(run_opts);
 
     if (run_result.has("error")) {

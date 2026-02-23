@@ -11,7 +11,6 @@
 #include "../config/settings_gateway.h"
 #include "../data/persistence.h"
 #include "../instrumentation/instrumenter.h"
-#include "../instrumentation/source_reader.h"
 #include "lcov_writer.h"
 
 namespace godot {

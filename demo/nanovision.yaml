@@ -8,9 +8,8 @@ source_dirs:
 output_dir: "coverage-report"
 
 report_types:
-  - "Html"
+  - "HtmlUnified"
   - "TextSummary"
-  - "Lcov"
 
 verbosity: "Info"
 log_format: "text"

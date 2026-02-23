@@ -1,0 +1,7 @@
+extends RefCounted
+
+func foo():
+    var x = 10
+    if x > 5:
+        return 1
+    return 0
