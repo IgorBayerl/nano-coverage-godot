@@ -30,23 +30,6 @@ TEST(CoverageApiTest, ContractTest) {
 
     String output_path = "res://";
 
-    // Test run_instrumented_project
-    Dictionary run_opts;
-    run_opts["output_path"] = output_path;
-    run_opts["workspace_id"] = "test_workspace";
-    run_opts["blocking"] = false;
-    run_opts["dry_run"] = true;
-
-    Dictionary run_result = api->run_instrumented_project(run_opts);
-    EXPECT_TRUE(run_result.has("args"));
-    EXPECT_TRUE(run_result.has("run_id"));
-    EXPECT_TRUE(run_result.has("expected_output_file"));
-
-    // VERIFY LOG FILE RETURN
-    EXPECT_TRUE(run_result.has("log_file")) << "API should return log_file path for tailing";
-    String log_file = run_result["log_file"];
-    EXPECT_FALSE(log_file.is_empty());
-    EXPECT_TRUE(log_file.ends_with(".log"));
 
     // Test generate_coverage_report
     // Must run before clearing data, as it requires coverage.meta

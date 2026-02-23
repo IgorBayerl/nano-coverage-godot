@@ -19,6 +19,14 @@ config/icon="res://logo.svg"
 
 enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/nano_coverage_godot/plugin.cfg")
 
+[gdunit4]
+
+settings/test/test_hooks=["res://addons/nano_coverage_godot/integrations/gdunit_hook.gd"]
+hooks/session_hooks=Dictionary[String, bool]({
+"res://addons/gdUnit4/src/core/hooks/GdUnitHtmlReporterTestSessionHook.gd": true,
+"res://addons/gdUnit4/src/core/hooks/GdUnitXMLReporterTestSessionHook.gd": true
+})
+
 [nano_coverage]
 
 integrations/gdunit4/active=true

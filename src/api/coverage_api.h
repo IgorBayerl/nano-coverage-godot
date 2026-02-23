@@ -22,10 +22,7 @@ class CoverageApi : public RefCounted {
     /// Saves the accumulated metadata to coverage.meta
     void save_static_metadata();
 
-    /// Runs the instrumented project.
-    /// Expects options: { "output_path": ..., "workspace_id": ..., "blocking": bool }
-    /// Returns: { "pid": ..., "output_file": ... }
-    Dictionary run_instrumented_project(const Dictionary& options);
+
 
     /// Generates the LCOV report from collected run data.
     /// Expects options: { "workspace_id": ... }
