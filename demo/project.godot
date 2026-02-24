@@ -21,11 +21,26 @@ enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/nano_
 
 [gdunit4]
 
-settings/test/test_hooks=["res://addons/nano_coverage_godot/integrations/gdunit_hook.gd"]
+settings/test/test_hooks=[]
 hooks/session_hooks=Dictionary[String, bool]({
 "res://addons/gdUnit4/src/core/hooks/GdUnitHtmlReporterTestSessionHook.gd": true,
-"res://addons/gdUnit4/src/core/hooks/GdUnitXMLReporterTestSessionHook.gd": true
+"res://addons/gdUnit4/src/core/hooks/GdUnitXMLReporterTestSessionHook.gd": true,
+"res://addons/nano_coverage_godot/integrations/gdunit_hook.gd": true
 })
+report/godot/push_error=false
+report/godot/script_error=true
+settings/test/flaky_check_enable=false
+settings/test/test_suite_naming_convention=0
+report/assert/strict_number_type_compare=true
+templates/testsuite/GDScript="# GdUnit generated TestSuite
+class_name ${suite_class_name}
+extends GdUnitTestSuite
+@warning_ignore('unused_parameter')
+@warning_ignore('return_value_discarded')
+
+# TestSuite generated from
+const __source: String = '${source_resource_path}'
+"
 
 [nano_coverage]
 

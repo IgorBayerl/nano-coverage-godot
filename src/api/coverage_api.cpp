@@ -39,7 +39,17 @@ Dictionary CoverageApi::instrument_script(const String& source_code, const Strin
         return result;
     }
 
-    // Accumulate metadata
+    // --- Ignore files with 0 coverable lines ---
+    // TODO: Fix, we should have a struct to hold this info
+    if (inst_res.covered_lines.empty()) {
+        result["success"] = true;
+        result["code"] = source_code; // Return the original, unmodified code
+        result["lines"] = Array();
+        result["ignored"] = true;     // Flag to tell GDScript not to reload it
+        return result;
+    }
+
+    // Accumulate metadata (only for files with > 0 coverable lines)
     session_metadata[res_path_std] = inst_res.covered_lines;
 
     Array covered_lines_arr;
@@ -50,6 +60,7 @@ Dictionary CoverageApi::instrument_script(const String& source_code, const Strin
     result["success"] = true;
     result["code"] = String(inst_res.instrumented_code.c_str());
     result["lines"] = covered_lines_arr;
+    result["ignored"] = false;
 
     return result;
 }
@@ -66,7 +77,6 @@ void CoverageApi::save_static_metadata() {
     String meta_path_godot = global_data_dir.path_join("coverage.meta");
     Persistence::save_metadata(meta_path_godot.utf8().get_data(), session_metadata);
 }
-
 
 Dictionary CoverageApi::generate_coverage_report(const Dictionary& options) {
     Dictionary result;
@@ -92,7 +102,7 @@ Dictionary CoverageApi::generate_coverage_report(const Dictionary& options) {
     // Construct path using Godot String to handle separators gracefully on all OS
     String meta_path_godot = data_store_base.path_join("coverage.meta");
 
-    // Use Persistence directly (std::ifstream) to check/load, avoiding FileAccess inconsistency with absolute paths
+    // Use Persistence directly (std::ifstream) to check/load
     if (!Persistence::load_metadata(meta_path_godot.utf8().get_data(), meta)) {
         UtilityFunctions::printerr("NanoCoverage: Failed to load coverage.meta from ", meta_path_godot);
         result["error"] = "Metadata file missing or unreadable. Did you run instrumentation?";
@@ -102,6 +112,7 @@ Dictionary CoverageApi::generate_coverage_report(const Dictionary& options) {
     // Merge Hits into Metadata
     CoverageData final_data;
 
+    // Because we skipped 0-line files during static analysis, `meta` only contains files that actually have code!
     for (const auto& meta_kv : meta) {
         const std::string& file_path = meta_kv.first;
         const std::vector<uint32_t>& coverable_lines = meta_kv.second;
@@ -120,7 +131,6 @@ Dictionary CoverageApi::generate_coverage_report(const Dictionary& options) {
                     count = hit_line_it->second;
                 }
             }
-            // Assign count (0 if not found, >0 if found)
             file_lines[line] = count;
         }
     }
