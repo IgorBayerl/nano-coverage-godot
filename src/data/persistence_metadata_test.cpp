@@ -47,8 +47,8 @@ TEST(NanoCoverageTest, ReportsZeroHitLinesFromMetadata) {
     // Configure Settings using RAII Helper
     SettingsOverride s1("nano_coverage/source_root", report_dir);
     SettingsOverride s2("nano_coverage/output_dir", report_dir);
-    SettingsOverride s3(SettingsKeys::PATHS_REPORT_DIR, report_dir);
-    SettingsOverride s4(SettingsKeys::PATHS_DATA_STORE_DIR, report_dir);
+    SettingsOverride s3(SettingsKeys::REPORT_DIR, report_dir);
+    SettingsOverride s4(SettingsKeys::DATA_STORE_DIR, report_dir);
 
     cov->save_session();
 

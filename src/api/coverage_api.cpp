@@ -67,7 +67,7 @@ Dictionary CoverageApi::instrument_script(const String& source_code, const Strin
 
 void CoverageApi::save_static_metadata() {
     CoverageSettings settings = SettingsGateway::load();
-    String data_store_dir = settings.paths_data_store_dir;
+    String data_store_dir = settings.data_store_dir;
     String global_data_dir = ProjectSettings::get_singleton()->globalize_path(data_store_dir);
 
     if (!DirAccess::dir_exists_absolute(global_data_dir)) {
@@ -86,7 +86,7 @@ Dictionary CoverageApi::clear_coverage_data(const Dictionary& options) {
     Dictionary result;
     String workspace_id = options.get("workspace_id", "default");
     CoverageSettings settings = SettingsGateway::load();
-    String data_store_dir = settings.paths_data_store_dir;
+    String data_store_dir = settings.data_store_dir;
 
     String data_store_base = ProjectSettings::get_singleton()->globalize_path(data_store_dir);
 

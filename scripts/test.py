@@ -20,7 +20,7 @@ import sys
 import utils
 import build
 
-GDUNIT_TEST_TARGET = "res://addons/gdUnit4/test"
+GDUNIT_TEST_TARGET = "res://addons/gdUnit4/test/mocker"
 
 def prime_godot_cache(godot_exe):
     utils.log_step("Priming Godot Cache")

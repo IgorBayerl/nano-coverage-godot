@@ -17,7 +17,7 @@ Dictionary ReportGenerator::generate(const Dictionary& options) {
     String workspace_id = options.get("workspace_id", "default");
 
     CoverageSettings settings = SettingsGateway::load();
-    String data_store_dir = settings.paths_data_store_dir;
+    String data_store_dir = settings.data_store_dir;
 
     String data_store_base = ProjectSettings::get_singleton()->globalize_path(data_store_dir);
 
@@ -71,7 +71,7 @@ Dictionary ReportGenerator::generate(const Dictionary& options) {
     LCOVWriter::write_lcov_report(final_data, settings);
 
     result["status"] = "ok";
-    result["report_path"] = settings.paths_report_dir;
+    result["report_path"] = settings.report_dir;
 
     return result;
 }

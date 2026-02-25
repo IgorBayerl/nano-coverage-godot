@@ -85,18 +85,14 @@ void NanoCoverageEditorPlugin::_exit_tree() {
 }
 
 void NanoCoverageEditorPlugin::_update_visibility() {
-    CoverageSettings settings = SettingsGateway::load();
-
-    bool show_all = settings.ui_show_all_buttons;
-
     if (run_instrumented_button) {
-        run_instrumented_button->set_visible(show_all || settings.ui_show_run_instrumented_button);
+        run_instrumented_button->set_visible(true);
     }
     if (generate_report_button) {
-        generate_report_button->set_visible(show_all || settings.ui_show_generate_report_button);
+        generate_report_button->set_visible(true);
     }
     if (clear_data_button) {
-        clear_data_button->set_visible(show_all || settings.ui_show_clear_data_button);
+        clear_data_button->set_visible(true);
     }
 }
 

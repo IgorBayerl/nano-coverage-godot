@@ -10,7 +10,8 @@ func startup(session: GdUnitTestSession) -> GdUnitResult:
 	var api = CoverageApi.new()
 	api.clear_coverage_data({"workspace_id": "gdunit4"})
 	
-	NanoCoverageBootstrap.instrument_all_scripts()
+	var bootstrapper = ProjectBootstrapper.new()
+	bootstrapper.instrument_all_scripts()
 	
 	print("[NanoCoverage] Instrumentation complete. Yielding to GdUnit4 tests.\n")
 	session.send_message("Instrumentation complete. Yielding to tests.")

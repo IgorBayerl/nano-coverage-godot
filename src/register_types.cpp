@@ -5,6 +5,9 @@
 #include "api/coverage_api.h"
 #include "editor/plugin.h"
 #include "runtime/coverage_monitor.h"
+#include "runtime/coverage_runtime.h"
+#include "instrumentation/project_bootstrapper.h"
+#include "config/settings_gateway.h"
 #ifdef TESTS_ENABLED
 #include "testing/test_main.h"
 #endif
@@ -29,7 +32,9 @@ void initialize_nano_coverage_godot_module(ModuleInitializationLevel p_level) {
             Engine::get_singleton()->register_singleton("NanoCoverage", g_nano_coverage_singleton);
         }
 
-        // Future: ClassDB::register_class<NanoCoverageRuntime>();
+        ClassDB::register_class<ProjectBootstrapper>();
+        ClassDB::register_class<CoverageRuntime>();
+        SettingsGateway::register_settings();
     }
 
     // 2. EDITOR LEVEL: Register Editor-only classes (Plugins, UI, etc.)

@@ -3,8 +3,13 @@ extends SceneTree
 func _init():
 	print("[NanoCoverage Runner] Bootstrapping Main Game...")
 	
-	# 1. Instrument everything in memory
-	NanoCoverageBootstrap.instrument_all_scripts()
+	# 1. Instrument memory using the new C++ Bootstrapper
+	var bootstrapper = ProjectBootstrapper.new()
+	bootstrapper.instrument_all_scripts()
+	
+	# 2. Inject Runtime monitor Node into SceneTree
+	var runtime = CoverageRuntime.new()
+	root.add_child(runtime)
 	
 	# 2. Find the user's actual main scene
 	var main_scene_path = ProjectSettings.get_setting("application/run/main_scene")

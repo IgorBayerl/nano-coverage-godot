@@ -34,7 +34,7 @@ void NanoCoverage::reset() {
 
 void NanoCoverage::save_session() {
     CoverageSettings settings = SettingsGateway::load();
-    String global_out_dir = ProjectSettings::get_singleton()->globalize_path(settings.paths_data_store_dir);
+    String global_out_dir = ProjectSettings::get_singleton()->globalize_path(settings.data_store_dir);
 
     CoverageStore store(global_out_dir.utf8().get_data(), "default");
     CoverageData snapshot = collector.snapshot();

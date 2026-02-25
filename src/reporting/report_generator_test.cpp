@@ -4,6 +4,9 @@
 #include <godot_cpp/variant/dictionary.hpp>
 
 #include "report_generator.h"
+#include "../config/settings_keys.h"
+#include "../config/settings_gateway.h"
+#include "lcov_writer.h"
 #include "../data/persistence.h"
 #include "../testing/test_utils.h"
 
@@ -16,8 +19,8 @@ TEST(ReportGeneratorTest, MergesMetadataAndCovDataCorrectly) {
     TestUtils::clean_dir(temp_dir);
     
     // Override settings so the ReportGenerator looks in our temp directory
-    SettingsOverride s1("nano_coverage/paths/data_store_dir", temp_dir);
-    SettingsOverride s2("nano_coverage/paths/report_dir", temp_dir);
+    SettingsOverride s1(SettingsKeys::DATA_STORE_DIR, temp_dir);
+    SettingsOverride s2(SettingsKeys::REPORT_DIR, temp_dir);
 
     // Create the directory
     DirAccess::make_dir_recursive_absolute(temp_dir);

@@ -10,7 +10,7 @@ namespace godot {
 
 void LCOVWriter::write_lcov_report(const CoverageData& data, const CoverageSettings& settings) {
     // Construct output path
-    String output_dir = settings.paths_report_dir;
+    String output_dir = settings.report_dir;
     String filename = settings.report_lcov_filename;
     String output_path;
 
@@ -38,7 +38,7 @@ void LCOVWriter::write_lcov_report(const CoverageData& data, const CoverageSetti
 
     // Fetch the original project root if available (injected by TempBuilder)
     String source_root = "";
-    if (settings.report_use_absolute_source_paths) {
+    if (settings.use_absolute_paths) {
         if (ProjectSettings::get_singleton()->has_setting("nano_coverage/source_root")) {
             source_root = ProjectSettings::get_singleton()->get_setting("nano_coverage/source_root");
             // Ensure source_root itself is absolute if it's a resource path
@@ -54,7 +54,7 @@ void LCOVWriter::write_lcov_report(const CoverageData& data, const CoverageSetti
 
         String display_path = file_path;
 
-        if (settings.report_use_absolute_source_paths) {
+        if (settings.use_absolute_paths) {
             if (!source_root.is_empty() && file_path.begins_with("res://")) {
                 // Strip "res://" (6 chars) and join with source root
                 String rel_path = file_path.substr(6);

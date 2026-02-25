@@ -29,9 +29,9 @@ TEST(LCOVFormatTest, GeneratesValidReport) {
     // Setup Settings
     fs::path temp_dir = fs::temp_directory_path();
     CoverageSettings settings;
-    settings.paths_report_dir = String(temp_dir.string().c_str());
+    settings.report_dir = String(temp_dir.string().c_str());
     settings.report_lcov_filename = "lcov_test_output.info";
-    settings.report_use_absolute_source_paths = false;  // Test relative paths
+    settings.use_absolute_paths = false;  // Test relative paths
 
     // Clean up previous run
     fs::path output_file = temp_dir / "lcov_test_output.info";
@@ -79,9 +79,9 @@ TEST(LCOVFormatTest, GeneratesAbsolutePaths) {
     // Setup Settings
     fs::path temp_dir = fs::temp_directory_path();
     CoverageSettings settings;
-    settings.paths_report_dir = String(temp_dir.string().c_str());
+    settings.report_dir = String(temp_dir.string().c_str());
     settings.report_lcov_filename = "lcov_abs_test.info";
-    settings.report_use_absolute_source_paths = true;
+    settings.use_absolute_paths = true;
 
     // Mock project path (we can rely on globalize_path or verify logic)
     // Since we can't easily mock ProjectSettings singleton here without partial mocks,

@@ -19,6 +19,7 @@
 // Project Includes
 // ADJUST THIS PATH: Point to where 'NanoCoverage' class is defined
 #include "../api/coverage_api.h"
+#include "../config/settings_keys.h"
 // OR
 #include "../runtime/coverage_monitor.h"
 
@@ -93,8 +94,9 @@ TEST(NanoCoverageTest, RecordsHitsAndSavesSession) {
     DirAccess::make_dir_recursive_absolute(temp_dir);
 
     // Override settings so save_session() writes there
-    SettingsOverride s1("nano_coverage/paths/data_store_dir", temp_dir);
-
+    SettingsOverride s1(SettingsKeys::DATA_STORE_DIR, temp_dir);
+    SettingsOverride s2(SettingsKeys::REPORT_DIR, temp_dir);
+    
     // Act
     cov->reset();
     cov->hit(test_file, 10);
