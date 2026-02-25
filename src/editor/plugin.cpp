@@ -7,7 +7,7 @@
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/callable.hpp>
-#include <godot_cpp/variant/utility_functions.hpp>
+#include "../utils/logger.h"
 
 #include "../config/settings_gateway.h"
 
@@ -105,7 +105,7 @@ void NanoCoverageEditorPlugin::_on_settings_changed() {
 }
 
 void NanoCoverageEditorPlugin::_on_run_instrumented_pressed() {
-    UtilityFunctions::print("NanoCoverage: Launching game with hot-patch coverage...");
+    Logger::info("Launching game with hot-patch coverage...");
 
     // Clear previous data
     if (coverage_api.is_valid()) {
@@ -128,29 +128,29 @@ void NanoCoverageEditorPlugin::_on_run_instrumented_pressed() {
     int32_t pid = OS::get_singleton()->create_process(OS::get_singleton()->get_executable_path(), args);
 
     if (pid == -1) {
-        UtilityFunctions::printerr("NanoCoverage: Failed to launch game process.");
+        Logger::error("Failed to launch game process.");
     } else {
-        UtilityFunctions::print("NanoCoverage: Process started with PID ", pid);
+        Logger::info("Process started with PID " + String::num_int64(pid));
     }
 }
 
 
 void NanoCoverageEditorPlugin::_on_generate_report_pressed() {
     if (coverage_api.is_null()) {
-        UtilityFunctions::printerr("NanoCoverage: API not initialized.");
+        Logger::error("API not initialized.");
         return;
     }
 
     Dictionary opts;
     opts["workspace_id"] = "default";
 
-    UtilityFunctions::print("NanoCoverage: Generating report...");
+    Logger::info("Generating report...");
     Dictionary result = coverage_api->generate_coverage_report(opts);
 
     if (result.has("status") && String(result["status"]) == "ok") {
-        UtilityFunctions::print("NanoCoverage: Report generated at: ", result["report_path"]);
+        Logger::info("Report generated at: " + String(result["report_path"]));
     } else {
-        UtilityFunctions::printerr("NanoCoverage: Report generation failed.");
+        Logger::error("Report generation failed.");
     }
 }
 
@@ -163,7 +163,7 @@ void NanoCoverageEditorPlugin::_on_clear_data_pressed() {
     opts["workspace_id"] = "default";
 
     coverage_api->clear_coverage_data(opts);
-    UtilityFunctions::print("NanoCoverage: Coverage data cleared.");
+    Logger::info("Coverage data cleared.");
 }
 
 }  // namespace godot

@@ -4,7 +4,7 @@
 #include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
-#include <godot_cpp/variant/utility_functions.hpp>
+#include "../utils/logger.h"
 
 namespace godot {
 
@@ -24,17 +24,17 @@ void LCOVWriter::write_lcov_report(const CoverageData& data, const CoverageSetti
     if (!DirAccess::dir_exists_absolute(output_dir)) {
         Error err = DirAccess::make_dir_recursive_absolute(output_dir);
         if (err != OK) {
-            UtilityFunctions::printerr("NanoCoverage: Failed to create report directory: ", output_dir);
+            Logger::error("Failed to create report directory: " + output_dir);
         }
     }
 
     Ref<FileAccess> file = FileAccess::open(output_path, FileAccess::WRITE);
     if (file.is_null()) {
-        UtilityFunctions::printerr("NanoCoverage: Could not open report file for writing: ", output_path);
+        Logger::error("Could not open report file for writing: " + output_path);
         return;
     }
 
-    UtilityFunctions::print("NanoCoverage: Writing LCOV report to ", output_path);
+    Logger::info("Writing LCOV report to " + output_path);
 
     // Fetch the original project root if available (injected by TempBuilder)
     String source_root = "";

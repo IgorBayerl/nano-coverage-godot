@@ -1,26 +1,18 @@
 class_name NanoCoverageBootstrap
 extends RefCounted
 
-const IGNORE_PATHS: Array[String] = [
-	"res://addons/nano_coverage_godot", # The coverage tool itself
-	
-	# --- Critical GdUnit4 Infrastructure (Must Ignore) ---
-	# Reloading these while tests are running breaks the connection to the editor.
-	"res://addons/gdUnit4/src/network",
-	"res://addons/gdUnit4/src/core/runners",
-	"res://addons/gdUnit4/src/ui",
-	"res://addons/gdUnit4/bin",
-	"res://addons/gdUnit4/src/core/hooks",
-	
-	# --- GdUnit4 Tests ---
-	# We ignore all test files. They will still RUN, but they won't be instrumented.
-	# This avoids parser errors from "intentional failure" scripts and keeps the report focused on source code.
-	"res://addons/gdUnit4/test"
-]
-
-
 static func _is_ignored(path: String) -> bool:
-	for ignored in IGNORE_PATHS:
+	var ignore_paths = ProjectSettings.get_setting("nano_coverage/paths_ignore", [
+		"res://addons/nano_coverage_godot",
+		"res://addons/gdUnit4/src/network",
+		"res://addons/gdUnit4/src/core/runners",
+		"res://addons/gdUnit4/src/ui",
+		"res://addons/gdUnit4/bin",
+		"res://addons/gdUnit4/src/core/hooks",
+		"res://addons/gdUnit4/test"
+	])
+	
+	for ignored in ignore_paths:
 		if path.begins_with(ignored):
 			return true
 	return false
@@ -48,16 +40,16 @@ static func _get_all_files(path: String, extension: String) -> Array[String]:
 						files.append(full_path)
 			file_name = dir.get_next()
 	else:
-		printerr("[NanoCoverage] Failed to open directory: ", path)
+		NanoCoverageLogger.error("Failed to open directory: " + path)
 		
 	return files
 
 static func instrument_all_scripts() -> void:
-	print("[NanoCoverage] --- Starting Memory Instrumentation ---")
+	NanoCoverageLogger.info("--- Starting Memory Instrumentation ---")
 	var api = CoverageApi.new()
 	var files = _get_all_files("res://", ".gd")
 	
-	print("[NanoCoverage] Total GDScript files found to instrument: ", files.size())
+	NanoCoverageLogger.info("Total GDScript files found to instrument: " + str(files.size()))
 
 	var instrumented_count = 0
 	var ignored_count = 0
@@ -76,10 +68,10 @@ static func instrument_all_scripts() -> void:
 					script.reload(true)
 					instrumented_count += 1
 			else:
-				printerr("[NanoCoverage]  -> Failed to instrument: ", path, " | ", res.get("error", "Unknown error"))
+				NanoCoverageLogger.error(" -> Failed to instrument: " + path + " | " + res.get("error", "Unknown error"))
 
-	print("[NanoCoverage] Saving static coverage metadata...")
+	NanoCoverageLogger.info("Saving static coverage metadata...")
 	api.save_static_metadata()
-	print("[NanoCoverage] --- Instrumentation Complete ---")
-	print("[NanoCoverage] Scripts Patched: ", instrumented_count)
-	print("[NanoCoverage] Scripts Ignored (0 Lines): ", ignored_count)
+	NanoCoverageLogger.info("--- Instrumentation Complete ---")
+	NanoCoverageLogger.info("Scripts Patched: " + str(instrumented_count))
+	NanoCoverageLogger.info("Scripts Ignored (0 Lines): " + str(ignored_count))

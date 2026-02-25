@@ -1,7 +1,7 @@
 #include "coverage_store.h"
 
 #include <filesystem>
-#include <iostream>
+#include "../utils/logger.h"
 #include <stdexcept>
 
 namespace godot {
@@ -49,8 +49,7 @@ void CoverageStore::clear() {
                 std::error_code ec;
                 fs::remove(entry.path(), ec);
                 if (ec) {
-                    std::cerr << "CoverageStore: Failed to delete " << entry.path().string() << ": " << ec.message()
-                              << std::endl;
+                    Logger::error("CoverageStore: Failed to delete " + String(entry.path().string().c_str()) + ": " + String(ec.message().c_str()));
                 }
             }
         }
@@ -63,7 +62,7 @@ void CoverageStore::clear() {
         std::error_code ec;
         fs::remove(meta_path, ec);
         if (ec) {
-            std::cerr << "CoverageStore: Failed to delete " << meta_path.string() << ": " << ec.message() << std::endl;
+            Logger::error("CoverageStore: Failed to delete " + String(meta_path.string().c_str()) + ": " + String(ec.message().c_str()));
         }
     }
 }

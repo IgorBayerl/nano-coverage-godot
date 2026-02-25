@@ -5,7 +5,7 @@
 #include <godot_cpp/classes/dir_access.hpp>  // Added for directory operations
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/godot.hpp>  // Ensure core types are available
-#include <godot_cpp/variant/utility_functions.hpp>
+#include "../utils/logger.h"
 #include <godot_cpp/variant/variant.hpp>
 
 namespace godot {
@@ -52,8 +52,7 @@ class TestUtils {
         if (std::filesystem::exists(path_str, ec)) {
             std::filesystem::remove_all(path_str, ec);
             if (ec) {
-                UtilityFunctions::printerr("TestUtils: Failed to cleanup ", res_path,
-                                           ". Error: ", String(ec.message().c_str()));
+                Logger::error("TestUtils: Failed to cleanup " + res_path + ". Error: " + String(ec.message().c_str()));
             }
         }
     }

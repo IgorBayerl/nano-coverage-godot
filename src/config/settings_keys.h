@@ -11,6 +11,7 @@ struct SettingsKeys {
     static constexpr const char* PATHS_TEMP_DIR = "nano_coverage/paths/temp_dir";
     static constexpr const char* PATHS_REPORT_DIR = "nano_coverage/paths/report_dir";
     static constexpr const char* PATHS_DATA_STORE_DIR = "nano_coverage/paths/data_store_dir";
+    static constexpr const char* PATHS_IGNORE = "nano_coverage/paths_ignore";
 
     static constexpr const char* REPORT_LCOV_FILENAME = "nano_coverage/report/lcov_filename";
     static constexpr const char* REPORT_USE_ABSOLUTE_SOURCE_PATHS = "nano_coverage/report/use_absolute_source_paths";

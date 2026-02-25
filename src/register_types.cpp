@@ -1,8 +1,7 @@
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/godot.hpp>
-#include <godot_cpp/variant/utility_functions.hpp>
-
+#include "utils/logger.h"
 #include "api/coverage_api.h"
 #include "editor/plugin.h"
 #include "runtime/coverage_monitor.h"
@@ -37,7 +36,7 @@ void initialize_nano_coverage_godot_module(ModuleInitializationLevel p_level) {
     // These are only available when the Editor is open.
     if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
         ClassDB::register_class<NanoCoverageEditorPlugin>();
-        UtilityFunctions::print("NanoCoverageGodot: Editor classes registered.");
+        Logger::info("Editor classes registered.");
     }
 }
 

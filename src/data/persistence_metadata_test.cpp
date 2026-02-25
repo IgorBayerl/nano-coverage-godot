@@ -7,6 +7,7 @@
 #include "../config/settings_keys.h"
 #include "../runtime/coverage_monitor.h"
 #include "persistence.h"
+#include "../reporting/report_generator.h"
 #include "testing/test_utils.h"
 
 namespace godot {
@@ -51,8 +52,9 @@ TEST(NanoCoverageTest, ReportsZeroHitLinesFromMetadata) {
 
     cov->save_session();
 
-    // Generate Report
-    cov->generate_report();
+    Dictionary opts;
+    opts["workspace_id"] = "default";
+    ReportGenerator::generate(opts);
 
     // Verify
     String lcov_path = report_dir + "/lcov.info";

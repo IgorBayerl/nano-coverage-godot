@@ -1,6 +1,7 @@
 #include "settings_gateway.h"
 
 #include <godot_cpp/classes/global_constants.hpp>
+#include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -38,6 +39,16 @@ void SettingsGateway::register_settings() {
                  "Same as temp_directory (Transition)");
     register_key(SettingsKeys::PATHS_REPORT_DIR, "res://coverage-report", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR);
     register_key(SettingsKeys::PATHS_DATA_STORE_DIR, "res://coverage-data", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR);
+    
+    Array default_ignore;
+    default_ignore.push_back("res://addons/nano_coverage_godot");
+    default_ignore.push_back("res://addons/gdUnit4/src/network");
+    default_ignore.push_back("res://addons/gdUnit4/src/core/runners");
+    default_ignore.push_back("res://addons/gdUnit4/src/ui");
+    default_ignore.push_back("res://addons/gdUnit4/bin");
+    default_ignore.push_back("res://addons/gdUnit4/src/core/hooks");
+    default_ignore.push_back("res://addons/gdUnit4/test");
+    register_key(SettingsKeys::PATHS_IGNORE, default_ignore, Variant::ARRAY);
 
     // Future keys - Report
     register_key(SettingsKeys::REPORT_LCOV_FILENAME, "lcov.info", Variant::STRING);
@@ -83,6 +94,23 @@ CoverageSettings SettingsGateway::load() {
     // Default for report dir is res://coverage_report. If retrieval gives "", use default.
     settings.paths_report_dir = get_path(SettingsKeys::PATHS_REPORT_DIR, "res://coverage-report");
     settings.paths_data_store_dir = get_path(SettingsKeys::PATHS_DATA_STORE_DIR, "res://coverage-data");
+
+    // Parse CLI overrides for backward compatibility
+    PackedStringArray user_args = OS::get_singleton()->get_cmdline_user_args();
+    auto get_cli_override = [&](const String& key_prefix) -> String {
+        for (const String& arg : user_args) {
+            if (arg.begins_with(key_prefix)) {
+                return arg.substr(key_prefix.length());
+            }
+        }
+        return "";
+    };
+
+    String cli_data_dir = get_cli_override("nano_coverage/output_dir=");
+    if (!cli_data_dir.is_empty()) {
+        settings.paths_data_store_dir = cli_data_dir;
+        settings.paths_report_dir = cli_data_dir; // mirror old behavior
+    }
 
     settings.report_lcov_filename = get_safe(SettingsKeys::REPORT_LCOV_FILENAME, "lcov.info");
     settings.report_use_absolute_source_paths = get_safe(SettingsKeys::REPORT_USE_ABSOLUTE_SOURCE_PATHS, false);

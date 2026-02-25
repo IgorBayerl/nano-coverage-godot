@@ -25,12 +25,8 @@ class NanoCoverage : public Object {
     // Dumps current memory execution data to "coverage.data" (appends).
     void save_session();
 
-    // Reads "coverage.meta" and "coverage.data", merges them, and outputs "lcov.info".
-    void generate_report();
-
     // Debugging helpers
     int64_t get_total_hit_count() const;
-    Dictionary get_snapshot() const;  // Returns raw internal state
 
    private:
     CoverageCollector collector;
