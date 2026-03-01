@@ -1,34 +1,21 @@
-#ifndef SETTINGS_GATEWAY_H
-#define SETTINGS_GATEWAY_H
-
+#pragma once
 #include <godot_cpp/variant/string.hpp>
+#include <godot_cpp/variant/packed_string_array.hpp>
 
 namespace godot {
 
 struct CoverageSettings {
-    // Current keys
-    String temp_directory;
-
-    // Future keys
-    String paths_temp_dir;
-    String paths_report_dir;
-    String paths_data_store_dir;
-
+    String data_store_dir;
+    String report_dir;
+    PackedStringArray ignore_paths;
+    bool ignore_addons;
     String report_lcov_filename;
-    bool report_use_absolute_source_paths;
-
-    bool ui_show_all_buttons;
-    bool ui_show_run_instrumented_button;
-    bool ui_show_generate_report_button;
-    bool ui_show_clear_data_button;
 };
 
 class SettingsGateway {
-   public:
+public:
     static void register_settings();
     static CoverageSettings load();
 };
 
-}  // namespace godot
-
-#endif  // SETTINGS_GATEWAY_H
+} // namespace godot

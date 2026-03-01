@@ -8,7 +8,7 @@
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/core/class_db.hpp>
-#include <godot_cpp/variant/utility_functions.hpp>
+#include "../utils/logger.h"
 
 // Google Test
 #include <gtest/gtest.h>
@@ -19,6 +19,7 @@
 // Project Includes
 // ADJUST THIS PATH: Point to where 'NanoCoverage' class is defined
 #include "../api/coverage_api.h"
+#include "../config/settings_keys.h"
 // OR
 #include "../runtime/coverage_monitor.h"
 
@@ -47,7 +48,7 @@ class GodotGTestPrinter : public ::testing::EmptyTestEventListener {
             ss << "\n[FAILED] " << result.file_name() << ":" << result.line_number() << "\n"
                << "         " << result.summary() << "\n";
             String msg = String(ss.str().c_str());
-            UtilityFunctions::printerr(msg);
+            Logger::error(msg);
             log_to_file(msg);
         }
     }
@@ -55,11 +56,11 @@ class GodotGTestPrinter : public ::testing::EmptyTestEventListener {
     virtual void OnTestEnd(const ::testing::TestInfo& test_info) override {
         if (test_info.result()->Failed()) {
             String msg = "[TEST FAILED] " + String(test_info.test_suite_name()) + "." + String(test_info.name());
-            UtilityFunctions::printerr(msg);
+            Logger::error(msg);
             log_to_file(msg);
         } else {
             String msg = "[TEST PASSED] " + String(test_info.test_suite_name()) + "." + String(test_info.name());
-            UtilityFunctions::print(msg);
+            Logger::info(msg);
             log_to_file(msg);
         }
     }
@@ -92,9 +93,10 @@ TEST(NanoCoverageTest, RecordsHitsAndSavesSession) {
     TestUtils::clean_dir(temp_dir);
     DirAccess::make_dir_recursive_absolute(temp_dir);
 
-    // Override "nano_coverage/output_dir" so save_session() writes there
-    SettingsOverride s1("nano_coverage/output_dir", temp_dir);
-
+    // Override settings so save_session() writes there
+    SettingsOverride s1(SettingsKeys::DATA_STORE_DIR, temp_dir);
+    SettingsOverride s2(SettingsKeys::REPORT_DIR, temp_dir);
+    
     // Act
     cov->reset();
     cov->hit(test_file, 10);
@@ -107,8 +109,7 @@ TEST(NanoCoverageTest, RecordsHitsAndSavesSession) {
     cov->save_session();
 
     // Verify file exists
-    // Note: coverage.data is the default name, check your constant in NanoCoverage
-    EXPECT_TRUE(FileAccess::file_exists(temp_dir + "/coverage.data"));
+    EXPECT_TRUE(FileAccess::file_exists(temp_dir + "/default/runs/session_data.covdata"));
 
     // Cleanup
     TestUtils::clean_dir(temp_dir);
@@ -129,7 +130,7 @@ int NanoCoverageTestRunner::run_all_tests() {
             f->store_line("--- STARTING TESTS ---");
     }
 
-    UtilityFunctions::print("NanoCoverage: --- STARTING GTEST SUITE ---");
+    Logger::info("--- STARTING GTEST SUITE ---");
 
     // Convert Godot Args to C-style argv for GTest
     PackedStringArray user_args = OS::get_singleton()->get_cmdline_user_args();
@@ -167,9 +168,9 @@ int NanoCoverageTestRunner::run_all_tests() {
     int res = RUN_ALL_TESTS();
 
     if (res == 0) {
-        UtilityFunctions::print("NanoCoverage: --- ALL TESTS PASSED ---");
+        Logger::info("--- ALL TESTS PASSED ---");
     } else {
-        UtilityFunctions::printerr("NanoCoverage: --- TESTS FAILED ---");
+        Logger::error("--- TESTS FAILED ---");
     }
 
     return res;

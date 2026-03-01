@@ -1,11 +1,13 @@
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/godot.hpp>
-#include <godot_cpp/variant/utility_functions.hpp>
-
+#include "utils/logger.h"
 #include "api/coverage_api.h"
 #include "editor/plugin.h"
 #include "runtime/coverage_monitor.h"
+#include "runtime/coverage_runtime.h"
+#include "instrumentation/project_bootstrapper.h"
+#include "config/settings_gateway.h"
 #ifdef TESTS_ENABLED
 #include "testing/test_main.h"
 #endif
@@ -30,14 +32,16 @@ void initialize_nano_coverage_godot_module(ModuleInitializationLevel p_level) {
             Engine::get_singleton()->register_singleton("NanoCoverage", g_nano_coverage_singleton);
         }
 
-        // Future: ClassDB::register_class<NanoCoverageRuntime>();
+        ClassDB::register_class<ProjectBootstrapper>();
+        ClassDB::register_class<CoverageRuntime>();
+        SettingsGateway::register_settings();
     }
 
     // 2. EDITOR LEVEL: Register Editor-only classes (Plugins, UI, etc.)
     // These are only available when the Editor is open.
     if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
         ClassDB::register_class<NanoCoverageEditorPlugin>();
-        UtilityFunctions::print("NanoCoverageGodot: Editor classes registered.");
+        Logger::info("Editor classes registered.");
     }
 }
 

@@ -1,12 +1,26 @@
 #pragma once
 
 #include <godot_cpp/variant/string.hpp>
-#include <mutex>
+#include <atomic>
+#include <shared_mutex>
 #include <string>
+#include <unordered_map>
 
 #include "../data/persistence.h"
 
 namespace godot {
+
+struct AtomicCounter {
+    std::atomic<uint64_t> count{0};
+    AtomicCounter() = default;
+    AtomicCounter(const AtomicCounter& other) {
+        count.store(other.count.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    }
+    AtomicCounter& operator=(const AtomicCounter& other) {
+        count.store(other.count.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        return *this;
+    }
+};
 
 class CoverageCollector {
    public:
@@ -27,9 +41,9 @@ class CoverageCollector {
     uint64_t get_total_hits() const;
 
    private:
-    mutable std::mutex mtx;
-    CoverageData data;
-    uint64_t total_hits = 0;
+    mutable std::shared_mutex mtx;
+    std::unordered_map<std::string, std::unordered_map<uint32_t, AtomicCounter>> atomic_data;
+    std::atomic<uint64_t> total_hits{0};
 };
 
 }  // namespace godot

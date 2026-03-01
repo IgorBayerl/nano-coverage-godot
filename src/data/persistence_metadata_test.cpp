@@ -7,6 +7,7 @@
 #include "../config/settings_keys.h"
 #include "../runtime/coverage_monitor.h"
 #include "persistence.h"
+#include "../reporting/report_generator.h"
 #include "testing/test_utils.h"
 
 namespace godot {
@@ -46,13 +47,14 @@ TEST(NanoCoverageTest, ReportsZeroHitLinesFromMetadata) {
     // Configure Settings using RAII Helper
     SettingsOverride s1("nano_coverage/source_root", report_dir);
     SettingsOverride s2("nano_coverage/output_dir", report_dir);
-    SettingsOverride s3(SettingsKeys::PATHS_REPORT_DIR, report_dir);
-    SettingsOverride s4(SettingsKeys::PATHS_DATA_STORE_DIR, report_dir);
+    SettingsOverride s3(SettingsKeys::REPORT_DIR, report_dir);
+    SettingsOverride s4(SettingsKeys::DATA_STORE_DIR, report_dir);
 
     cov->save_session();
 
-    // Generate Report
-    cov->generate_report();
+    Dictionary opts;
+    opts["workspace_id"] = "default";
+    ReportGenerator::generate(opts);
 
     // Verify
     String lcov_path = report_dir + "/lcov.info";

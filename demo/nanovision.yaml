@@ -8,9 +8,8 @@ source_dirs:
 output_dir: "coverage-report"
 
 report_types:
-  - "Html"
+  - "HtmlUnified"
   - "TextSummary"
-  - "Lcov"
 
 verbosity: "Info"
 log_format: "text"
@@ -20,3 +19,5 @@ ignore_files:
   - "addons/gdUnit4/test/*"
   - "addons/gdUnit4/bin/*"
   - "-**/*_test.go"
+
+ignore_cache: true

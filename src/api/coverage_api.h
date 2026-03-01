@@ -2,6 +2,7 @@
 
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
+#include "../data/persistence.h"
 
 namespace godot {
 
@@ -9,17 +10,19 @@ class CoverageApi : public RefCounted {
     GDCLASS(CoverageApi, RefCounted)
 
    private:
+    CoverageMetadata session_metadata;
+
     static void _bind_methods();
 
    public:
-    /// Instruments the project found at 'res://' (or configured path).
-    /// Returns: { "workspace_id": ..., "output_path": ... }
-    Dictionary instrument_project(const Dictionary& options);
+    /// Instruments a single script's source code and tracks coverable lines.
+    /// Returns: { "code": modified_string, "lines": [coverable_lines] }
+    Dictionary instrument_script(const String& source_code, const String& file_path);
 
-    /// Runs the instrumented project.
-    /// Expects options: { "output_path": ..., "workspace_id": ..., "blocking": bool }
-    /// Returns: { "pid": ..., "output_file": ... }
-    Dictionary run_instrumented_project(const Dictionary& options);
+    /// Saves the accumulated metadata to coverage.meta
+    void save_static_metadata();
+
+
 
     /// Generates the LCOV report from collected run data.
     /// Expects options: { "workspace_id": ... }

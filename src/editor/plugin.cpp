@@ -7,7 +7,7 @@
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/callable.hpp>
-#include <godot_cpp/variant/utility_functions.hpp>
+#include "../utils/logger.h"
 
 #include "../config/settings_gateway.h"
 
@@ -20,7 +20,6 @@ void NanoCoverageEditorPlugin::_bind_methods() {
                          &NanoCoverageEditorPlugin::_on_generate_report_pressed);
     ClassDB::bind_method(D_METHOD("_on_clear_data_pressed"), &NanoCoverageEditorPlugin::_on_clear_data_pressed);
     ClassDB::bind_method(D_METHOD("_on_settings_changed"), &NanoCoverageEditorPlugin::_on_settings_changed);
-    ClassDB::bind_method(D_METHOD("_on_log_poll_timeout"), &NanoCoverageEditorPlugin::_on_log_poll_timeout);
 }
 
 NanoCoverageEditorPlugin::NanoCoverageEditorPlugin() {
@@ -58,13 +57,6 @@ void NanoCoverageEditorPlugin::_enter_tree() {
     // Connect to settings changed
     ProjectSettings::get_singleton()->connect("settings_changed", Callable(this, "_on_settings_changed"));
 
-    // Log Timer
-    log_poll_timer = memnew(Timer);
-    log_poll_timer->set_wait_time(0.5);  // Check every 500ms
-    log_poll_timer->set_one_shot(false);
-    log_poll_timer->connect("timeout", Callable(this, "_on_log_poll_timeout"));
-    add_child(log_poll_timer);  // Add to tree so it processes
-
     // Initial visibility update
     _update_visibility();
 }
@@ -90,26 +82,17 @@ void NanoCoverageEditorPlugin::_exit_tree() {
         ProjectSettings::get_singleton()->disconnect("settings_changed", Callable(this, "_on_settings_changed"));
     }
 
-    if (log_poll_timer) {
-        log_poll_timer->stop();
-        log_poll_timer->queue_free();
-        log_poll_timer = nullptr;
-    }
 }
 
 void NanoCoverageEditorPlugin::_update_visibility() {
-    CoverageSettings settings = SettingsGateway::load();
-
-    bool show_all = settings.ui_show_all_buttons;
-
     if (run_instrumented_button) {
-        run_instrumented_button->set_visible(show_all || settings.ui_show_run_instrumented_button);
+        run_instrumented_button->set_visible(true);
     }
     if (generate_report_button) {
-        generate_report_button->set_visible(show_all || settings.ui_show_generate_report_button);
+        generate_report_button->set_visible(true);
     }
     if (clear_data_button) {
-        clear_data_button->set_visible(show_all || settings.ui_show_clear_data_button);
+        clear_data_button->set_visible(true);
     }
 }
 
@@ -118,99 +101,52 @@ void NanoCoverageEditorPlugin::_on_settings_changed() {
 }
 
 void NanoCoverageEditorPlugin::_on_run_instrumented_pressed() {
-    UtilityFunctions::print("NanoCoverage: Preparing temporary project...");
+    Logger::info("Launching game with hot-patch coverage...");
 
-    if (coverage_api.is_null()) {
-        UtilityFunctions::printerr("NanoCoverage: API not initialized.");
-        return;
+    // Clear previous data
+    if (coverage_api.is_valid()) {
+        Dictionary opts;
+        opts["workspace_id"] = "default";
+        coverage_api->clear_coverage_data(opts);
     }
 
-    // Stop previous logging if active
-    if (log_poll_timer->is_stopped() == false) {
-        log_poll_timer->stop();
-    }
+    // Launch Godot subprocess with our custom game_runner.gd
+    PackedStringArray args;
+    args.push_back("--path");
+    
+    // FIX: Convert res:// to absolute system path
+    String absolute_path = ProjectSettings::get_singleton()->globalize_path("res://");
+    args.push_back(absolute_path);
+    
+    args.push_back("--script");
+    args.push_back("res://addons/nano_coverage_godot/game_runner.gd");
 
-    Dictionary instr_opts;
-    Dictionary instr_result = coverage_api->instrument_project(instr_opts);
+    int32_t pid = OS::get_singleton()->create_process(OS::get_singleton()->get_executable_path(), args);
 
-    if (instr_result.has("error")) {
-        UtilityFunctions::printerr("NanoCoverage: Instrumentation failed: ", instr_result["error"]);
-        return;
-    }
-
-    String output_path = instr_result["output_path"];
-
-    Dictionary run_opts;
-    run_opts["output_path"] = output_path;
-    run_opts["workspace_id"] = "default";
-    run_opts["blocking"] = false;  // Non-blocking so we can tail logs
-
-    UtilityFunctions::print("NanoCoverage: Launching instrumented project...");
-    Dictionary run_result = coverage_api->run_instrumented_project(run_opts);
-
-    if (run_result.has("error")) {
-        UtilityFunctions::printerr("NanoCoverage: Run failed: ", run_result["error"]);
-        return;
-    }
-
-    UtilityFunctions::print("NanoCoverage: Project running. Run ID: ", run_result["run_id"]);
-
-    // Setup Log Tailing
-    if (run_result.has("log_file") && run_result.has("pid")) {
-        current_log_path = run_result["log_file"];
-        current_pid = run_result["pid"];
-        log_read_pos = 0;
-
-        UtilityFunctions::print("NanoCoverage: Tailing log file: ", current_log_path);
-        log_poll_timer->start();
+    if (pid == -1) {
+        Logger::error("Failed to launch game process.");
+    } else {
+        Logger::info("Process started with PID " + String::num_int64(pid));
     }
 }
 
-void NanoCoverageEditorPlugin::_on_log_poll_timeout() {
-    if (current_log_path.is_empty())
-        return;
-
-    Ref<FileAccess> f = FileAccess::open(current_log_path, FileAccess::READ);
-    if (f.is_valid()) {
-        // Seek to where we last left off
-        f->seek(log_read_pos);
-
-        while (f->get_position() < f->get_length()) {
-            String line = f->get_line();
-            // Prefix to distinguish game logs from editor logs
-            UtilityFunctions::print("[Game] ", line);
-        }
-
-        log_read_pos = f->get_position();
-        f->close();
-    }
-
-    // Check if process is still alive
-    if (current_pid != -1) {
-        if (!OS::get_singleton()->is_process_running(current_pid)) {
-            UtilityFunctions::print("NanoCoverage: Game process finished.");
-            log_poll_timer->stop();
-            current_pid = -1;
-        }
-    }
-}
 
 void NanoCoverageEditorPlugin::_on_generate_report_pressed() {
     if (coverage_api.is_null()) {
-        UtilityFunctions::printerr("NanoCoverage: API not initialized.");
+        Logger::error("API not initialized.");
         return;
     }
 
     Dictionary opts;
     opts["workspace_id"] = "default";
 
-    UtilityFunctions::print("NanoCoverage: Generating report...");
+    Logger::info("Generating report...");
     Dictionary result = coverage_api->generate_coverage_report(opts);
 
     if (result.has("status") && String(result["status"]) == "ok") {
-        UtilityFunctions::print("NanoCoverage: Report generated at: ", result["report_path"]);
+        Logger::info("Report generated at: " + String(result["report_path"]));
     } else {
-        UtilityFunctions::printerr("NanoCoverage: Report generation failed.");
+        Logger::error("Report generation failed.");
     }
 }
 
@@ -223,7 +159,7 @@ void NanoCoverageEditorPlugin::_on_clear_data_pressed() {
     opts["workspace_id"] = "default";
 
     coverage_api->clear_coverage_data(opts);
-    UtilityFunctions::print("NanoCoverage: Coverage data cleared.");
+    Logger::info("Coverage data cleared.");
 }
 
 }  // namespace godot
