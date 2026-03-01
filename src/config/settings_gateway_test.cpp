@@ -19,20 +19,20 @@ TEST(SettingsGatewayTest, RegisterAndDefaultValues) {
     EXPECT_EQ(settings.data_store_dir, "res://coverage-data");
     EXPECT_EQ(settings.report_dir, "res://coverage-report");
     EXPECT_EQ(settings.report_lcov_filename, "lcov.info");
-    EXPECT_FALSE(settings.use_absolute_paths);
+    EXPECT_TRUE(settings.ignore_addons);
 }
 
 TEST(SettingsGatewayTest, LoadReadsValuesFromProjectSettings) {
     ProjectSettings* ps = ProjectSettings::get_singleton();
 
     // Setup overrides using RAII
-    Array custom_ignores;
+    PackedStringArray custom_ignores;
     custom_ignores.push_back("test/**");
     SettingsOverride s1(SettingsKeys::DATA_STORE_DIR, "custom/data");
     SettingsOverride s2(SettingsKeys::REPORT_DIR, "custom/report");
     SettingsOverride s3(SettingsKeys::IGNORE_PATHS, custom_ignores);
     SettingsOverride s4(SettingsKeys::REPORT_LCOV_FILENAME, "custom.info");
-    SettingsOverride s5(SettingsKeys::USE_ABSOLUTE_PATHS, true);
+    SettingsOverride s6(SettingsKeys::IGNORE_ADDONS, false);
 
     // Load settings
     CoverageSettings settings = SettingsGateway::load();
@@ -42,7 +42,7 @@ TEST(SettingsGatewayTest, LoadReadsValuesFromProjectSettings) {
     EXPECT_EQ(settings.report_dir, "custom/report");
     EXPECT_EQ(settings.ignore_paths, custom_ignores);
     EXPECT_EQ(settings.report_lcov_filename, "custom.info");
-    EXPECT_TRUE(settings.use_absolute_paths);
+    EXPECT_FALSE(settings.ignore_addons);
 
     // Destructors restore original values automatically
 }
@@ -55,5 +55,6 @@ TEST(SettingsGatewayTest, RegisterSetsUpKeysAndTypes) {
     EXPECT_EQ(ps->get_setting(SettingsKeys::DATA_STORE_DIR).get_type(), Variant::STRING);
     EXPECT_TRUE(ps->has_setting(SettingsKeys::REPORT_DIR));
     EXPECT_TRUE(ps->has_setting(SettingsKeys::IGNORE_PATHS));
-    EXPECT_EQ(ps->get_setting(SettingsKeys::IGNORE_PATHS).get_type(), Variant::ARRAY);
+    EXPECT_EQ(ps->get_setting(SettingsKeys::IGNORE_PATHS).get_type(), Variant::PACKED_STRING_ARRAY);
+    EXPECT_TRUE(ps->has_setting(SettingsKeys::IGNORE_ADDONS));
 }

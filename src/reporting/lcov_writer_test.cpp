@@ -31,7 +31,6 @@ TEST(LCOVFormatTest, GeneratesValidReport) {
     CoverageSettings settings;
     settings.report_dir = String(temp_dir.string().c_str());
     settings.report_lcov_filename = "lcov_test_output.info";
-    settings.use_absolute_paths = false;  // Test relative paths
 
     // Clean up previous run
     fs::path output_file = temp_dir / "lcov_test_output.info";
@@ -71,46 +70,5 @@ TEST(LCOVFormatTest, GeneratesValidReport) {
     fs::remove(output_file);
 }
 
-TEST(LCOVFormatTest, GeneratesAbsolutePaths) {
-    // Setup Data
-    CoverageData data;
-    data["res://scripts/player.gd"][10] = 1;
 
-    // Setup Settings
-    fs::path temp_dir = fs::temp_directory_path();
-    CoverageSettings settings;
-    settings.report_dir = String(temp_dir.string().c_str());
-    settings.report_lcov_filename = "lcov_abs_test.info";
-    settings.use_absolute_paths = true;
 
-    // Mock project path (we can rely on globalize_path or verify logic)
-    // Since we can't easily mock ProjectSettings singleton here without partial mocks,
-    // we rely on the fact that globalize_path("res://") usually returns absolute path.
-    // However, LCOVWriter logic first checks "nano_coverage/source_root" setting.
-    // If that's not set, it falls back to globalize_path.
-    // Let's assume globalize_path works.
-
-    // Clean up previous run
-    fs::path output_file = temp_dir / "lcov_abs_test.info";
-    if (fs::exists(output_file)) {
-        fs::remove(output_file);
-    }
-
-    LCOVWriter::write_lcov_report(data, settings);
-
-    std::ifstream in(output_file);
-    ASSERT_TRUE(in.is_open());
-    std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-
-    // We expect SF: to NOT start with res:// and to look absolute
-    // Windows: C:/... or C:\...
-    // Linux: /...
-    // Just checking it DOES NOT start with res:// is a good proxy, assuming the original was res://
-    EXPECT_EQ(content.find("SF:res://"), std::string::npos);
-
-    // It should contain "scripts/player.gd"
-    EXPECT_NE(content.find("scripts/player.gd"), std::string::npos);
-
-    in.close();
-    fs::remove(output_file);
-}

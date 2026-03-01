@@ -1,15 +1,15 @@
 #pragma once
 #include <godot_cpp/variant/string.hpp>
-#include <godot_cpp/variant/array.hpp>
+#include <godot_cpp/variant/packed_string_array.hpp>
 
 namespace godot {
 
 struct CoverageSettings {
     String data_store_dir;
     String report_dir;
-    Array ignore_paths;
+    PackedStringArray ignore_paths;
+    bool ignore_addons;
     String report_lcov_filename;
-    bool use_absolute_paths;
 };
 
 class SettingsGateway {

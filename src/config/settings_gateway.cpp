@@ -16,26 +16,36 @@ static void _register_setting(const String& p_name, const Variant& p_default, Va
 
     Dictionary property_info;
     property_info["name"] = p_name;
-    property_info["type"] = p_type;
-    property_info["hint"] = p_hint;
+    property_info["type"] = (int)p_type; // Fixes Godot parsing the Dictionary 
+    property_info["hint"] = (int)p_hint;
     property_info["hint_string"] = p_hint_string;
     
     ps->add_property_info(property_info);
     ps->set_as_basic(p_name, true);
 }
 
+	// "res://addons/gdUnit4/src/network",
+	// "res://addons/gdUnit4/src/core/runners",
+	// "res://addons/gdUnit4/src/ui",
+	// "res://addons/gdUnit4/bin",
+	// "res://addons/gdUnit4/src/core/hooks",
+	
+	// # --- GdUnit4 Tests ---
+	// # We ignore all test files. They will still RUN, but they won't be instrumented.
+	// # This avoids parser errors from "intentional failure" scripts and keeps the report focused on source code.
+	// "res://addons/gdUnit4/test"
+
 void SettingsGateway::register_settings() {
-    _register_setting(SettingsKeys::DATA_STORE_DIR, "res://coverage-data", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR);
-    _register_setting(SettingsKeys::REPORT_DIR, "res://coverage-report", Variant::STRING, PROPERTY_HINT_GLOBAL_DIR);
+    _register_setting(SettingsKeys::DATA_STORE_DIR, "res://coverage-data", Variant::STRING, PROPERTY_HINT_DIR);
+    _register_setting(SettingsKeys::REPORT_DIR, "res://coverage-report", Variant::STRING, PROPERTY_HINT_DIR);
     
-    Array default_ignore;
-    default_ignore.push_back("res://addons/nano_coverage_godot/**");
-    default_ignore.push_back("res://addons/gdUnit4/**");
-    default_ignore.push_back("**/*_test.gd"); // Example: ignore any file ending in _test.gd recursively
-    _register_setting(SettingsKeys::IGNORE_PATHS, default_ignore, Variant::ARRAY);
+    PackedStringArray default_ignore;
+    default_ignore.push_back("**/*_test.gd"); // Explicitly ignore unit test gdscripts in the report
+    _register_setting(SettingsKeys::IGNORE_PATHS, default_ignore, Variant::PACKED_STRING_ARRAY);
+
+    _register_setting(SettingsKeys::IGNORE_ADDONS, true, Variant::BOOL);
 
     _register_setting(SettingsKeys::REPORT_LCOV_FILENAME, "lcov.info", Variant::STRING);
-    _register_setting(SettingsKeys::USE_ABSOLUTE_PATHS, false, Variant::BOOL);
 }
 
 CoverageSettings SettingsGateway::load() {
@@ -47,11 +57,11 @@ CoverageSettings SettingsGateway::load() {
         return default_val;
     };
 
-    settings.data_store_dir = get_safe(SettingsKeys::DATA_STORE_DIR, "res://coverage-data");
-    settings.report_dir = get_safe(SettingsKeys::REPORT_DIR, "res://coverage-report");
-    settings.ignore_paths = get_safe(SettingsKeys::IGNORE_PATHS, Array());
+    settings.data_store_dir = get_safe(SettingsKeys::DATA_STORE_DIR, "coverage-data");
+    settings.report_dir = get_safe(SettingsKeys::REPORT_DIR, "coverage-report");
+    settings.ignore_paths = get_safe(SettingsKeys::IGNORE_PATHS, PackedStringArray());
+    settings.ignore_addons = get_safe(SettingsKeys::IGNORE_ADDONS, true);
     settings.report_lcov_filename = get_safe(SettingsKeys::REPORT_LCOV_FILENAME, "lcov.info");
-    settings.use_absolute_paths = get_safe(SettingsKeys::USE_ABSOLUTE_PATHS, false);
 
     return settings;
 }

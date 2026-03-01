@@ -86,7 +86,20 @@ void ProjectBootstrapper::instrument_all_scripts() {
     Logger::info("--- Starting Memory Instrumentation ---");
 
     CoverageSettings settings = SettingsGateway::load();
-    Array compiled_ignores = compile_ignore_patterns(settings.ignore_paths);
+    Array raw_ignores;
+    
+    for (int i = 0; i < settings.ignore_paths.size(); ++i) {
+        raw_ignores.push_back(settings.ignore_paths[i]);
+    }
+
+    if (settings.ignore_addons) {
+        raw_ignores.push_back("res://addons/**");
+    } else {
+        // Hardcoded ignore for nanocoverage gdscripts. Cannot be instrumented anyway.
+        raw_ignores.push_back("res://addons/nano_coverage_godot/**");
+    }
+
+    Array compiled_ignores = compile_ignore_patterns(raw_ignores);
     Array files = get_all_files("res://", compiled_ignores);
 
     Logger::info("Total GDScript files found to instrument: " + String::num_int64(files.size()));
