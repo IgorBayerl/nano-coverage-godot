@@ -23,7 +23,7 @@ class NanoCoverage : public Object {
     void reset();
 
     // Dumps current memory execution data to "coverage.data" (appends).
-    void save_session();
+    void save_session(const String& workspace_id = "default");
 
     // Debugging helpers
     int64_t get_total_hit_count() const;

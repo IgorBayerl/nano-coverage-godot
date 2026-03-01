@@ -11,8 +11,13 @@
 using namespace godot;
 
 TEST(SettingsGatewayTest, RegisterAndDefaultValues) {
-    // Ensure we are reading clean defaults by overriding potentially dirty ones from other tests
-    // (Though with the fixes above, they should be clean, but this makes this test self-sufficient)
+    ProjectSettings* ps = ProjectSettings::get_singleton();
+    ps->clear(SettingsKeys::DATA_STORE_DIR);
+    ps->clear(SettingsKeys::REPORT_DIR);
+    ps->clear(SettingsKeys::IGNORE_PATHS);
+    ps->clear(SettingsKeys::IGNORE_ADDONS);
+    ps->clear(SettingsKeys::REPORT_LCOV_FILENAME);
+
     SettingsGateway::register_settings();
     CoverageSettings settings = SettingsGateway::load();
 

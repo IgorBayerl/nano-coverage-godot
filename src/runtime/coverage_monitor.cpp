@@ -19,7 +19,7 @@ namespace fs = std::filesystem;
 
 void NanoCoverage::_bind_methods() {
     ClassDB::bind_method(D_METHOD("hit", "file_path", "line"), &NanoCoverage::hit);
-    ClassDB::bind_method(D_METHOD("save_session"), &NanoCoverage::save_session);
+    ClassDB::bind_method(D_METHOD("save_session", "workspace_id"), &NanoCoverage::save_session, DEFVAL("default"));
     ClassDB::bind_method(D_METHOD("reset"), &NanoCoverage::reset);
     ClassDB::bind_method(D_METHOD("get_total_hit_count"), &NanoCoverage::get_total_hit_count);
 }
@@ -32,14 +32,15 @@ void NanoCoverage::reset() {
     collector.clear();
 }
 
-void NanoCoverage::save_session() {
+void NanoCoverage::save_session(const String& workspace_id) {
     CoverageSettings settings = SettingsGateway::load();
     String global_out_dir = ProjectSettings::get_singleton()->globalize_path(settings.data_store_dir);
 
-    CoverageStore store(global_out_dir.utf8().get_data(), "default");
+    std::string ws_id_str = workspace_id.utf8().get_data();
+    CoverageStore store(global_out_dir.utf8().get_data(), ws_id_str);
     CoverageData snapshot = collector.snapshot();
 
-    Logger::info("Saving Session memory snapshot...");
+    Logger::info("Saving Session memory snapshot to workspace: " + workspace_id);
     store.append_run_snapshot("session_data", snapshot);
 }
 

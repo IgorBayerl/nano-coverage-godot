@@ -31,12 +31,7 @@ func shutdown(session: GdUnitTestSession) -> GdUnitResult:
 		print("[NanoCoverage] Total hits currently in memory: ", hits)
 		session.send_message("NanoCoverage: Collected %d execution hits." % hits)
 		
-		# Tell the C++ backend exactly where to save the .covdata file
-		# so that the LCOV reporter can find it.
-		ProjectSettings.set_setting("nano_coverage/output_dir", "res://coverage-data/gdunit4/runs")
-		ProjectSettings.set_setting("nano_coverage/output_name", "gdunit_session.covdata")
-		
-		nc.save_session()
+		nc.save_session("gdunit4")
 		nc.reset()
 	
 	# 2. Generate the report
