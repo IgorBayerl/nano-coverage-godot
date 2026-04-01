@@ -19,39 +19,21 @@ func run_full_coverage_cycle():
 	print("--- Starting Coverage Cycle ---")
 
 	# 1. INSTRUMENTATION
-	# Creates a temporary copy of the project with tracking code injected.
-	# Returns: Dictionary { "output_path": String, "error": String }
-	var instr_opts = {}
-	var instr_result = _api.instrument_project(instr_opts)
-	
-	if instr_result.has("error"):
-		printerr("Instrumentation failed: ", instr_result.error)
-		return
-
-	var temp_path = instr_result.output_path
-	print("Project instrumented at: ", temp_path)
+	# Use ProjectBootstrapper to instrument all scripts in-memory.
+	# This patches loaded GDScript sources with tracking calls.
+	var bootstrapper = ProjectBootstrapper.new()
+	bootstrapper.instrument_all_scripts()
+	print("Project instrumented in-memory.")
 
 	# 2. EXECUTION
-	# Runs the instrumented project.
-	# Options:
-	#   - output_path: (Required) Path from step 1
-	#   - workspace_id: (Optional) ID for session merging (default: "default")
-	#   - blocking: (Optional) If true, waits for game to close (default: false)
-	#   - dry_run: (Optional) Returns command args without running (default: false)
-	var run_opts = {
-		"output_path": temp_path,
-		"workspace_id": "integration_test",
-		"blocking": true # We wait here so we can generate the report immediately after
-	}
-	
-	print("Running game...")
-	var run_result = _api.run_instrumented_project(run_opts)
-	
-	if run_result.has("error"):
-		printerr("Run failed: ", run_result.error)
-		return
-		
-	print("Game run finished. Run ID: ", run_result.run_id)
+	# At this point, run your game or tests normally.
+	# Instrumented scripts will call NanoCoverage.hit() on every executed line.
+	# When the game/tests finish, save the session:
+	if Engine.has_singleton("NanoCoverage"):
+		var nc = Engine.get_singleton("NanoCoverage")
+		nc.save_session("integration_test")
+		nc.reset()
+		print("Session saved.")
 
 	# 3. REPORT GENERATION
 	# Merges data and produces the lcov.info file.
@@ -60,9 +42,9 @@ func run_full_coverage_cycle():
 	var report_opts = {
 		"workspace_id": "integration_test"
 	}
-	
+
 	var report_result = _api.generate_coverage_report(report_opts)
-	
+
 	if report_result.has("report_path"):
 		print("Success! Report generated at: ", report_result.report_path)
 	else:

@@ -7,7 +7,7 @@ compatibility_minimum = "4.3"
 
 # WINDOWS
 windows.debug.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.windows.template_debug.x86_64.dll"
-windows.editor.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.windows.template_debug.x86_64.dll"
+windows.editor.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.windows.editor.x86_64.dll"
 windows.release.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.windows.template_release.x86_64.dll"
 
 # LINUX (x86_64 and ARM64)

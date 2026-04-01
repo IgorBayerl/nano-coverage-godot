@@ -10,6 +10,11 @@ struct CoverageSettings {
     PackedStringArray ignore_paths;
     bool ignore_addons;
     String report_lcov_filename;
+
+    // UI settings
+    bool ui_show_run_instrumented = true;
+    bool ui_show_generate_report = true;
+    bool ui_show_clear_data = true;
 };
 
 class SettingsGateway {

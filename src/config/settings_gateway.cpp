@@ -46,6 +46,11 @@ void SettingsGateway::register_settings() {
     _register_setting(SettingsKeys::IGNORE_ADDONS, true, Variant::BOOL);
 
     _register_setting(SettingsKeys::REPORT_LCOV_FILENAME, "lcov.info", Variant::STRING);
+
+    // UI settings
+    _register_setting(SettingsKeys::UI_SHOW_RUN_INSTRUMENTED, true, Variant::BOOL);
+    _register_setting(SettingsKeys::UI_SHOW_GENERATE_REPORT, true, Variant::BOOL);
+    _register_setting(SettingsKeys::UI_SHOW_CLEAR_DATA, true, Variant::BOOL);
 }
 
 CoverageSettings SettingsGateway::load() {
@@ -62,6 +67,11 @@ CoverageSettings SettingsGateway::load() {
     settings.ignore_paths = get_safe(SettingsKeys::IGNORE_PATHS, PackedStringArray());
     settings.ignore_addons = get_safe(SettingsKeys::IGNORE_ADDONS, true);
     settings.report_lcov_filename = get_safe(SettingsKeys::REPORT_LCOV_FILENAME, "lcov.info");
+
+    // UI settings
+    settings.ui_show_run_instrumented = get_safe(SettingsKeys::UI_SHOW_RUN_INSTRUMENTED, true);
+    settings.ui_show_generate_report = get_safe(SettingsKeys::UI_SHOW_GENERATE_REPORT, true);
+    settings.ui_show_clear_data = get_safe(SettingsKeys::UI_SHOW_CLEAR_DATA, true);
 
     return settings;
 }

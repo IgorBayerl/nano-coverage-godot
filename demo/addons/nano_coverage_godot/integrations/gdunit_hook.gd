@@ -23,22 +23,26 @@ func shutdown(session: GdUnitTestSession) -> GdUnitResult:
 	session.send_message("NanoCoverage: Tests complete. Generating Report...")
 	
 	# 1. Force the runtime to dump hits to disk
-	if Engine.has_singleton("NanoCoverage"):
-		var nc = Engine.get_singleton("NanoCoverage")
-		
-		# Log the total hits directly from C++ memory
-		var hits = nc.get_total_hit_count()
-		print("[NanoCoverage] Total hits currently in memory: ", hits)
-		session.send_message("NanoCoverage: Collected %d execution hits." % hits)
-		
-		nc.save_session("gdunit4")
-		nc.reset()
-	
+	if not Engine.has_singleton("NanoCoverage"):
+		printerr("[NanoCoverage] NanoCoverage singleton not found. Coverage data was not collected.")
+		session.send_message("NanoCoverage: Singleton not found. Skipping report generation.")
+		return GdUnitResult.success()
+
+	var nc = Engine.get_singleton("NanoCoverage")
+
+	# Log the total hits directly from C++ memory
+	var hits = nc.get_total_hit_count()
+	print("[NanoCoverage] Total hits currently in memory: ", hits)
+	session.send_message("NanoCoverage: Collected %d execution hits." % hits)
+
+	nc.save_session("gdunit4")
+	nc.reset()
+
 	# 2. Generate the report
 	var api = CoverageApi.new()
 	var report_opts = {"workspace_id": "gdunit4"}
 	var result = api.generate_coverage_report(report_opts)
-	
+
 	if result.has("status") and result.status == "ok":
 		print("[NanoCoverage] Report generated successfully at: ", result.report_path)
 		session.send_message("NanoCoverage LCOV Report generated at: %s" % result.report_path)
@@ -46,5 +50,5 @@ func shutdown(session: GdUnitTestSession) -> GdUnitResult:
 		var err = result.get("error", "Unknown")
 		printerr("[NanoCoverage] Report generation failed: ", err)
 		session.send_message("NanoCoverage LCOV Report generation failed: %s" % err)
-		
+
 	return GdUnitResult.success()

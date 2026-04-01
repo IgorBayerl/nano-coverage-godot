@@ -85,14 +85,16 @@ void NanoCoverageEditorPlugin::_exit_tree() {
 }
 
 void NanoCoverageEditorPlugin::_update_visibility() {
+    CoverageSettings settings = SettingsGateway::load();
+
     if (run_instrumented_button) {
-        run_instrumented_button->set_visible(true);
+        run_instrumented_button->set_visible(settings.ui_show_run_instrumented);
     }
     if (generate_report_button) {
-        generate_report_button->set_visible(true);
+        generate_report_button->set_visible(settings.ui_show_generate_report);
     }
     if (clear_data_button) {
-        clear_data_button->set_visible(true);
+        clear_data_button->set_visible(settings.ui_show_clear_data);
     }
 }
 
@@ -102,13 +104,6 @@ void NanoCoverageEditorPlugin::_on_settings_changed() {
 
 void NanoCoverageEditorPlugin::_on_run_instrumented_pressed() {
     Logger::info("Launching game with hot-patch coverage...");
-
-    // Clear previous data
-    if (coverage_api.is_valid()) {
-        Dictionary opts;
-        opts["workspace_id"] = "default";
-        coverage_api->clear_coverage_data(opts);
-    }
 
     // Launch Godot subprocess with our custom game_runner.gd
     PackedStringArray args;

@@ -21,12 +21,13 @@ Array ProjectBootstrapper::compile_ignore_patterns(const Array& glob_patterns) {
         // Convert Glob to strict Regex
         // 1. Escape dots
         String regex_str = glob.replace(".", "\\.");
-        // 2. Replace ** with .* (matches across slashes)
-        regex_str = regex_str.replace("**", ".*");
-        // 3. Replace single * with [^/]* (matches inside a single directory)
-        // Note: careful to avoid replacing the .* we just made
-        regex_str = regex_str.replace("[^/]*[^/]*", ".*"); // Cleanup edge cases
-        
+        // 2. Replace ** with placeholder (to avoid double-replacing in step 3)
+        regex_str = regex_str.replace("**", "<<GLOBSTAR>>");
+        // 3. Replace remaining single * with [^/]* (matches inside a single directory)
+        regex_str = regex_str.replace("*", "[^/]*");
+        // 4. Replace placeholder with .* (matches across slashes)
+        regex_str = regex_str.replace("<<GLOBSTAR>>", ".*");
+
         regex_str = "^" + regex_str + "$";
 
         Ref<RegEx> rx = RegEx::create_from_string(regex_str);
