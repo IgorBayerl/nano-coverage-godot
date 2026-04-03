@@ -4,6 +4,7 @@
 #include "utils/logger.h"
 #include "api/coverage_api.h"
 #include "editor/plugin.h"
+#include "editor/coverage_gutter.h"
 #include "editor/coverage_panel.h"
 #include "runtime/coverage_monitor.h"
 #include "runtime/coverage_runtime.h"
@@ -41,6 +42,7 @@ void initialize_nano_coverage_godot_module(ModuleInitializationLevel p_level) {
     // 2. EDITOR LEVEL: Register Editor-only classes (Plugins, UI, etc.)
     // These are only available when the Editor is open.
     if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
+        ClassDB::register_class<CoverageGutter>();
         ClassDB::register_class<CoveragePanel>();
         ClassDB::register_class<NanoCoverageEditorPlugin>();
         Logger::info("Editor classes registered.");

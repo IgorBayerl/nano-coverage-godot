@@ -14,6 +14,10 @@ private:
     Label* summary_label = nullptr;
     Tree* file_tree = nullptr;
 
+    void _on_item_activated();
+    void _on_button_clicked(TreeItem* item, int32_t column, int32_t id, int32_t mouse_button);
+    void _open_file(TreeItem* item);
+
 protected:
     static void _bind_methods();
 

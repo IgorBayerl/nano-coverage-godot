@@ -63,10 +63,15 @@ TEST(SettingsGatewayTest, RegisterSetsUpKeysAndTypes) {
     EXPECT_EQ(ps->get_setting(SettingsKeys::IGNORE_PATHS).get_type(), Variant::PACKED_STRING_ARRAY);
     EXPECT_TRUE(ps->has_setting(SettingsKeys::IGNORE_ADDONS));
 
+    // General behavior settings
+    EXPECT_TRUE(ps->has_setting(SettingsKeys::WATCH_LCOV_FILE));
+    EXPECT_TRUE(ps->has_setting(SettingsKeys::AUTO_GENERATE_REPORT));
+
     // UI settings
     EXPECT_TRUE(ps->has_setting(SettingsKeys::UI_SHOW_RUN_INSTRUMENTED));
     EXPECT_TRUE(ps->has_setting(SettingsKeys::UI_SHOW_GENERATE_REPORT));
     EXPECT_TRUE(ps->has_setting(SettingsKeys::UI_SHOW_CLEAR_DATA));
+    EXPECT_TRUE(ps->has_setting(SettingsKeys::UI_SHOW_COVERAGE_PANEL));
 }
 
 TEST(SettingsGatewayTest, UIButtonVisibilityDefaults) {

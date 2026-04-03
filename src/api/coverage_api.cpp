@@ -39,8 +39,7 @@ Dictionary CoverageApi::instrument_script(const String& source_code, const Strin
         return result;
     }
 
-    // --- Ignore files with 0 coverable lines ---
-    // TODO: Fix, we should have a struct to hold this info
+    // Ignore files with 0 coverable lines
     if (inst_res.covered_lines.empty()) {
         result["success"] = true;
         result["code"] = source_code; // Return the original, unmodified code
