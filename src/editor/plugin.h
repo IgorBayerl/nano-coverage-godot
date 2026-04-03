@@ -2,11 +2,13 @@
 
 #include <godot_cpp/classes/button.hpp>
 #include <godot_cpp/classes/editor_plugin.hpp>
-#include <godot_cpp/classes/timer.hpp>
 
 #include "../api/coverage_api.h"
+#include "../reporting/lcov_parser.h"
 
 namespace godot {
+
+class CoveragePanel;
 
 class NanoCoverageEditorPlugin : public EditorPlugin {
     GDCLASS(NanoCoverageEditorPlugin, EditorPlugin)
@@ -17,7 +19,14 @@ class NanoCoverageEditorPlugin : public EditorPlugin {
     Button* generate_report_button = nullptr;
     Button* clear_data_button = nullptr;
 
+    // Coverage display
+    CoveragePanel* coverage_panel = nullptr;
+    Button* panel_button = nullptr;
+    LcovReport cached_report;
 
+    void refresh_gutters();
+    void update_active_editor_gutter();
+    void refresh_metrics_panel();
 
    protected:
     static void _bind_methods();
@@ -34,8 +43,7 @@ class NanoCoverageEditorPlugin : public EditorPlugin {
     void _on_generate_report_pressed();
     void _on_clear_data_pressed();
     void _on_settings_changed();
-
-
+    void _on_editor_script_changed(const Ref<Script>& script);
 };
 
 }  // namespace godot

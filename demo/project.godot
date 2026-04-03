@@ -33,3 +33,6 @@ hooks/session_hooks=Dictionary[String, bool]({
 integrations/gdunit4/active=true
 general/ignore_paths=PackedStringArray("**/*_test.gd", "res://addons/gdUnit4/src/network", "res://addons/gdUnit4/src/core/runners", "res://addons/gdUnit4/src/ui", "res://addons/gdUnit4/bin", "res://addons/gdUnit4/src/core/hooks", "res://addons/gdUnit4/test")
 general/ignore_addons=false
+ui/show_run_instrumented=false
+ui/show_generate_report=false
+ui/show_clear_data=false
