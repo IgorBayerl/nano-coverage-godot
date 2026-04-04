@@ -50,14 +50,16 @@ jobs:
         if: ${{ matrix.platform != 'macos' }}
         # Windows runner auto-detects MSVC. Linux runner auto-detects GCC.
         run: |
-          scons platform=${{ matrix.platform }} target=template_release build_tests=no cache_path=.scons_cache/
+          scons platform=${{ matrix.platform }} target=editor build_tests=no cache_path=.scons_cache/
+          scons platform=${{ matrix.platform }} target=template_debug build_tests=no cache_path=.scons_cache/
 
       - name: Compile (MacOS)
         if: ${{ matrix.platform == 'macos' }}
         run: |
-          # MacOS usually needs both architectures for a universal build
-          scons platform=macos arch=x86_64 target=template_release build_tests=no cache_path=.scons_cache/
-          scons platform=macos arch=arm64 target=template_release build_tests=no cache_path=.scons_cache/
+          scons platform=macos arch=x86_64 target=editor build_tests=no cache_path=.scons_cache/
+          scons platform=macos arch=x86_64 target=template_debug build_tests=no cache_path=.scons_cache/
+          scons platform=macos arch=arm64 target=editor build_tests=no cache_path=.scons_cache/
+          scons platform=macos arch=arm64 target=template_debug build_tests=no cache_path=.scons_cache/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
