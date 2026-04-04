@@ -82,7 +82,7 @@ def run_gdunit_tests(godot_exe):
 
 class BuildArgs:
     platform = "auto"
-    target = "template_debug" 
+    target = "editor" 
     clean = False
     only_clean = False
     no_tests = False 

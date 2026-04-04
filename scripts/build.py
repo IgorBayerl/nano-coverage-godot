@@ -82,7 +82,7 @@ def run_build(args):
 def main():
     parser = argparse.ArgumentParser(description="Build Manager")
     parser.add_argument("--platform", choices=["windows", "linux", "macos", "android", "ios", "auto"], default="auto")
-    parser.add_argument("--target", choices=["template_debug", "template_release"], default="template_debug")
+    parser.add_argument("--target", choices=["editor", "template_debug", "template_release"], default="editor")
     parser.add_argument("--clean", action="store_true")
     parser.add_argument("--only-clean", action="store_true")
     parser.add_argument("--no-tests", action="store_true")

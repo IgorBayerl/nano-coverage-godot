@@ -10,12 +10,15 @@ windows.debug.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot
 windows.editor.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.windows.editor.x86_64.dll"
 windows.release.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.windows.template_release.x86_64.dll"
 
-# LINUX (x86_64 and ARM64)
+# LINUX (x86_64)
 linux.debug.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.linux.template_debug.x86_64.so"
+linux.editor.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.linux.editor.x86_64.so"
 linux.release.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.linux.template_release.x86_64.so"
 
 # MACOS (Intel and Apple Silicon)
 macos.debug.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.macos.template_debug.x86_64.dylib"
+macos.editor.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.macos.editor.x86_64.dylib"
 macos.release.x86_64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.macos.template_release.x86_64.dylib"
 macos.debug.arm64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.macos.template_debug.arm64.dylib"
+macos.editor.arm64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.macos.editor.arm64.dylib"
 macos.release.arm64 = "res://addons/nano_coverage_godot/bin/nano_coverage_godot.macos.template_release.arm64.dylib"
