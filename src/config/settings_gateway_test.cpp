@@ -25,6 +25,8 @@ TEST(SettingsGatewayTest, RegisterAndDefaultValues) {
     EXPECT_EQ(settings.report_dir, "res://coverage-report");
     EXPECT_EQ(settings.report_lcov_filename, "lcov.info");
     EXPECT_TRUE(settings.ignore_addons);
+    EXPECT_FLOAT_EQ(settings.threshold_high, 80.0f);
+    EXPECT_FLOAT_EQ(settings.threshold_medium, 50.0f);
 }
 
 TEST(SettingsGatewayTest, LoadReadsValuesFromProjectSettings) {
@@ -38,6 +40,8 @@ TEST(SettingsGatewayTest, LoadReadsValuesFromProjectSettings) {
     SettingsOverride s3(SettingsKeys::IGNORE_PATHS, custom_ignores);
     SettingsOverride s4(SettingsKeys::REPORT_LCOV_FILENAME, "custom.info");
     SettingsOverride s6(SettingsKeys::IGNORE_ADDONS, false);
+    SettingsOverride s7(SettingsKeys::THRESHOLD_HIGH, 90.0f);
+    SettingsOverride s8(SettingsKeys::THRESHOLD_MEDIUM, 60.0f);
 
     // Load settings
     CoverageSettings settings = SettingsGateway::load();
@@ -48,6 +52,8 @@ TEST(SettingsGatewayTest, LoadReadsValuesFromProjectSettings) {
     EXPECT_EQ(settings.ignore_paths, custom_ignores);
     EXPECT_EQ(settings.report_lcov_filename, "custom.info");
     EXPECT_FALSE(settings.ignore_addons);
+    EXPECT_FLOAT_EQ(settings.threshold_high, 90.0f);
+    EXPECT_FLOAT_EQ(settings.threshold_medium, 60.0f);
 
     // Destructors restore original values automatically
 }
@@ -72,6 +78,10 @@ TEST(SettingsGatewayTest, RegisterSetsUpKeysAndTypes) {
     EXPECT_TRUE(ps->has_setting(SettingsKeys::UI_SHOW_GENERATE_REPORT));
     EXPECT_TRUE(ps->has_setting(SettingsKeys::UI_SHOW_CLEAR_DATA));
     EXPECT_TRUE(ps->has_setting(SettingsKeys::UI_SHOW_COVERAGE_PANEL));
+    
+    // UI Thresholds
+    EXPECT_TRUE(ps->has_setting(SettingsKeys::THRESHOLD_HIGH));
+    EXPECT_TRUE(ps->has_setting(SettingsKeys::THRESHOLD_MEDIUM));
 }
 
 TEST(SettingsGatewayTest, UIButtonVisibilityDefaults) {

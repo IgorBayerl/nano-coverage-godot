@@ -17,6 +17,10 @@ struct SettingsKeys {
     static constexpr const char* UI_SHOW_GENERATE_REPORT = "nano_coverage/ui/show_generate_report";
     static constexpr const char* UI_SHOW_CLEAR_DATA = "nano_coverage/ui/show_clear_data";
     static constexpr const char* UI_SHOW_COVERAGE_PANEL = "nano_coverage/ui/show_coverage_panel";
+    
+    // UI Thresholds (Grouped under "thresholds")
+    static constexpr const char* THRESHOLD_HIGH = "nano_coverage/ui/thresholds/high_percent";
+    static constexpr const char* THRESHOLD_MEDIUM = "nano_coverage/ui/thresholds/medium_percent";
 };
 
 } // namespace godot

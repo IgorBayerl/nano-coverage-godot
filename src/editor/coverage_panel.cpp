@@ -10,6 +10,7 @@
 #include <godot_cpp/classes/tree_item.hpp>
 #include <godot_cpp/core/class_db.hpp>
 
+#include "../config/settings_gateway.h"
 #include "../utils/path_utils.h"
 
 namespace godot {
@@ -144,6 +145,11 @@ void CoveragePanel::_populate_tree() {
         return;
     }
 
+    // Load User Thresholds
+    CoverageSettings settings = SettingsGateway::load();
+    float threshold_high = settings.threshold_high;
+    float threshold_medium = settings.threshold_medium;
+
     // Prepare filter Regex if needed
     Ref<RegEx> glob_regex;
     bool use_regex = false;
@@ -224,14 +230,15 @@ void CoveragePanel::_populate_tree() {
             item->set_text(3, "Open");
         }
 
+        // Apply dynamically loaded coloring thresholds
         Color color;
         float pct = file->coverage_percent();
-        if (pct >= 80.0f) {
-            color = Color(0.2, 0.8, 0.2);
-        } else if (pct >= 50.0f) {
-            color = Color(0.9, 0.7, 0.1);
+        if (pct >= threshold_high) {
+            color = Color(0.2, 0.8, 0.2); // Green
+        } else if (pct >= threshold_medium) {
+            color = Color(0.9, 0.7, 0.1); // Yellow
         } else {
-            color = Color(0.9, 0.2, 0.2);
+            color = Color(0.9, 0.2, 0.2); // Red
         }
         item->set_custom_color(1, color);
         item->set_metadata(0, String(file->source_file.c_str()));

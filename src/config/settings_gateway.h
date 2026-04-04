@@ -19,6 +19,10 @@ struct CoverageSettings {
     bool ui_show_generate_report = true;
     bool ui_show_clear_data = true;
     bool ui_show_coverage_panel = true;
+    
+    // UI Thresholds
+    float threshold_high = 80.0f;
+    float threshold_medium = 50.0f;
 };
 
 class SettingsGateway {

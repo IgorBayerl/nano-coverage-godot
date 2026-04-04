@@ -42,6 +42,10 @@ void SettingsGateway::register_settings() {
     _register_setting(SettingsKeys::UI_SHOW_GENERATE_REPORT, true, Variant::BOOL);
     _register_setting(SettingsKeys::UI_SHOW_CLEAR_DATA, true, Variant::BOOL);
     _register_setting(SettingsKeys::UI_SHOW_COVERAGE_PANEL, true, Variant::BOOL);
+    
+    // UI Thresholds (Range 0.0 to 100.0, step 0.1)
+    _register_setting(SettingsKeys::THRESHOLD_HIGH, 80.0f, Variant::FLOAT, PROPERTY_HINT_RANGE, "0.0,100.0,0.1");
+    _register_setting(SettingsKeys::THRESHOLD_MEDIUM, 50.0f, Variant::FLOAT, PROPERTY_HINT_RANGE, "0.0,100.0,0.1");
 }
 
 CoverageSettings SettingsGateway::load() {
@@ -67,6 +71,10 @@ CoverageSettings SettingsGateway::load() {
     settings.ui_show_generate_report = get_safe(SettingsKeys::UI_SHOW_GENERATE_REPORT, true);
     settings.ui_show_clear_data = get_safe(SettingsKeys::UI_SHOW_CLEAR_DATA, true);
     settings.ui_show_coverage_panel = get_safe(SettingsKeys::UI_SHOW_COVERAGE_PANEL, true);
+    
+    // UI Thresholds
+    settings.threshold_high = get_safe(SettingsKeys::THRESHOLD_HIGH, 80.0f);
+    settings.threshold_medium = get_safe(SettingsKeys::THRESHOLD_MEDIUM, 50.0f);
 
     return settings;
 }
