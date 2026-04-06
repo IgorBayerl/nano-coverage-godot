@@ -93,9 +93,9 @@ TEST(SettingsGatewayTest, UIButtonVisibilityDefaults) {
     SettingsGateway::register_settings();
     CoverageSettings s = SettingsGateway::load();
 
-    EXPECT_TRUE(s.ui_show_run_instrumented);
-    EXPECT_TRUE(s.ui_show_generate_report);
-    EXPECT_TRUE(s.ui_show_clear_data);
+    EXPECT_FALSE(s.ui_show_run_instrumented);
+    EXPECT_FALSE(s.ui_show_generate_report);
+    EXPECT_FALSE(s.ui_show_clear_data);
 }
 
 TEST(SettingsGatewayTest, UIButtonVisibilityOverrides) {

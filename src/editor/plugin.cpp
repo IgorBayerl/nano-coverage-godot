@@ -2,11 +2,11 @@
 
 #include <godot_cpp/classes/code_edit.hpp>
 #include <godot_cpp/classes/control.hpp>
+#include <godot_cpp/classes/editor_file_system.hpp>
 #include <godot_cpp/classes/editor_interface.hpp>
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/h_box_container.hpp>
-#include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/classes/script.hpp>
 #include <godot_cpp/classes/script_editor.hpp>
@@ -17,6 +17,7 @@
 #include <godot_cpp/variant/callable.hpp>
 
 #include "../config/settings_gateway.h"
+#include "../instrumentation/disk_instrumenter.h"
 #include "../runtime/coverage_monitor.h"
 #include "../utils/logger.h"
 #include "../utils/path_utils.h"
@@ -26,15 +27,16 @@
 namespace godot {
 
 void NanoCoverageEditorPlugin::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("_on_run_instrumented_pressed"),
-                         &NanoCoverageEditorPlugin::_on_run_instrumented_pressed);
+    ClassDB::bind_method(D_METHOD("_on_instrument_toggled", "pressed"),
+                         &NanoCoverageEditorPlugin::_on_instrument_toggled);
+    ClassDB::bind_method(D_METHOD("_on_restore_pressed"),
+                         &NanoCoverageEditorPlugin::_on_restore_pressed);
     ClassDB::bind_method(D_METHOD("_on_generate_report_pressed"),
                          &NanoCoverageEditorPlugin::_on_generate_report_pressed);
     ClassDB::bind_method(D_METHOD("_on_clear_data_pressed"), &NanoCoverageEditorPlugin::_on_clear_data_pressed);
     ClassDB::bind_method(D_METHOD("_on_settings_changed"), &NanoCoverageEditorPlugin::_on_settings_changed);
     ClassDB::bind_method(D_METHOD("_on_editor_script_changed"), &NanoCoverageEditorPlugin::_on_editor_script_changed);
     ClassDB::bind_method(D_METHOD("_on_lcov_watch_tick"), &NanoCoverageEditorPlugin::_on_lcov_watch_tick);
-    ClassDB::bind_method(D_METHOD("_on_poll_game_process"), &NanoCoverageEditorPlugin::_on_poll_game_process);
     ClassDB::bind_method(D_METHOD("_on_toggle_gutters"), &NanoCoverageEditorPlugin::_on_toggle_gutters);
 }
 
@@ -52,10 +54,17 @@ void NanoCoverageEditorPlugin::_enter_tree() {
     // Create toolbar buttons inside a shared container
     toolbar_button_container = memnew(HBoxContainer);
 
-    run_instrumented_button = memnew(Button);
-    run_instrumented_button->set_tooltip_text("Run Instrumented");
-    run_instrumented_button->connect("pressed", Callable(this, "_on_run_instrumented_pressed"));
-    toolbar_button_container->add_child(run_instrumented_button);
+    instrument_toggle = memnew(CheckButton);
+    instrument_toggle->set_text("Instrument");
+    instrument_toggle->set_tooltip_text("Toggle disk instrumentation for manual coverage");
+    instrument_toggle->connect("toggled", Callable(this, "_on_instrument_toggled"));
+    toolbar_button_container->add_child(instrument_toggle);
+
+    restore_button = memnew(Button);
+    restore_button->set_tooltip_text("Restore original scripts from backup");
+    restore_button->set_visible(false);
+    restore_button->connect("pressed", Callable(this, "_on_restore_pressed"));
+    toolbar_button_container->add_child(restore_button);
 
     generate_report_button = memnew(Button);
     generate_report_button->set_tooltip_text("Generate Report");
@@ -91,13 +100,6 @@ void NanoCoverageEditorPlugin::_enter_tree() {
     lcov_watch_timer->connect("timeout", Callable(this, "_on_lcov_watch_tick"));
     add_child(lcov_watch_timer);
 
-    // Game process poll timer
-    process_poll_timer = memnew(Timer);
-    process_poll_timer->set_wait_time(1.0);
-    process_poll_timer->set_autostart(false);
-    process_poll_timer->connect("timeout", Callable(this, "_on_poll_game_process"));
-    add_child(process_poll_timer);
-
     // Connect to settings changed
     ProjectSettings::get_singleton()->connect("settings_changed", Callable(this, "_on_settings_changed"));
 
@@ -109,6 +111,9 @@ void NanoCoverageEditorPlugin::_enter_tree() {
 
     _update_visibility();
 
+    // State recovery: check if files are instrumented on disk
+    _sync_instrument_state();
+
     // Start LCOV watcher if enabled
     CoverageSettings settings = SettingsGateway::load();
     if (settings.watch_lcov_file) {
@@ -117,21 +122,26 @@ void NanoCoverageEditorPlugin::_enter_tree() {
 }
 
 void NanoCoverageEditorPlugin::_exit_tree() {
+    // Warn if files are still instrumented on disk
+    {
+        Ref<DiskInstrumenter> di;
+        di.instantiate();
+        if (di->is_instrumented()) {
+            Logger::warn("NanoCoverage: Files are still instrumented on disk. Remember to restore before committing.");
+        }
+    }
+
     if (lcov_watch_timer) {
         lcov_watch_timer->stop();
         lcov_watch_timer->queue_free();
         lcov_watch_timer = nullptr;
     }
-    if (process_poll_timer) {
-        process_poll_timer->stop();
-        process_poll_timer->queue_free();
-        process_poll_timer = nullptr;
-    }
 
     if (toolbar_button_container) {
         toolbar_button_container->queue_free();
         toolbar_button_container = nullptr;
-        run_instrumented_button = nullptr;
+        instrument_toggle = nullptr;
+        restore_button = nullptr;
         generate_report_button = nullptr;
         clear_data_button = nullptr;
     }
@@ -162,8 +172,11 @@ void NanoCoverageEditorPlugin::_exit_tree() {
 void NanoCoverageEditorPlugin::_update_visibility() {
     CoverageSettings settings = SettingsGateway::load();
 
-    if (run_instrumented_button) {
-        run_instrumented_button->set_visible(settings.ui_show_run_instrumented);
+    if (instrument_toggle) {
+        instrument_toggle->set_visible(settings.ui_show_run_instrumented);
+    }
+    if (restore_button && !settings.ui_show_run_instrumented) {
+        restore_button->set_visible(false);
     }
     if (generate_report_button) {
         generate_report_button->set_visible(settings.ui_show_generate_report);
@@ -217,12 +230,12 @@ void NanoCoverageEditorPlugin::_place_toolbar_buttons() {
             parent->move_child(toolbar_button_container, run_bar_idx);
 
             // Apply editor theme icons to buttons
-            Ref<Texture2D> play_icon = base->get_theme_icon("Play", "EditorIcons");
             Ref<Texture2D> file_icon = base->get_theme_icon("File", "EditorIcons");
             Ref<Texture2D> clear_icon = base->get_theme_icon("Remove", "EditorIcons");
+            Ref<Texture2D> reload_icon = base->get_theme_icon("Reload", "EditorIcons");
 
-            if (play_icon.is_valid() && run_instrumented_button)
-                run_instrumented_button->set_button_icon(play_icon);
+            if (reload_icon.is_valid() && restore_button)
+                restore_button->set_button_icon(reload_icon);
             if (file_icon.is_valid() && generate_report_button)
                 generate_report_button->set_button_icon(file_icon);
             if (clear_icon.is_valid() && clear_data_button)
@@ -370,48 +383,50 @@ void NanoCoverageEditorPlugin::_on_lcov_watch_tick() {
     }
 }
 
-// --- Game process polling ---
+// --- Disk instrumentation state ---
 
-void NanoCoverageEditorPlugin::_on_poll_game_process() {
-    if (game_pid == -1) {
-        process_poll_timer->stop();
-        return;
+void NanoCoverageEditorPlugin::_sync_instrument_state() {
+    Ref<DiskInstrumenter> di;
+    di.instantiate();
+    bool on_disk = di->is_instrumented();
+
+    if (instrument_toggle) {
+        instrument_toggle->set_pressed_no_signal(on_disk);
+        instrument_toggle->set_text(on_disk ? "Instrumented" : "Instrument");
     }
-
-    if (!OS::get_singleton()->is_process_running(game_pid)) {
-        process_poll_timer->stop();
-        game_pid = -1;
-        Logger::info("Game process exited.");
-
-        CoverageSettings settings = SettingsGateway::load();
-        if (settings.auto_generate_report) {
-            Logger::info("Auto-generating report...");
-            _on_generate_report_pressed();
-        }
+    if (restore_button) {
+        restore_button->set_visible(on_disk);
     }
 }
 
 // --- Button handlers ---
 
-void NanoCoverageEditorPlugin::_on_run_instrumented_pressed() {
-    Logger::info("Launching game with hot-patch coverage...");
-
-    PackedStringArray args;
-    args.push_back("--path");
-    String absolute_path = ProjectSettings::get_singleton()->globalize_path("res://");
-    args.push_back(absolute_path);
-    args.push_back("--script");
-    args.push_back("res://addons/nano_coverage_godot/game_runner.gd");
-
-    int32_t pid = OS::get_singleton()->create_process(OS::get_singleton()->get_executable_path(), args);
-
-    if (pid == -1) {
-        Logger::error("Failed to launch game process.");
+void NanoCoverageEditorPlugin::_on_instrument_toggled(bool pressed) {
+    if (pressed) {
+        Ref<DiskInstrumenter> di;
+        di.instantiate();
+        Dictionary result = di->instrument_to_disk();
+        if (String(result["status"]) != "ok") {
+            Logger::error("Instrumentation failed: " + String(result.get("error", "")));
+            if (instrument_toggle) {
+                instrument_toggle->set_pressed_no_signal(false);
+            }
+        }
     } else {
-        Logger::info("Process started with PID " + String::num_int64(pid));
-        game_pid = pid;
-        process_poll_timer->start();
+        _on_restore_pressed();
     }
+    _sync_instrument_state();
+}
+
+void NanoCoverageEditorPlugin::_on_restore_pressed() {
+    Ref<DiskInstrumenter> di;
+    di.instantiate();
+    Dictionary result = di->restore_from_disk();
+    if (String(result["status"]) == "ok") {
+        // Trigger editor script reload so the editor picks up restored files
+        EditorInterface::get_singleton()->get_resource_filesystem()->scan();
+    }
+    _sync_instrument_state();
 }
 
 void NanoCoverageEditorPlugin::_on_generate_report_pressed() {

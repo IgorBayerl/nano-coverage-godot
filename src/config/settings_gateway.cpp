@@ -36,11 +36,12 @@ void SettingsGateway::register_settings() {
     _register_setting(SettingsKeys::REPORT_LCOV_FILENAME, "lcov.info", Variant::STRING);
     _register_setting(SettingsKeys::WATCH_LCOV_FILE, true, Variant::BOOL);
     _register_setting(SettingsKeys::AUTO_GENERATE_REPORT, true, Variant::BOOL);
+    _register_setting(SettingsKeys::BACKUP_DIR, "res://.nano_coverage", Variant::STRING, PROPERTY_HINT_DIR);
 
     // UI
-    _register_setting(SettingsKeys::UI_SHOW_RUN_INSTRUMENTED, true, Variant::BOOL);
-    _register_setting(SettingsKeys::UI_SHOW_GENERATE_REPORT, true, Variant::BOOL);
-    _register_setting(SettingsKeys::UI_SHOW_CLEAR_DATA, true, Variant::BOOL);
+    _register_setting(SettingsKeys::UI_SHOW_RUN_INSTRUMENTED, false, Variant::BOOL);
+    _register_setting(SettingsKeys::UI_SHOW_GENERATE_REPORT, false, Variant::BOOL);
+    _register_setting(SettingsKeys::UI_SHOW_CLEAR_DATA, false, Variant::BOOL);
     _register_setting(SettingsKeys::UI_SHOW_COVERAGE_PANEL, true, Variant::BOOL);
     
     // UI Thresholds (Range 0.0 to 100.0, step 0.1)
@@ -65,11 +66,12 @@ CoverageSettings SettingsGateway::load() {
     settings.report_lcov_filename = get_safe(SettingsKeys::REPORT_LCOV_FILENAME, "lcov.info");
     settings.watch_lcov_file = get_safe(SettingsKeys::WATCH_LCOV_FILE, true);
     settings.auto_generate_report = get_safe(SettingsKeys::AUTO_GENERATE_REPORT, true);
+    settings.backup_dir = get_safe(SettingsKeys::BACKUP_DIR, "res://.nano_coverage");
 
     // UI
-    settings.ui_show_run_instrumented = get_safe(SettingsKeys::UI_SHOW_RUN_INSTRUMENTED, true);
-    settings.ui_show_generate_report = get_safe(SettingsKeys::UI_SHOW_GENERATE_REPORT, true);
-    settings.ui_show_clear_data = get_safe(SettingsKeys::UI_SHOW_CLEAR_DATA, true);
+    settings.ui_show_run_instrumented = get_safe(SettingsKeys::UI_SHOW_RUN_INSTRUMENTED, false);
+    settings.ui_show_generate_report = get_safe(SettingsKeys::UI_SHOW_GENERATE_REPORT, false);
+    settings.ui_show_clear_data = get_safe(SettingsKeys::UI_SHOW_CLEAR_DATA, false);
     settings.ui_show_coverage_panel = get_safe(SettingsKeys::UI_SHOW_COVERAGE_PANEL, true);
     
     // UI Thresholds

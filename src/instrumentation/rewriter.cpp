@@ -7,10 +7,16 @@ namespace godot {
 std::string Rewriter::apply(const std::string& src, std::vector<TextInsertion> insertions) {
     std::string out = src;
 
-    // We use stable_sort to guarantee deterministic output order
-    // when multiple injections target the exact same byte offset.
-    std::stable_sort(insertions.begin(), insertions.end(),
-                     [](const TextInsertion& a, const TextInsertion& b) { return a.byte_offset > b.byte_offset; });
+    // Sort descending by byte_offset. 
+    // If offsets are equal, sort descending by original_index so the later 
+    // insertion is applied first, pushing the earlier insertion to the top.
+    std::sort(insertions.begin(), insertions.end(),
+        [](const TextInsertion& a, const TextInsertion& b) { 
+            if (a.byte_offset != b.byte_offset) {
+                return a.byte_offset > b.byte_offset; 
+            }
+            return a.original_index > b.original_index;
+        });
 
     for (const auto& ins : insertions) {
         if (ins.byte_offset > out.size()) {

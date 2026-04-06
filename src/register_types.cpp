@@ -8,6 +8,7 @@
 #include "editor/coverage_panel.h"
 #include "runtime/coverage_monitor.h"
 #include "runtime/coverage_runtime.h"
+#include "instrumentation/disk_instrumenter.h"
 #include "instrumentation/project_bootstrapper.h"
 #include "config/settings_gateway.h"
 #ifdef TESTS_ENABLED
@@ -35,6 +36,7 @@ void initialize_nano_coverage_godot_module(ModuleInitializationLevel p_level) {
         }
 
         ClassDB::register_class<ProjectBootstrapper>();
+        ClassDB::register_class<DiskInstrumenter>();
         ClassDB::register_class<CoverageRuntime>();
         SettingsGateway::register_settings();
     }

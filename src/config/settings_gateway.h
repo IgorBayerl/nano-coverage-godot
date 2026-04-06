@@ -13,11 +13,12 @@ struct CoverageSettings {
     String report_lcov_filename;
     bool watch_lcov_file = true;
     bool auto_generate_report = true;
+    String backup_dir;
 
     // UI
-    bool ui_show_run_instrumented = true;
-    bool ui_show_generate_report = true;
-    bool ui_show_clear_data = true;
+    bool ui_show_run_instrumented = false;
+    bool ui_show_generate_report = false;
+    bool ui_show_clear_data = false;
     bool ui_show_coverage_panel = true;
     
     // UI Thresholds

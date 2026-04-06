@@ -6,3 +6,5 @@ cmake-build-debug
 godot_project/addons
 godot_project/logo*
 *.os
+README.md
+LICENSE.md

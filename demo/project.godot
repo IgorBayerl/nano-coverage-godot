@@ -21,7 +21,7 @@ enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/nano_
 
 [gdunit4]
 
-settings/test/test_hooks=["res://addons/nano_coverage_godot/integrations/gdunit_hook.gd"]
+settings/test/test_hooks=[]
 hooks/session_hooks=Dictionary[String, bool]({
 "res://addons/gdUnit4/src/core/hooks/GdUnitHtmlReporterTestSessionHook.gd": true,
 "res://addons/gdUnit4/src/core/hooks/GdUnitXMLReporterTestSessionHook.gd": true,

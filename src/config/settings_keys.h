@@ -11,6 +11,7 @@ struct SettingsKeys {
     static constexpr const char* REPORT_LCOV_FILENAME = "nano_coverage/general/report_lcov_filename";
     static constexpr const char* WATCH_LCOV_FILE = "nano_coverage/general/watch_lcov_file";
     static constexpr const char* AUTO_GENERATE_REPORT = "nano_coverage/general/auto_generate_report";
+    static constexpr const char* BACKUP_DIR = "nano_coverage/general/backup_dir";
 
     // UI
     static constexpr const char* UI_SHOW_RUN_INSTRUMENTED = "nano_coverage/ui/show_run_instrumented";

@@ -127,12 +127,21 @@ static void collect_insertions(TSNode node, const std::string& src, const std::s
                                std::vector<TextInsertion>& out_insertions, std::vector<uint32_t>& out_lines) {
     const std::string_view type = ts_node_type(node);
 
+    // 1. Standard Block Instrumentation
     if (is_block_like_node_type(type) && has_function_ancestor(node)) {
         const uint32_t n = ts_node_named_child_count(node);
         for (uint32_t i = 0; i < n; i++) {
             const TSNode child = ts_node_named_child(node, i);
             if (ts_node_is_null(child) || is_comment_node(child))
                 continue;
+
+            const std::string_view child_type = ts_node_type(child);
+            
+            // Never inject above structural flow clauses directly in the generic loop.
+            if (child_type == "elif_clause" || child_type == "else_clause" || 
+                child_type == "match_branch" || child_type == "pattern_section") {
+                continue; 
+            }
 
             const size_t stmt_start = (size_t)ts_node_start_byte(child);
             const size_t line_start = find_line_start(src, stmt_start);
@@ -147,30 +156,69 @@ static void collect_insertions(TSNode node, const std::string& src, const std::s
             const TSPoint pt = ts_node_start_point(child);
             const uint32_t line_1_based = pt.row + 1;
 
-            // 1. Find the first non-whitespace character on this line
             size_t first_non_ws = line_start;
             while (first_non_ws < src.size() && (src[first_non_ws] == ' ' || src[first_non_ws] == '\t')) {
                 first_non_ws++;
             }
 
-            // 2. If the statement starts AFTER the first non-whitespace char, it's inline!
             bool is_inline = stmt_start > first_non_ws;
-
-            // Always track that this line is a coverable line
             out_lines.push_back(line_1_based);
 
+            size_t current_idx = out_insertions.size();
+
             if (is_inline) {
-                // INLINE INJECTION: Inject coverage exactly where the statement starts, separated by a semicolon
                 std::string injected = "NanoCoverage.hit(\"" + file_lit + "\", " + std::to_string(line_1_based) + "); ";
-                out_insertions.push_back(TextInsertion{stmt_start, injected});
+                out_insertions.push_back(TextInsertion{stmt_start, injected, current_idx});
             } else {
-                // STANDARD INJECTION: Inject a full line above the current statement
                 const std::string indent = get_line_indent(src, line_start);
-                out_insertions.push_back(TextInsertion{line_start, make_injected_line(indent, file_lit, line_1_based)});
+                out_insertions.push_back(TextInsertion{line_start, make_injected_line(indent, file_lit, line_1_based), current_idx});
             }
         }
     }
 
+    // 2. Structural Branch Logic (Elif / Else / Match Branch)
+    if ((type == "elif_clause" || type == "else_clause" || type == "match_branch") && has_function_ancestor(node)) {
+        TSNode body = {};
+        for (uint32_t i = 0; i < ts_node_child_count(node); i++) {
+            TSNode c = ts_node_child(node, i);
+            if (is_block_like_node_type(ts_node_type(c))) {
+                body = c;
+                break;
+            }
+        }
+
+        if (!ts_node_is_null(body) && ts_node_named_child_count(body) > 0) {
+            const TSPoint branch_pt = ts_node_start_point(node);
+            const uint32_t branch_line = branch_pt.row + 1;
+            
+            TSNode first_stmt = ts_node_named_child(body, 0);
+            
+            if (!ts_node_is_null(first_stmt) && !is_comment_node(first_stmt)) {
+                const size_t stmt_start = (size_t)ts_node_start_byte(first_stmt);
+                const size_t line_start = find_line_start(src, stmt_start);
+                
+                out_lines.push_back(branch_line);
+
+                size_t first_non_ws = line_start;
+                while (first_non_ws < src.size() && (src[first_non_ws] == ' ' || src[first_non_ws] == '\t')) {
+                    first_non_ws++;
+                }
+
+                bool is_inline = stmt_start > first_non_ws;
+                size_t current_idx = out_insertions.size();
+
+                if (is_inline) {
+                    std::string injected = "NanoCoverage.hit(\"" + file_lit + "\", " + std::to_string(branch_line) + "); ";
+                    out_insertions.push_back(TextInsertion{stmt_start, injected, current_idx});
+                } else {
+                    const std::string indent = get_line_indent(src, line_start);
+                    out_insertions.push_back(TextInsertion{line_start, make_injected_line(indent, file_lit, branch_line), current_idx});
+                }
+            }
+        }
+    }
+
+    // 3. Recursive traversal
     const uint32_t child_count = ts_node_child_count(node);
     for (uint32_t i = 0; i < child_count; i++) {
         const TSNode c = ts_node_child(node, i);
