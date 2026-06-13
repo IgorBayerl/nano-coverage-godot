@@ -5,8 +5,6 @@
 #include <godot_cpp/classes/hashing_context.hpp>
 #include <godot_cpp/classes/json.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
-#include <godot_cpp/classes/reg_ex.hpp>
-#include <godot_cpp/classes/reg_ex_match.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/array.hpp>
 #include <godot_cpp/variant/packed_byte_array.hpp>
@@ -14,12 +12,15 @@
 #include "../api/coverage_api.h"
 #include "../config/settings_gateway.h"
 #include "../utils/logger.h"
+#include "script_scanner.h"
 
 namespace godot {
 
 void DiskInstrumenter::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("instrument_to_disk"), &DiskInstrumenter::instrument_to_disk);
-    ClassDB::bind_method(D_METHOD("restore_from_disk"), &DiskInstrumenter::restore_from_disk);
+    ClassDB::bind_method(D_METHOD("instrument_to_disk", "options"), &DiskInstrumenter::instrument_to_disk,
+                         DEFVAL(Dictionary()));
+    ClassDB::bind_method(D_METHOD("restore_from_disk", "options"), &DiskInstrumenter::restore_from_disk,
+                         DEFVAL(Dictionary()));
     ClassDB::bind_method(D_METHOD("is_instrumented"), &DiskInstrumenter::is_instrumented);
 }
 
@@ -63,75 +64,62 @@ String DiskInstrumenter::get_backup_path(const String& backup_dir, const String&
     return backup_dir.path_join("backup").path_join(relative);
 }
 
-// --- File discovery (mirrors ProjectBootstrapper logic) ---
-
-static Array compile_ignore_patterns(const Array& glob_patterns) {
-    Array compiled_regexes;
-    for (int i = 0; i < glob_patterns.size(); ++i) {
-        String glob = glob_patterns[i];
-
-        String regex_str = glob.replace(".", "\\.");
-        regex_str = regex_str.replace("**", "<<GLOBSTAR>>");
-        regex_str = regex_str.replace("*", "[^/]*");
-        regex_str = regex_str.replace("<<GLOBSTAR>>", ".*");
-        regex_str = "^" + regex_str + "$";
-
-        Ref<RegEx> rx = RegEx::create_from_string(regex_str);
-        if (rx.is_valid()) {
-            compiled_regexes.push_back(rx);
-        }
+// Writes content to a temp file first, then renames it over the target so a
+// crash mid-write never leaves a half-written script behind.
+bool DiskInstrumenter::write_file_atomic(const String& path, const String& content) {
+    String dir_path = path.get_base_dir();
+    if (!DirAccess::dir_exists_absolute(dir_path)) {
+        DirAccess::make_dir_recursive_absolute(dir_path);
     }
-    return compiled_regexes;
+
+    String tmp_path = path + String(".tmp");
+    Ref<FileAccess> f = FileAccess::open(tmp_path, FileAccess::WRITE);
+    if (f.is_null()) {
+        return false;
+    }
+    f->store_string(content);
+    f->close();
+
+    Ref<DirAccess> da = DirAccess::open(dir_path);
+    if (da.is_null()) {
+        return false;
+    }
+    return da->rename(tmp_path, path) == OK;
 }
 
-static Array get_all_files(const String& current_path, const Array& compiled_regexes) {
-    Array files;
-    Ref<DirAccess> dir = DirAccess::open(current_path);
-    if (dir.is_null()) {
-        return files;
+// --- Runtime autoload registration ---
+
+void DiskInstrumenter::register_runtime_autoload(bool save_settings) {
+    ProjectSettings* ps = ProjectSettings::get_singleton();
+    String value = String("*") + AUTOLOAD_SCRIPT;
+    if (ps->has_setting(AUTOLOAD_SETTING) && String(ps->get_setting(AUTOLOAD_SETTING)) == value) {
+        return;
     }
-
-    dir->list_dir_begin();
-    String file_name = dir->get_next();
-
-    while (!file_name.is_empty()) {
-        if (file_name == "." || file_name == "..") {
-            file_name = dir->get_next();
-            continue;
-        }
-
-        String full_path = current_path.path_join(file_name);
-        bool is_ignored = false;
-
-        for (int i = 0; i < compiled_regexes.size(); ++i) {
-            Ref<RegEx> rx = compiled_regexes[i];
-            if (rx->search(full_path).is_valid()) {
-                is_ignored = true;
-                break;
-            }
-        }
-
-        if (is_ignored) {
-            file_name = dir->get_next();
-            continue;
-        }
-
-        if (dir->current_is_dir()) {
-            files.append_array(get_all_files(full_path, compiled_regexes));
-        } else if (file_name.ends_with(".gd")) {
-            files.append(full_path);
-        }
-
-        file_name = dir->get_next();
+    ps->set_setting(AUTOLOAD_SETTING, value);
+    if (save_settings) {
+        ps->save();
     }
-    return files;
+    Logger::info("Registered runtime autoload (flushes coverage data when the game exits).");
+}
+
+void DiskInstrumenter::unregister_runtime_autoload(bool save_settings) {
+    ProjectSettings* ps = ProjectSettings::get_singleton();
+    if (!ps->has_setting(AUTOLOAD_SETTING)) {
+        return;
+    }
+    ps->set_setting(AUTOLOAD_SETTING, Variant());
+    if (save_settings) {
+        ps->save();
+    }
+    Logger::info("Removed runtime autoload.");
 }
 
 // --- Recursive directory removal ---
 
 static void remove_dir_recursive(const String& dir_path) {
     Ref<DirAccess> da = DirAccess::open(dir_path);
-    if (da.is_null()) return;
+    if (da.is_null())
+        return;
 
     da->list_dir_begin();
     String name = da->get_next();
@@ -160,8 +148,9 @@ bool DiskInstrumenter::is_instrumented() const {
     return FileAccess::file_exists(manifest_path);
 }
 
-Dictionary DiskInstrumenter::instrument_to_disk() {
+Dictionary DiskInstrumenter::instrument_to_disk(const Dictionary& options) {
     Dictionary result;
+    bool save_project_settings = options.get("save_project_settings", true);
 
     CoverageSettings settings = SettingsGateway::load();
     String backup_dir = settings.backup_dir;
@@ -175,19 +164,7 @@ Dictionary DiskInstrumenter::instrument_to_disk() {
         return result;
     }
 
-    // Build ignore patterns
-    Array raw_ignores;
-    for (int i = 0; i < settings.ignore_paths.size(); ++i) {
-        raw_ignores.push_back(settings.ignore_paths[i]);
-    }
-    if (settings.ignore_addons) {
-        raw_ignores.push_back("res://addons/**");
-    } else {
-        raw_ignores.push_back("res://addons/nano_coverage_godot/**");
-    }
-
-    Array compiled_ignores = compile_ignore_patterns(raw_ignores);
-    Array files = get_all_files("res://", compiled_ignores);
+    Array files = ScriptScanner::scan_project(settings);
 
     Logger::info("Disk instrumentation: found " + String::num_int64(files.size()) + " .gd files");
 
@@ -196,7 +173,8 @@ Dictionary DiskInstrumenter::instrument_to_disk() {
         String path = files[i];
         if (file_has_marker(path)) {
             result["status"] = "error";
-            result["error"] = "File already contains instrumentation marker: " + path + ". A previous backup may have been lost.";
+            result["error"] =
+                "File already contains instrumentation marker: " + path + ". A previous backup may have been lost.";
             Logger::error("Aborting: file already contains marker: " + path);
             return result;
         }
@@ -243,47 +221,18 @@ Dictionary DiskInstrumenter::instrument_to_disk() {
 
         // Backup original
         String bkp_path = get_backup_path(backup_dir, path);
-        String bkp_dir = bkp_path.get_base_dir();
-        if (!DirAccess::dir_exists_absolute(bkp_dir)) {
-            DirAccess::make_dir_recursive_absolute(bkp_dir);
-        }
-
-        // Write backup (original content)
-        {
-            String tmp_path = bkp_path + ".tmp";
-            Ref<FileAccess> bkp_f = FileAccess::open(tmp_path, FileAccess::WRITE);
-            if (bkp_f.is_null()) {
-                Logger::error("Cannot write backup for: " + path);
-                failed_count++;
-                continue;
-            }
-            bkp_f->store_string(source);
-            bkp_f->close();
-
-            Ref<DirAccess> da = DirAccess::open(bkp_dir);
-            if (da.is_valid()) {
-                da->rename(tmp_path, bkp_path);
-            }
+        if (!write_file_atomic(bkp_path, source)) {
+            Logger::error("Cannot write backup for: " + path);
+            failed_count++;
+            continue;
         }
 
         // Write instrumented code with marker to original path
         String marked_code = String(MARKER) + "\n" + instrumented_code;
-        {
-            String dir_of_file = path.get_base_dir();
-            String tmp_path = path + ".tmp";
-            Ref<FileAccess> out_f = FileAccess::open(tmp_path, FileAccess::WRITE);
-            if (out_f.is_null()) {
-                Logger::error("Cannot write instrumented file: " + path);
-                failed_count++;
-                continue;
-            }
-            out_f->store_string(marked_code);
-            out_f->close();
-
-            Ref<DirAccess> da = DirAccess::open(dir_of_file);
-            if (da.is_valid()) {
-                da->rename(tmp_path, path);
-            }
+        if (!write_file_atomic(path, marked_code)) {
+            Logger::error("Cannot write instrumented file: " + path);
+            failed_count++;
+            continue;
         }
 
         // Record manifest entry
@@ -302,12 +251,11 @@ Dictionary DiskInstrumenter::instrument_to_disk() {
         manifest["version"] = 1;
         manifest["files"] = manifest_files;
 
+        String json_str = JSON::stringify(manifest, "  ");
         String manifest_dir = manifest_path.get_base_dir();
         if (!DirAccess::dir_exists_absolute(manifest_dir)) {
             DirAccess::make_dir_recursive_absolute(manifest_dir);
         }
-
-        String json_str = JSON::stringify(manifest, "  ");
         Ref<FileAccess> mf = FileAccess::open(manifest_path, FileAccess::WRITE);
         if (mf.is_valid()) {
             mf->store_string(json_str);
@@ -316,6 +264,9 @@ Dictionary DiskInstrumenter::instrument_to_disk() {
 
         // Save static metadata for coverage reporting
         api->save_static_metadata();
+
+        // Make sure hits collected during a normal Play session get flushed
+        register_runtime_autoload(save_project_settings);
     }
 
     result["status"] = "ok";
@@ -333,8 +284,9 @@ Dictionary DiskInstrumenter::instrument_to_disk() {
     return result;
 }
 
-Dictionary DiskInstrumenter::restore_from_disk() {
+Dictionary DiskInstrumenter::restore_from_disk(const Dictionary& options) {
     Dictionary result;
+    bool save_project_settings = options.get("save_project_settings", true);
 
     CoverageSettings settings = SettingsGateway::load();
     String backup_dir = settings.backup_dir;
@@ -389,7 +341,8 @@ Dictionary DiskInstrumenter::restore_from_disk() {
         if (!expected_hash.is_empty()) {
             String actual_hash = "sha256:" + compute_file_hash(bkp_path);
             if (actual_hash != expected_hash) {
-                Logger::warn("Hash mismatch for backup of " + path + " (expected: " + expected_hash + ", got: " + actual_hash + "). Restoring anyway.");
+                Logger::warn("Hash mismatch for backup of " + path + " (expected: " + expected_hash +
+                             ", got: " + actual_hash + "). Restoring anyway.");
                 warnings.push_back("Hash mismatch: " + path);
             }
         }
@@ -424,6 +377,8 @@ Dictionary DiskInstrumenter::restore_from_disk() {
         // Try to remove the backup_dir itself if empty
         DirAccess::remove_absolute(backup_dir);
     }
+
+    unregister_runtime_autoload(save_project_settings);
 
     result["status"] = "ok";
     result["restored_count"] = restored_count;

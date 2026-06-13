@@ -6,43 +6,37 @@ var _integration_manager
 
 
 func _enter_tree() -> void:
-	print("NanoCoverage Plugin Loading")
-
 	# Instantiate C++ Plugin
 	if not ClassDB.class_exists("NanoCoverageEditorPlugin"):
-		printerr("Error: NanoCoverageEditorPlugin class not found!")
+		NanoCoverageLogger.error("NanoCoverageEditorPlugin class not found! Is the GDExtension built for this platform?")
 		return
 
 	_plugin_instance = ClassDB.instantiate("NanoCoverageEditorPlugin")
 	add_child(_plugin_instance)
-	print("C++ Editor Plugin instantiated")
 
 	# Check CoverageApi
 	if not ClassDB.class_exists("CoverageApi"):
-		printerr("Error: CoverageApi class not found in ClassDB!")
+		NanoCoverageLogger.error("CoverageApi class not found in ClassDB!")
 		return
 
 	var api = ClassDB.instantiate("CoverageApi")
 	if not api:
-		printerr("Error: Failed to instantiate CoverageApi")
+		NanoCoverageLogger.error("Failed to instantiate CoverageApi.")
 		return
-	
-	print("CoverageApi instantiated")
 
 	# Load Integration Manager Script
 	var manager_path = "res://addons/nano_coverage_godot/integrations/integration_manager.gd"
 	if not FileAccess.file_exists(manager_path):
-		printerr("Error: Integration Manager file missing at: ", manager_path)
+		NanoCoverageLogger.error("Integration Manager file missing at: " + manager_path)
 		return
 
 	var manager_script = load(manager_path)
 	if not manager_script:
-		printerr("Error: Failed to load Integration Manager script")
+		NanoCoverageLogger.error("Failed to load Integration Manager script.")
 		return
 
-	# Initialize Manager
 	_integration_manager = manager_script.new(api)
-	print("Integration Manager initialized")
+	NanoCoverageLogger.info("Editor plugin ready.")
 
 
 func _exit_tree() -> void:

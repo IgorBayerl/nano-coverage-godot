@@ -2,6 +2,7 @@
 
 #include <godot_cpp/classes/code_edit.hpp>
 #include <godot_cpp/classes/control.hpp>
+#include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/editor_file_system.hpp>
 #include <godot_cpp/classes/editor_interface.hpp>
 #include <godot_cpp/classes/engine.hpp>
@@ -29,14 +30,13 @@ namespace godot {
 void NanoCoverageEditorPlugin::_bind_methods() {
     ClassDB::bind_method(D_METHOD("_on_instrument_toggled", "pressed"),
                          &NanoCoverageEditorPlugin::_on_instrument_toggled);
-    ClassDB::bind_method(D_METHOD("_on_restore_pressed"),
-                         &NanoCoverageEditorPlugin::_on_restore_pressed);
+    ClassDB::bind_method(D_METHOD("_on_restore_pressed"), &NanoCoverageEditorPlugin::_on_restore_pressed);
     ClassDB::bind_method(D_METHOD("_on_generate_report_pressed"),
                          &NanoCoverageEditorPlugin::_on_generate_report_pressed);
     ClassDB::bind_method(D_METHOD("_on_clear_data_pressed"), &NanoCoverageEditorPlugin::_on_clear_data_pressed);
     ClassDB::bind_method(D_METHOD("_on_settings_changed"), &NanoCoverageEditorPlugin::_on_settings_changed);
     ClassDB::bind_method(D_METHOD("_on_editor_script_changed"), &NanoCoverageEditorPlugin::_on_editor_script_changed);
-    ClassDB::bind_method(D_METHOD("_on_lcov_watch_tick"), &NanoCoverageEditorPlugin::_on_lcov_watch_tick);
+    ClassDB::bind_method(D_METHOD("_on_watch_tick"), &NanoCoverageEditorPlugin::_on_watch_tick);
     ClassDB::bind_method(D_METHOD("_on_toggle_gutters"), &NanoCoverageEditorPlugin::_on_toggle_gutters);
 }
 
@@ -93,12 +93,12 @@ void NanoCoverageEditorPlugin::_enter_tree() {
     coverage_panel->setup();
     panel_button = add_control_to_bottom_panel(coverage_panel, "Coverage");
 
-    // LCOV file watcher timer
-    lcov_watch_timer = memnew(Timer);
-    lcov_watch_timer->set_wait_time(2.0);
-    lcov_watch_timer->set_autostart(false);
-    lcov_watch_timer->connect("timeout", Callable(this, "_on_lcov_watch_tick"));
-    add_child(lcov_watch_timer);
+    // File watcher timer (LCOV report + new coverage data)
+    watch_timer = memnew(Timer);
+    watch_timer->set_wait_time(2.0);
+    watch_timer->set_autostart(false);
+    watch_timer->connect("timeout", Callable(this, "_on_watch_tick"));
+    add_child(watch_timer);
 
     // Connect to settings changed
     ProjectSettings::get_singleton()->connect("settings_changed", Callable(this, "_on_settings_changed"));
@@ -114,11 +114,8 @@ void NanoCoverageEditorPlugin::_enter_tree() {
     // State recovery: check if files are instrumented on disk
     _sync_instrument_state();
 
-    // Start LCOV watcher if enabled
-    CoverageSettings settings = SettingsGateway::load();
-    if (settings.watch_lcov_file) {
-        lcov_watch_timer->start();
-    }
+    // Start the file watcher if any watching feature is enabled
+    _update_watch_timer(SettingsGateway::load());
 }
 
 void NanoCoverageEditorPlugin::_exit_tree() {
@@ -127,14 +124,14 @@ void NanoCoverageEditorPlugin::_exit_tree() {
         Ref<DiskInstrumenter> di;
         di.instantiate();
         if (di->is_instrumented()) {
-            Logger::warn("NanoCoverage: Files are still instrumented on disk. Remember to restore before committing.");
+            Logger::warn("Files are still instrumented on disk. Remember to restore before committing.");
         }
     }
 
-    if (lcov_watch_timer) {
-        lcov_watch_timer->stop();
-        lcov_watch_timer->queue_free();
-        lcov_watch_timer = nullptr;
+    if (watch_timer) {
+        watch_timer->stop();
+        watch_timer->queue_free();
+        watch_timer = nullptr;
     }
 
     if (toolbar_button_container) {
@@ -160,7 +157,8 @@ void NanoCoverageEditorPlugin::_exit_tree() {
     }
 
     ScriptEditor* script_editor = EditorInterface::get_singleton()->get_script_editor();
-    if (script_editor && script_editor->is_connected("editor_script_changed", Callable(this, "_on_editor_script_changed"))) {
+    if (script_editor &&
+        script_editor->is_connected("editor_script_changed", Callable(this, "_on_editor_script_changed"))) {
         script_editor->disconnect("editor_script_changed", Callable(this, "_on_editor_script_changed"));
     }
 
@@ -191,22 +189,26 @@ void NanoCoverageEditorPlugin::_update_visibility() {
 
 void NanoCoverageEditorPlugin::_on_settings_changed() {
     _update_visibility();
+    _update_watch_timer(SettingsGateway::load());
+}
 
-    // Toggle LCOV watcher based on setting
-    CoverageSettings settings = SettingsGateway::load();
-    if (lcov_watch_timer) {
-        if (settings.watch_lcov_file && lcov_watch_timer->is_stopped()) {
-            lcov_watch_timer->start();
-        } else if (!settings.watch_lcov_file && !lcov_watch_timer->is_stopped()) {
-            lcov_watch_timer->stop();
-        }
+void NanoCoverageEditorPlugin::_update_watch_timer(const CoverageSettings& settings) {
+    if (!watch_timer)
+        return;
+
+    bool should_run = settings.watch_lcov_file || settings.auto_generate_report;
+    if (should_run && watch_timer->is_stopped()) {
+        watch_timer->start();
+    } else if (!should_run && !watch_timer->is_stopped()) {
+        watch_timer->stop();
     }
 }
 
 // --- UI placement helpers ---
 
 void NanoCoverageEditorPlugin::_place_toolbar_buttons() {
-    if (!toolbar_button_container) return;
+    if (!toolbar_button_container)
+        return;
 
     // Try to find the play/run bar and insert our container right before it.
     // In Godot 4.x the run bar is typically named "@EditorRunBar@..." inside the title bar.
@@ -250,21 +252,26 @@ void NanoCoverageEditorPlugin::_place_toolbar_buttons() {
 }
 
 void NanoCoverageEditorPlugin::_place_gutters_button_in_status_bar() {
-    if (!toggle_gutters_button) return;
+    if (!toggle_gutters_button)
+        return;
 
     ScriptEditor* script_editor = EditorInterface::get_singleton()->get_script_editor();
-    if (!script_editor) return;
+    if (!script_editor)
+        return;
 
     ScriptEditorBase* current = script_editor->get_current_editor();
-    if (!current) return;
+    if (!current)
+        return;
 
     CodeEdit* code_edit = Object::cast_to<CodeEdit>(current->get_base_editor());
-    if (!code_edit) return;
+    if (!code_edit)
+        return;
 
     // The CodeEdit sits inside a CodeTextEditor (VBoxContainer).
     // The status bar is an HBoxContainer that is a sibling below the CodeEdit.
     Node* code_text_editor = code_edit->get_parent();
-    if (!code_text_editor) return;
+    if (!code_text_editor)
+        return;
 
     // Find the status bar HBoxContainer among siblings
     HBoxContainer* status_bar = nullptr;
@@ -276,10 +283,12 @@ void NanoCoverageEditorPlugin::_place_gutters_button_in_status_bar() {
         }
     }
 
-    if (!status_bar) return;
+    if (!status_bar)
+        return;
 
     // Already placed in this status bar
-    if (status_bar_ref == status_bar && toggle_gutters_button->get_parent() == status_bar) return;
+    if (status_bar_ref == status_bar && toggle_gutters_button->get_parent() == status_bar)
+        return;
 
     // Remove from previous parent if needed
     if (toggle_gutters_button->get_parent()) {
@@ -305,13 +314,16 @@ void NanoCoverageEditorPlugin::refresh_gutters() {
 
 void NanoCoverageEditorPlugin::update_active_editor_gutter() {
     ScriptEditor* script_editor = EditorInterface::get_singleton()->get_script_editor();
-    if (!script_editor) return;
+    if (!script_editor)
+        return;
 
     ScriptEditorBase* current = script_editor->get_current_editor();
-    if (!current) return;
+    if (!current)
+        return;
 
     CodeEdit* code_edit = Object::cast_to<CodeEdit>(current->get_base_editor());
-    if (!code_edit) return;
+    if (!code_edit)
+        return;
 
     // Clean up previous gutter instance
     if (active_gutter.is_valid()) {
@@ -320,7 +332,8 @@ void NanoCoverageEditorPlugin::update_active_editor_gutter() {
     }
 
     Ref<Script> script = script_editor->get_current_script();
-    if (script.is_null()) return;
+    if (script.is_null())
+        return;
 
     String res_path = script->get_path();
     std::string lcov_key = PathUtils::res_to_lcov_std(res_path);
@@ -366,21 +379,66 @@ void NanoCoverageEditorPlugin::_on_toggle_gutters() {
     }
 }
 
-// --- LCOV file watcher ---
+// --- File watcher ---
 
-void NanoCoverageEditorPlugin::_on_lcov_watch_tick() {
+void NanoCoverageEditorPlugin::_on_watch_tick() {
     CoverageSettings settings = SettingsGateway::load();
-    String lcov_path = settings.report_dir.path_join(settings.report_lcov_filename);
 
-    if (!FileAccess::file_exists(lcov_path)) return;
-
-    uint64_t mod_time = FileAccess::get_modified_time(lcov_path);
-    if (mod_time != lcov_last_modified) {
-        lcov_last_modified = mod_time;
-        Logger::info("LCOV file changed, refreshing coverage display...");
-        refresh_gutters();
-        refresh_metrics_panel();
+    // Auto-generate a report when new coverage data appears (e.g. an
+    // instrumented Play session just ended).
+    if (settings.auto_generate_report) {
+        _check_auto_report(settings);
     }
+
+    if (settings.watch_lcov_file) {
+        String lcov_path = settings.report_dir.path_join(settings.report_lcov_filename);
+        if (FileAccess::file_exists(lcov_path)) {
+            uint64_t mod_time = FileAccess::get_modified_time(lcov_path);
+            if (mod_time != lcov_last_modified) {
+                lcov_last_modified = mod_time;
+                Logger::info("LCOV file changed, refreshing coverage display...");
+                refresh_gutters();
+                refresh_metrics_panel();
+            }
+        }
+    }
+}
+
+void NanoCoverageEditorPlugin::_check_auto_report(const CoverageSettings& settings) {
+    String runs_dir = settings.data_store_dir.path_join("default").path_join("runs");
+
+    Ref<DirAccess> da = DirAccess::open(runs_dir);
+    if (da.is_null())
+        return;
+
+    uint64_t latest = 0;
+    da->list_dir_begin();
+    for (String name = da->get_next(); !name.is_empty(); name = da->get_next()) {
+        if (da->current_is_dir() || !name.ends_with(".covdata"))
+            continue;
+        uint64_t mod_time = FileAccess::get_modified_time(runs_dir.path_join(name));
+        if (mod_time > latest)
+            latest = mod_time;
+    }
+    da->list_dir_end();
+
+    if (latest == 0)
+        return;
+
+    // Data that already existed when the editor started doesn't trigger a
+    // report; only changes observed while running do.
+    if (!covdata_seeded) {
+        covdata_seeded = true;
+        covdata_last_modified = latest;
+        return;
+    }
+
+    if (latest <= covdata_last_modified)
+        return;
+    covdata_last_modified = latest;
+
+    Logger::info("New coverage data detected, generating report...");
+    _generate_report();
 }
 
 // --- Disk instrumentation state ---
@@ -406,7 +464,11 @@ void NanoCoverageEditorPlugin::_on_instrument_toggled(bool pressed) {
         Ref<DiskInstrumenter> di;
         di.instantiate();
         Dictionary result = di->instrument_to_disk();
-        if (String(result["status"]) != "ok") {
+        if (String(result["status"]) == "ok") {
+            // Keep the editor's view of the scripts in sync with the
+            // instrumented files on disk.
+            EditorInterface::get_singleton()->get_resource_filesystem()->scan();
+        } else {
             Logger::error("Instrumentation failed: " + String(result.get("error", "")));
             if (instrument_toggle) {
                 instrument_toggle->set_pressed_no_signal(false);
@@ -430,6 +492,10 @@ void NanoCoverageEditorPlugin::_on_restore_pressed() {
 }
 
 void NanoCoverageEditorPlugin::_on_generate_report_pressed() {
+    _generate_report();
+}
+
+void NanoCoverageEditorPlugin::_generate_report() {
     if (coverage_api.is_null()) {
         Logger::error("API not initialized.");
         return;
@@ -456,7 +522,7 @@ void NanoCoverageEditorPlugin::_on_generate_report_pressed() {
         refresh_gutters();
         refresh_metrics_panel();
     } else {
-        Logger::error("Report generation failed.");
+        Logger::error("Report generation failed: " + String(result.get("error", "Unknown error")));
     }
 }
 

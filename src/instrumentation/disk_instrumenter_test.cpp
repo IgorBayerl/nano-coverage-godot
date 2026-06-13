@@ -1,11 +1,10 @@
 #include "disk_instrumenter.h"
 
-#include <gtest/gtest.h>
-
 #include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/json.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
+#include <gtest/gtest.h>
 
 #include "../config/settings_keys.h"
 #include "../testing/test_utils.h"
@@ -45,10 +44,33 @@ class DiskInstrumenterTest : public ::testing::Test {
 
     static String read_file(const String& path) {
         Ref<FileAccess> f = FileAccess::open(path, FileAccess::READ);
-        if (f.is_null()) return "";
+        if (f.is_null())
+            return "";
         String content = f->get_as_text();
         f->close();
         return content;
+    }
+
+    // Tests must not persist project.godot, so the autoload registration
+    // stays in-memory only.
+    static Dictionary test_opts() {
+        Dictionary opts;
+        opts["save_project_settings"] = false;
+        return opts;
+    }
+
+    // Confines instrumentation to the test directory. Without these ignores
+    // the instrumenter would patch the real demo project scripts, and a
+    // failing assertion would leave them modified on disk.
+    static PackedStringArray scoped_ignores(const String& extra = "") {
+        PackedStringArray ignores;
+        ignores.push_back("res://src/**");
+        ignores.push_back("res://tests/**");
+        ignores.push_back("res://logo.gd");
+        if (!extra.is_empty()) {
+            ignores.push_back(extra);
+        }
+        return ignores;
     }
 };
 
@@ -63,7 +85,7 @@ TEST_F(DiskInstrumenterTest, InstrumentAndRestoreRoundTrip) {
 
     // Configure settings to only instrument our test dir
     SettingsOverride s_backup(SettingsKeys::BACKUP_DIR, TEST_BACKUP_DIR);
-    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, PackedStringArray());
+    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, scoped_ignores());
     SettingsOverride s_addons(SettingsKeys::IGNORE_ADDONS, true);
 
     Ref<DiskInstrumenter> di;
@@ -72,7 +94,7 @@ TEST_F(DiskInstrumenterTest, InstrumentAndRestoreRoundTrip) {
     ASSERT_FALSE(di->is_instrumented());
 
     // Instrument
-    Dictionary result = di->instrument_to_disk();
+    Dictionary result = di->instrument_to_disk(test_opts());
     ASSERT_EQ(String(result["status"]), "ok");
     EXPECT_GT(int(result["instrumented_count"]), 0);
 
@@ -92,7 +114,7 @@ TEST_F(DiskInstrumenterTest, InstrumentAndRestoreRoundTrip) {
     EXPECT_TRUE(FileAccess::file_exists(manifest_path));
 
     // Restore
-    Dictionary restore_result = di->restore_from_disk();
+    Dictionary restore_result = di->restore_from_disk(test_opts());
     ASSERT_EQ(String(restore_result["status"]), "ok");
     EXPECT_GT(int(restore_result["restored_count"]), 0);
 
@@ -114,23 +136,23 @@ TEST_F(DiskInstrumenterTest, RefusesDoubleInstrument) {
     write_gd_file(file1, "extends Node\n\nfunc _ready():\n\tpass\n");
 
     SettingsOverride s_backup(SettingsKeys::BACKUP_DIR, TEST_BACKUP_DIR);
-    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, PackedStringArray());
+    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, scoped_ignores());
     SettingsOverride s_addons(SettingsKeys::IGNORE_ADDONS, true);
 
     Ref<DiskInstrumenter> di;
     di.instantiate();
 
     // First instrument should succeed
-    Dictionary result1 = di->instrument_to_disk();
+    Dictionary result1 = di->instrument_to_disk(test_opts());
     ASSERT_EQ(String(result1["status"]), "ok");
 
     // Second instrument should fail
-    Dictionary result2 = di->instrument_to_disk();
+    Dictionary result2 = di->instrument_to_disk(test_opts());
     EXPECT_EQ(String(result2["status"]), "error");
     EXPECT_TRUE(String(result2["error"]).find("already instrumented") != -1);
 
     // Clean up
-    di->restore_from_disk();
+    di->restore_from_disk(test_opts());
 }
 
 TEST_F(DiskInstrumenterTest, RefusesInstrumentIfMarkerPresent) {
@@ -138,13 +160,13 @@ TEST_F(DiskInstrumenterTest, RefusesInstrumentIfMarkerPresent) {
     write_gd_file(file1, "# __NANO_COVERAGE_INSTRUMENTED__\nextends Node\n\nfunc _ready():\n\tpass\n");
 
     SettingsOverride s_backup(SettingsKeys::BACKUP_DIR, TEST_BACKUP_DIR);
-    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, PackedStringArray());
+    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, scoped_ignores());
     SettingsOverride s_addons(SettingsKeys::IGNORE_ADDONS, true);
 
     Ref<DiskInstrumenter> di;
     di.instantiate();
 
-    Dictionary result = di->instrument_to_disk();
+    Dictionary result = di->instrument_to_disk(test_opts());
     EXPECT_EQ(String(result["status"]), "error");
     EXPECT_TRUE(String(result["error"]).find("marker") != -1);
 }
@@ -155,7 +177,7 @@ TEST_F(DiskInstrumenterTest, RestoreWithoutManifestIsNoOp) {
     Ref<DiskInstrumenter> di;
     di.instantiate();
 
-    Dictionary result = di->restore_from_disk();
+    Dictionary result = di->restore_from_disk(test_opts());
     EXPECT_EQ(String(result["status"]), "error");
     EXPECT_TRUE(String(result["error"]).find("No manifest") != -1);
 }
@@ -165,13 +187,13 @@ TEST_F(DiskInstrumenterTest, HashVerificationOnRestore) {
     write_gd_file(file1, "extends Node\n\nfunc _ready():\n\tvar x = 1\n");
 
     SettingsOverride s_backup(SettingsKeys::BACKUP_DIR, TEST_BACKUP_DIR);
-    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, PackedStringArray());
+    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, scoped_ignores());
     SettingsOverride s_addons(SettingsKeys::IGNORE_ADDONS, true);
 
     Ref<DiskInstrumenter> di;
     di.instantiate();
 
-    Dictionary result = di->instrument_to_disk();
+    Dictionary result = di->instrument_to_disk(test_opts());
     ASSERT_EQ(String(result["status"]), "ok");
 
     // Corrupt the backup file
@@ -183,7 +205,7 @@ TEST_F(DiskInstrumenterTest, HashVerificationOnRestore) {
     }
 
     // Restore should still work but with warnings
-    Dictionary restore_result = di->restore_from_disk();
+    Dictionary restore_result = di->restore_from_disk(test_opts());
     EXPECT_EQ(String(restore_result["status"]), "ok");
 
     Array warnings = restore_result["warnings"];
@@ -195,13 +217,13 @@ TEST_F(DiskInstrumenterTest, ManifestJsonStructure) {
     write_gd_file(file1, "extends Node\n\nfunc _ready():\n\tvar x = 1\n");
 
     SettingsOverride s_backup(SettingsKeys::BACKUP_DIR, TEST_BACKUP_DIR);
-    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, PackedStringArray());
+    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, scoped_ignores());
     SettingsOverride s_addons(SettingsKeys::IGNORE_ADDONS, true);
 
     Ref<DiskInstrumenter> di;
     di.instantiate();
 
-    Dictionary result = di->instrument_to_disk();
+    Dictionary result = di->instrument_to_disk(test_opts());
     ASSERT_EQ(String(result["status"]), "ok");
 
     // Read and verify manifest
@@ -229,7 +251,7 @@ TEST_F(DiskInstrumenterTest, ManifestJsonStructure) {
     EXPECT_TRUE(hash.begins_with("sha256:"));
 
     // Clean up
-    di->restore_from_disk();
+    di->restore_from_disk(test_opts());
 }
 
 TEST_F(DiskInstrumenterTest, IgnorePatternsRespected) {
@@ -239,17 +261,14 @@ TEST_F(DiskInstrumenterTest, IgnorePatternsRespected) {
     write_gd_file(src_file, "extends Node\n\nfunc _ready():\n\tvar x = 1\n");
     write_gd_file(test_file, "extends Node\n\nfunc test_something():\n\tvar y = 2\n");
 
-    PackedStringArray ignores;
-    ignores.push_back("**/*_test.gd");
-
     SettingsOverride s_backup(SettingsKeys::BACKUP_DIR, TEST_BACKUP_DIR);
-    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, ignores);
+    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, scoped_ignores("**/*_test.gd"));
     SettingsOverride s_addons(SettingsKeys::IGNORE_ADDONS, true);
 
     Ref<DiskInstrumenter> di;
     di.instantiate();
 
-    Dictionary result = di->instrument_to_disk();
+    Dictionary result = di->instrument_to_disk(test_opts());
     ASSERT_EQ(String(result["status"]), "ok");
 
     // src file should be instrumented (has marker)
@@ -261,5 +280,56 @@ TEST_F(DiskInstrumenterTest, IgnorePatternsRespected) {
     EXPECT_FALSE(test_content.begins_with("# __NANO_COVERAGE_INSTRUMENTED__"));
 
     // Clean up
-    di->restore_from_disk();
+    di->restore_from_disk(test_opts());
+}
+
+TEST_F(DiskInstrumenterTest, RegistersRuntimeAutoloadWhileInstrumented) {
+    String file1 = TEST_DIR.path_join("autoload_test.gd");
+    write_gd_file(file1, "extends Node\n\nfunc _ready():\n\tvar x = 1\n");
+
+    SettingsOverride s_backup(SettingsKeys::BACKUP_DIR, TEST_BACKUP_DIR);
+    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, scoped_ignores());
+    SettingsOverride s_addons(SettingsKeys::IGNORE_ADDONS, true);
+
+    ProjectSettings* ps = ProjectSettings::get_singleton();
+    const String autoload_key = "autoload/NanoCoverageRuntime";
+    ASSERT_FALSE(ps->has_setting(autoload_key));
+
+    Ref<DiskInstrumenter> di;
+    di.instantiate();
+
+    Dictionary result = di->instrument_to_disk(test_opts());
+    ASSERT_EQ(String(result["status"]), "ok");
+
+    ASSERT_TRUE(ps->has_setting(autoload_key));
+    EXPECT_EQ(String(ps->get_setting(autoload_key)), "*res://addons/nano_coverage_godot/runtime/coverage_autoload.gd");
+
+    Dictionary restore_result = di->restore_from_disk(test_opts());
+    ASSERT_EQ(String(restore_result["status"]), "ok");
+
+    EXPECT_FALSE(ps->has_setting(autoload_key));
+}
+
+TEST_F(DiskInstrumenterTest, NoAutoloadWhenNothingInstrumented) {
+    // Only a non-coverable file (no executable lines) -> instrumented_count == 0
+    String file1 = TEST_DIR.path_join("empty.gd");
+    write_gd_file(file1, "extends Node\n");
+
+    SettingsOverride s_backup(SettingsKeys::BACKUP_DIR, TEST_BACKUP_DIR);
+    SettingsOverride s_ignore(SettingsKeys::IGNORE_PATHS, scoped_ignores());
+    SettingsOverride s_addons(SettingsKeys::IGNORE_ADDONS, true);
+
+    ProjectSettings* ps = ProjectSettings::get_singleton();
+    const String autoload_key = "autoload/NanoCoverageRuntime";
+    ASSERT_FALSE(ps->has_setting(autoload_key));
+
+    Ref<DiskInstrumenter> di;
+    di.instantiate();
+
+    Dictionary result = di->instrument_to_disk(test_opts());
+    ASSERT_EQ(String(result["status"]), "ok");
+    EXPECT_EQ(int(result["instrumented_count"]), 0);
+
+    EXPECT_FALSE(ps->has_setting(autoload_key));
+    EXPECT_FALSE(di->is_instrumented());
 }

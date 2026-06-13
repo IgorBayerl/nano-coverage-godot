@@ -13,13 +13,15 @@ It helps you see exactly which parts of your GDScript code are executed when you
 
 ### ✅ Current Features
 * **Accurate Coverage:** Uses advanced parsing (Tree-sitter) to ignore comments and empty lines, counting only real code.
-* **Simple UI:** Adds "Run Instrumented" and "Generate Report" buttons directly to the Godot Editor toolbar.
+* **In-Editor Display:** Coverage gutters in the script editor and a metrics bottom panel, refreshed automatically when the report changes.
+* **Standalone Mode:** Instrument your project, press Play, close the game — a coverage report is generated automatically. No test framework required.
+* **Test Framework Integrations:** Built-in GdUnit4 integration via session hooks; more integrations planned.
 * **LCOV Support:** Generates standard `lcov.info` files compatible with popular tools like Coveralls, Codecov, or IDE extensions.
 * **Session Merging:** Run your game multiple times; the tool accumulates coverage data across all sessions.
 * **Headless Support:** Works from the command line for automated testing environments.
 
 ### 🚀 Planned Features
-* **In editor Reports:** Visualization of covered and uncovered lines inside of code editor.
+* **More Integrations:** GUT and other Godot testing frameworks.
 * **Godot Asset Library:** We plan to publish this to the Asset Library for one-click installation.
 * **Automated Builds:** Pre-compiled binaries for Windows, Linux, and macOS.
 
@@ -27,9 +29,16 @@ It helps you see exactly which parts of your GDScript code are executed when you
 
 ## ⚙️ How It Works
 
-1.  **Instrumentation:** When you click "Run Instrumented", Nano Coverage creates a temporary copy of your project. It injects invisible trackers into your GDScript code.
-2.  **Execution:** Your game runs normally. As you play or run tests, the trackers record which lines are hit.
-3.  **Reporting:** When you finish, you click "Generate Report" to combine the data into a LCOV file.
+Nano Coverage has two instrumentation modes:
+
+**Disk mode (standalone — no test framework needed):**
+1.  **Instrument:** Toggling "Instrument" in the toolbar patches your `.gd` files on disk (with full backups and a manifest), *before* Godot loads them. Stateful scripts and autoloads behave normally because nothing is hot-reloaded.
+2.  **Play:** Run your game with the regular Play button. Invisible trackers record which lines are hit, and a temporary autoload flushes the data when the game exits.
+3.  **Report:** The editor detects the new data and generates the LCOV report automatically (or click "Generate Report"). Toggle "Instrument" off to restore your original files.
+
+**Memory mode (used by integrations like GdUnit4):**
+1.  When a test session starts, scripts are instrumented in memory inside the test runner process — nothing on disk changes.
+2.  When the session ends, the hook flushes the hits and generates the report automatically.
 
 ---
 
@@ -88,16 +97,23 @@ Once you have built the project, you can install it into your own Godot game.
 
 ## 🎮 Usage
 
-1.  **Run Instrumented:**
-    Click the **"Run Instrumented"** button in the main editor toolbar. This launches your game with coverage tracking enabled.
-2.  **Play/Test:**
-    Play your game or run your unit test suite.
+### Standalone (play your game manually)
+
+1.  **Instrument:**
+    Enable the toolbar buttons via `nano_coverage/ui/` in Project Settings, then toggle **"Instrument"** in the main editor toolbar. Your scripts are patched on disk with full backups (add `.nano_coverage/` to `.gitignore`).
+2.  **Play:**
+    Run your game normally and exercise the code you want covered.
 3.  **Exit:**
-    Close the game window.
-4.  **Generate Report:**
-    Click the **"Generate Report"** button in the toolbar.
-5.  **View Results:**
-    A file named `lcov.info` will be created in your project folder (usually under `coverage_report/`). You can view this using any LCOV viewer (like the "Coverage Gutters" extension for VS Code).
+    Close the game window. Coverage data is flushed automatically.
+4.  **View Results:**
+    With `auto_generate_report` enabled (default), the report regenerates by itself and the editor gutters/panel refresh. `lcov.info` lands in `res://coverage-report/` and works with any LCOV viewer (like the "Coverage Gutters" extension for VS Code).
+5.  **Restore:**
+    Toggle **"Instrument"** off to restore your original scripts before committing.
+
+### With GdUnit4
+
+1.  Enable the integration: **Project > Project Settings > Nano Coverage > Integrations > Gdunit4**.
+2.  Run your test suite as usual. The session hook instruments scripts in memory, and the LCOV report is generated when the test session finishes.
 
 ---
 
@@ -105,8 +121,8 @@ Once you have built the project, you can install it into your own Godot game.
 
 Nano Coverage exposes a `CoverageApi` class to GDScript.
 
-If you are building a test runner (like **GdUnit4**) or a CI pipeline, you can use this API to programmatically:
-* Instrument the project.
+If you are building a test runner integration or a CI pipeline, you can use this API to programmatically:
+* Instrument the project (in memory via `ProjectBootstrapper`, or on disk via `DiskInstrumenter`).
 * Run the instrumented instance.
 * Generate reports without using the Editor UI.
 
@@ -118,11 +134,15 @@ Refer to `addons/nano_coverage_godot/coverage_api_example.gd` or the C++ source 
 
 You can customize the tool via **Project > Project Settings > Nano Coverage**
 
-| Setting                         | Description                                                 | Default                 |
-|:--------------------------------|:------------------------------------------------------------|:------------------------|
-| **Paths / Report Dir**          | Where the `lcov.info` file is saved.                        | `res://coverage-report` |
-| **Paths / Data Store**          | Where raw coverage data is kept.                            | `res://coverage-data`   |
-| **Report / Use Absolute Paths** | If true, uses full system paths in reports (useful for CI). | `false`                 |
-| **UI / Show All Buttons**       | Hides/Shows the toolbar buttons.                            | `true`                  |
+| Setting                            | Description                                                      | Default                 |
+|:-----------------------------------|:-----------------------------------------------------------------|:------------------------|
+| **General / Report Dir**           | Where the `lcov.info` file is saved.                             | `res://coverage-report` |
+| **General / Data Store Dir**       | Where raw coverage data is kept.                                 | `res://coverage-data`   |
+| **General / Backup Dir**           | Where disk-instrumentation backups and the manifest are stored.  | `res://.nano_coverage`  |
+| **General / Ignore Paths**         | Glob patterns excluded from instrumentation.                     | `**/*_test.gd`          |
+| **General / Auto Generate Report** | Regenerate the report when a Play session writes new data.       | `true`                  |
+| **General / Watch Lcov File**      | Refresh gutters/panel when the LCOV file changes.                | `true`                  |
+| **UI / ...**                       | Show/hide the individual toolbar buttons.                        | hidden                  |
+| **Integrations / Gdunit4**         | Enable the GdUnit4 session hook.                                 | `false`                 |
 
 ---

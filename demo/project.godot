@@ -21,7 +21,6 @@ enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/nano_
 
 [gdunit4]
 
-settings/test/test_hooks=[]
 hooks/session_hooks=Dictionary[String, bool]({
 "res://addons/gdUnit4/src/core/hooks/GdUnitHtmlReporterTestSessionHook.gd": true,
 "res://addons/gdUnit4/src/core/hooks/GdUnitXMLReporterTestSessionHook.gd": true,
@@ -30,6 +29,6 @@ hooks/session_hooks=Dictionary[String, bool]({
 
 [nano_coverage]
 
-integrations/gdunit4/active=true
+integrations/gdunit4=true
 general/ignore_paths=PackedStringArray("**/*_test.gd", "res://addons/gdUnit4/src/network", "res://addons/gdUnit4/src/core/runners", "res://addons/gdUnit4/src/ui", "res://addons/gdUnit4/bin", "res://addons/gdUnit4/src/core/hooks", "res://addons/gdUnit4/test")
 general/ignore_addons=false

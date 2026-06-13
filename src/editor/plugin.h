@@ -7,6 +7,7 @@
 #include <godot_cpp/classes/timer.hpp>
 
 #include "../api/coverage_api.h"
+#include "../config/settings_gateway.h"
 #include "../reporting/lcov_parser.h"
 #include "coverage_gutter.h"
 
@@ -36,9 +37,11 @@ class NanoCoverageEditorPlugin : public EditorPlugin {
     LcovReport cached_report;
     Ref<CoverageGutter> active_gutter;
 
-    // LCOV file watcher
-    Timer* lcov_watch_timer = nullptr;
+    // File watcher (LCOV report + coverage data store)
+    Timer* watch_timer = nullptr;
     uint64_t lcov_last_modified = 0;
+    uint64_t covdata_last_modified = 0;
+    bool covdata_seeded = false;
 
     void refresh_gutters();
     void update_active_editor_gutter();
@@ -46,6 +49,9 @@ class NanoCoverageEditorPlugin : public EditorPlugin {
     void _place_gutters_button_in_status_bar();
     void _place_toolbar_buttons();
     void _sync_instrument_state();
+    void _generate_report();
+    void _check_auto_report(const CoverageSettings& settings);
+    void _update_watch_timer(const CoverageSettings& settings);
 
    protected:
     static void _bind_methods();
@@ -64,7 +70,7 @@ class NanoCoverageEditorPlugin : public EditorPlugin {
     void _on_clear_data_pressed();
     void _on_settings_changed();
     void _on_editor_script_changed(const Ref<Script>& script);
-    void _on_lcov_watch_tick();
+    void _on_watch_tick();
     void _on_toggle_gutters();
 };
 
