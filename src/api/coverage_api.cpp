@@ -57,7 +57,7 @@ Dictionary CoverageApi::instrument_script(const String& source_code, const Strin
     }
 
     result["success"] = true;
-    result["code"] = String(inst_res.instrumented_code.c_str());
+    result["code"] = String::utf8(inst_res.instrumented_code.data(), static_cast<int>(inst_res.instrumented_code.size()));
     result["lines"] = covered_lines_arr;
     result["ignored"] = false;
 

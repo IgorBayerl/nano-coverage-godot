@@ -9,7 +9,7 @@ It helps you see exactly which parts of your GDScript code are executed when you
 ## 🚧 Status & Roadmap
 
 **Current State:** Alpha / Developer Preview.  
-**Note:** We currently do not have automated builds (CI/CD). You must build the plugin from source using the instructions below.
+**Note:** GitHub Actions runs automated tests for pull requests and provides manually triggered release builds for Windows, Linux, and macOS.
 
 ### ✅ Current Features
 * **Accurate Coverage:** Uses advanced parsing (Tree-sitter) to ignore comments and empty lines, counting only real code.
@@ -23,7 +23,6 @@ It helps you see exactly which parts of your GDScript code are executed when you
 ### 🚀 Planned Features
 * **More Integrations:** GUT and other Godot testing frameworks.
 * **Godot Asset Library:** We plan to publish this to the Asset Library for one-click installation.
-* **Automated Builds:** Pre-compiled binaries for Windows, Linux, and macOS.
 
 ---
 
@@ -44,7 +43,7 @@ Nano Coverage has two instrumentation modes:
 
 ## 🛠️ Building from Source
 
-Since pre-compiled binaries aren't available yet, you need to build the plugin yourself. We have automated this process with Python scripts.
+If you need to build the plugin yourself, we have automated this process with Python scripts.
 
 ### Prerequisites
 * **Python 3.10+**

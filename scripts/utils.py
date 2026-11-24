@@ -105,7 +105,13 @@ def extract_zip(zip_path, extract_to):
     log_substep(f"Extracting {os.path.basename(zip_path)}")
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_to)
+            for member in zip_ref.infolist():
+                extracted_path = zip_ref.extract(member, extract_to)
+                if os.name == 'posix' and member.create_system == 3 and not member.is_dir():
+                    # zipfile does not restore Unix file permissions.
+                    mode = (member.external_attr >> 16) & 0o777
+                    if mode:
+                        os.chmod(extracted_path, mode)
         return True
     except Exception as e:
         log_error(f"Extraction failed: {e}")
