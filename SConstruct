@@ -4,6 +4,7 @@ import os
 # Environment Setup
 env = SConscript("godot-cpp/SConstruct")
 project_env = env.Clone()
+project_env.Replace(SHLIBPREFIX="")
 
 build_tests = ARGUMENTS.get("build_tests", "yes")
 

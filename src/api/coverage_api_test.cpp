@@ -51,3 +51,22 @@ TEST(CoverageApiTest, ContractTest) {
     EXPECT_TRUE(clear_result.has("status"));
     EXPECT_EQ(String(clear_result["status"]), "ok");
 }
+
+TEST(CoverageApiTest, InstrumentScriptPreservesUtf8) {
+    Ref<CoverageApi> api;
+    api.instantiate();
+
+    const String unicode_text = String::utf8("Привет 日本語 العربية ქართული 😀 é");
+    const String source_code = String::utf8("extends RefCounted\nfunc greet():\n\tprint(\"Привет 日本語 العربية ქართული 😀 é\")\n");
+
+    Dictionary result = api->instrument_script(source_code, "res://utf8_probe.gd");
+    ASSERT_TRUE(bool(result.get("success", false)))
+        << String(result.get("error", "")).utf8().get_data();
+    ASSERT_FALSE(bool(result.get("ignored", true)));
+    ASSERT_TRUE(result.has("code"));
+    const String instrumented = result["code"];
+    EXPECT_NE(instrumented.find(unicode_text), -1)
+        << "Instrumented code must preserve the Unicode source text";
+    EXPECT_NE(instrumented.find(String::utf8("NanoCoverage.hit(")), -1)
+        << "The test must exercise actual instrumentation, not an ignored script";
+}
